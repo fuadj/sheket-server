@@ -111,7 +111,7 @@ func ConnectDbStore() (*dbStore, error) {
 		TABLE_CATEGORY, TABLE_COMPANY))
 
 	exec(t_name("CREATE TABLE IF NOT EXISTS %s ( "+
-		// permission-table
+		// user-permission-table
 		"company_id			INTEGER REFERENCES %s(company_id), "+
 		"user_id			INTEGER REFERENCES %s(user_id), "+
 		"permission_type	INTEGER NOT NULL, "+

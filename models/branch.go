@@ -70,7 +70,7 @@ func (s *shStore) ListCompanyBranches(id int64) ([]*ShBranch, error) {
 	return branches, nil
 }
 
-func (s *shStore) AddItemToBranch(item *ShBranchItem) (*ShBranchItem, error) {
+func (s *shStore) AddItemToBranch(item *ShBranchItem, msg string) (*ShBranchItem, error) {
 	tnx, err := s.Begin()
 	if err != nil {
 		return nil, fmt.Errorf("Error creating item %v", err)
@@ -85,6 +85,9 @@ func (s *shStore) AddItemToBranch(item *ShBranchItem) (*ShBranchItem, error) {
 		fmt.Sprintf("select item_id from %s "+
 			"where branch_id = $1 and item_id = $2", TABLE_BRANCH_ITEM),
 		item.BranchId, item.ItemId)
+	if err != nil {
+		return nil, err
+	}
 	defer rows.Close()
 	if rows.Next() { // if the item already exists, overwrite it
 		stmt := fmt.Sprintf("update %s set "+

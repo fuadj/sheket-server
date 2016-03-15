@@ -3,39 +3,30 @@ package models
 import "testing"
 import (
 	"fmt"
-	"gopkg.in/DATA-DOG/go-sqlmock.v1"
+	"github.com/DATA-DOG/go-sqlmock"
 	"strings"
 )
 
-const (
-	company_id    = int64(1)
-	branch_name   = "test branch"
-	location      = "mexico"
-	branch_id     = int64(10)
-	item_id       = int64(88)
-	quantity      = 8.8
-	item_location = "A10"
-)
 
 func TestCreateBranch(t *testing.T) {
 	mock_setup(t, "TestCreateBranch")
 	defer db.Close()
 
 	mock.ExpectQuery(fmt.Sprintf("insert into %s", TABLE_BRANCH)).
-		WithArgs(company_id, branch_name, location).
-		WillReturnRows(sqlmock.NewRows([]string{"branch_id"}).AddRow(branch_id))
+		WithArgs(company_id, branch_name, branch_location).
+		WillReturnRows(sqlmock.NewRows(_cols("branch_id")).AddRow(branch_id))
 
-	branch := &ShBranch{company_id, 1, branch_name, location}
+	branch := &ShBranch{company_id, 1, branch_name, branch_location}
 
 	branch, err := store.CreateBranch(branch)
 	if err != nil {
-		log_err("Branch creation failed '%v'", err)
+		_log_err("Branch creation failed '%v'", err)
 	} else if branch.BranchId != branch_id {
-		log_err("Expected brach with id:%d", branch_id)
+		_log_err("Expected brach with id:%d", branch_id)
 	}
 
 	if err := mock.ExpectationsWereMet(); err != nil {
-		log_err("Expectation not met %v", err)
+		_log_err("Expectation not met %v", err)
 	}
 }
 
@@ -44,14 +35,14 @@ func TestCreateBranchFail(t *testing.T) {
 	defer db.Close()
 
 	mock.ExpectQuery(fmt.Sprintf("insert into %s", TABLE_BRANCH)).
-		WithArgs(company_id, branch_name, location).
+		WithArgs(company_id, branch_name, branch_location).
 		WillReturnError(fmt.Errorf("insert error"))
 
-	branch := &ShBranch{company_id, 1, branch_name, location}
+	branch := &ShBranch{company_id, 1, branch_name, branch_location}
 
 	branch, err := store.CreateBranch(branch)
 	if err == nil {
-		log_err("error should have returned")
+		_log_err("error should have returned")
 	}
 }
 
@@ -59,17 +50,17 @@ func TestGetBranch(t *testing.T) {
 	mock_setup(t, "TestGetBranch")
 	defer db.Close()
 
-	get_rows := sqlmock.NewRows([]string{"company_id", "branch_id", "branch_name", "location"}).
-		AddRow(company_id, branch_id, branch_name, location)
+	get_rows := sqlmock.NewRows(_cols("company_id,branch_id,branch_name,location")).
+		AddRow(company_id, branch_id, branch_name, branch_location)
 	mock.ExpectQuery(fmt.Sprintf("select (.+) from %s", TABLE_BRANCH)).
 		WithArgs(branch_id).
 		WillReturnRows(get_rows)
 
 	branch, err := store.GetBranchById(branch_id)
 	if err != nil {
-		log_err("GetBranchById failed '%v'", err)
+		_log_err("GetBranchById failed '%v'", err)
 	} else if branch.BranchId != branch_id {
-		log_err("Expected brach with id:%d", branch_id)
+		_log_err("Expected brach with id:%d", branch_id)
 	}
 }
 
@@ -83,7 +74,7 @@ func TestGetBranchFail(t *testing.T) {
 
 	_, err := store.GetBranchById(branch_id)
 	if err == nil {
-		log_err("no branch created, should have failed '%v'", err)
+		_log_err("no branch created, should have failed '%v'", err)
 	}
 }
 
@@ -94,7 +85,7 @@ func TestAddBranchItemInsert(t *testing.T) {
 	mock.ExpectBegin()
 	mock.ExpectQuery(fmt.Sprintf("select (.+) from %s", TABLE_BRANCH_ITEM)).
 		WithArgs(branch_id, item_id).
-		WillReturnRows(sqlmock.NewRows([]string{"item_id"}))
+		WillReturnRows(sqlmock.NewRows(_cols("item_id")))
 	mock.ExpectExec(fmt.Sprintf("insert into %s", TABLE_BRANCH_ITEM)).
 		WithArgs(company_id, branch_id, item_id,
 		quantity, item_location).
@@ -103,10 +94,10 @@ func TestAddBranchItemInsert(t *testing.T) {
 
 	item := &ShBranchItem{company_id, branch_id,
 		item_id, quantity, item_location}
-	_, err := store.AddItemToBranch(item)
+	_, err := store.AddItemToBranch(item, "TestAddBranchItemInsert")
 
 	if err != nil {
-		log_err("AddItemToBranch failed '%v'", err)
+		_log_err("AddItemToBranch failed '%v'", err)
 	}
 }
 
@@ -118,7 +109,7 @@ func TestAddBranchItemUpdate(t *testing.T) {
 	mock.ExpectQuery(fmt.Sprintf("select (.+) from %s", TABLE_BRANCH_ITEM)).
 		WithArgs(branch_id, item_id).
 		WillReturnRows(
-		sqlmock.NewRows([]string{"item_id"}).AddRow(item_id))
+		sqlmock.NewRows(_cols("item_id")).AddRow(item_id))
 
 	mock.ExpectExec(fmt.Sprintf("update %s", TABLE_BRANCH_ITEM)).
 		WithArgs(quantity, item_location, branch_id, item_id).
@@ -127,21 +118,21 @@ func TestAddBranchItemUpdate(t *testing.T) {
 
 	item := &ShBranchItem{company_id, branch_id,
 		item_id, quantity, item_location}
-	_, err := store.AddItemToBranch(item)
+	_, err := store.AddItemToBranch(item, "TestAddBranchItemUpdate")
 
 	if err != nil {
-		log_err("AddItemToBranch failed '%v'", err)
+		_log_err("AddItemToBranch failed '%v'", err)
 	}
 }
 
 func TestAddBranchItemInsertRollback(t *testing.T) {
-	mock_setup(t, "TestAddBranchRollback")
+	mock_setup(t, "TestAddBranchItemInsertRollback")
 	defer mock_teardown()
 
 	mock.ExpectBegin()
 	mock.ExpectQuery(fmt.Sprintf("select (.+) from %s", TABLE_BRANCH_ITEM)).
 		WithArgs(branch_id, item_id).
-		WillReturnRows(sqlmock.NewRows([]string{"item_id"}))
+		WillReturnRows(sqlmock.NewRows(_cols("item_id")))
 	mock.ExpectExec(fmt.Sprintf("insert into %s", TABLE_BRANCH_ITEM)).
 		WithArgs(company_id, branch_id, item_id,
 		quantity, item_location).
@@ -150,10 +141,10 @@ func TestAddBranchItemInsertRollback(t *testing.T) {
 
 	item := &ShBranchItem{company_id, branch_id,
 		item_id, quantity, item_location}
-	_, err := store.AddItemToBranch(item)
+	_, err := store.AddItemToBranch(item, "TestAddBranchItemInsertRollback")
 
 	if err == nil {
-		log_err("AddItemToBranch expected error")
+		_log_err("AddItemToBranch expected error")
 	}
 }
 
@@ -164,7 +155,8 @@ func TestAddBranchItemUpdateRollback(t *testing.T) {
 	mock.ExpectBegin()
 	mock.ExpectQuery(fmt.Sprintf("select (.+) from %s", TABLE_BRANCH_ITEM)).
 		WithArgs(branch_id, item_id).
-		WillReturnRows(sqlmock.NewRows([]string{"item_id"}))
+		WillReturnRows(sqlmock.NewRows(_cols("item_id")).
+			AddRow(sqlmock.NewResult(1, 1)))
 	mock.ExpectExec(fmt.Sprintf("update %s", TABLE_BRANCH_ITEM)).
 		WithArgs(quantity, item_location, branch_id, item_id).
 		WillReturnError(fmt.Errorf("update error"))
@@ -172,10 +164,10 @@ func TestAddBranchItemUpdateRollback(t *testing.T) {
 
 	item := &ShBranchItem{company_id, branch_id,
 		item_id, quantity, item_location}
-	_, err := store.AddItemToBranch(item)
+	_, err := store.AddItemToBranch(item, "TestAddBranchItemUpdateRollback")
 
 	if err == nil {
-		log_err("AddItemToBranch expected error")
+		_log_err("AddItemToBranch expected error")
 	}
 }
 
@@ -191,13 +183,13 @@ func TestGetItemsInBranch(t *testing.T) {
 
 	items, err := store.GetItemsInBranch(branch_id)
 	if err != nil {
-		log_err("GetItemsInBranch err '%v'", err)
+		_log_err("GetItemsInBranch err '%v'", err)
 	}
 	if items == nil || len(items) == 0 {
-		log_err("No item in branch returned")
+		_log_err("No item in branch returned")
 	}
 	if items[0].ItemId != item_id {
-		log_err("returned item not the item")
+		_log_err("returned item not the item")
 	}
 }
 
@@ -211,10 +203,10 @@ func TestGetItemsInBranchFail(t *testing.T) {
 
 	items, err := store.GetItemsInBranch(branch_id)
 	if err == nil {
-		log_err("GetItemsInBranch should have returned error")
+		_log_err("GetItemsInBranch should have returned error")
 	}
 	if items != nil {
-		log_err("the items result should have been nil")
+		_log_err("the items result should have been nil")
 	}
 }
 
@@ -230,13 +222,13 @@ func TestGetItemsInAllCompanyBranches(t *testing.T) {
 
 	items, err := store.GetItemsInAllCompanyBranches(company_id)
 	if err != nil {
-		log_err("err '%v'", err)
+		_log_err("err '%v'", err)
 	}
 	if items == nil || len(items) == 0 {
-		log_err("No item in all branches returned")
+		_log_err("No item in all branches returned")
 	}
 	if items[0].ItemId != item_id {
-		log_err("returned item not the item")
+		_log_err("returned item not the item")
 	}
 }
 
@@ -250,9 +242,9 @@ func TestGetItemsInAllCompanyBranchesFail(t *testing.T) {
 
 	items, err := store.GetItemsInAllCompanyBranches(branch_id)
 	if err == nil {
-		log_err("should have returned error")
+		_log_err("should have returned error")
 	}
 	if items != nil {
-		log_err("the items result should have been nil")
+		_log_err("the items result should have been nil")
 	}
 }
