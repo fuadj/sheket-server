@@ -367,7 +367,7 @@ func TestSetUserPermissionUpdateInTransactionFail(t *testing.T) {
 	mock.ExpectQuery(fmt.Sprintf("select (.+) from %s", TABLE_U_PERMISSION)).
 		WithArgs(company_id, user_id).
 		WillReturnRows(sqlmock.NewRows(_cols("permission_type")).
-			AddRow(sqlmock.NewResult(1, 1)))
+			AddRow(permission_type))
 	mock.ExpectExec(fmt.Sprintf("update %s", TABLE_U_PERMISSION)).
 		WithArgs(permission_type, branch_id, company_id, user_id).
 		WillReturnError(fmt.Errorf("update fail"))

@@ -156,7 +156,7 @@ func TestAddBranchItemUpdateRollback(t *testing.T) {
 	mock.ExpectQuery(fmt.Sprintf("select (.+) from %s", TABLE_BRANCH_ITEM)).
 		WithArgs(branch_id, item_id).
 		WillReturnRows(sqlmock.NewRows(_cols("item_id")).
-			AddRow(sqlmock.NewResult(1, 1)))
+			AddRow(item_id))
 	mock.ExpectExec(fmt.Sprintf("update %s", TABLE_BRANCH_ITEM)).
 		WithArgs(quantity, item_location, branch_id, item_id).
 		WillReturnError(fmt.Errorf("update error"))
