@@ -5,14 +5,21 @@ import "database/sql"
 var ShStore ShDataStore
 
 type ShDataStore interface {
-	CreateTransaction(*ShTransaction) (*ShTransaction, error)
+	/**
+	 * This assumes the transaction items are included in the transaction object.
+	 * Creation of a {@code ShTransaction} happens only happens in a database
+	 * transaction because either all or none of a user's business transactions
+	 * should be committed.
+	 */
+	CreateShTransaction(*sql.Tx, *ShTransaction) (*ShTransaction, error)
+	AddShTransactionElem(*sql.Tx, *ShTransaction, *ShTransactionItem) (*ShTransactionItem, error)
 
-	// whether you want the items in the transaction
-	GetTransactionById(id int64, fetch_items_also bool) (*ShTransaction, error)
+	// @args fetch_items 	whether you want the items in the transaction
+	GetShTransactionById(id int64, fetch_items bool) (*ShTransaction, error)
 
 	// this doesn't fetch items in the transaction
 	// those need to be specifically queried
-	ListTransactionSinceTransId(int64) ([]*ShTransaction, error)
+	ListShTransactionSinceTransId(int64) ([]*ShTransaction, error)
 
 	CreateItem(*ShItem) (*ShItem, error)
 	GetItemById(int64) (*ShItem, error)

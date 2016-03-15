@@ -24,7 +24,6 @@ const (
 	item_id         = int64(88)
 	quantity        = 8.8
 	item_location   = "A10"
-	transaction_id  = 748
 	date            = 87123
 )
 

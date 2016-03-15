@@ -8,21 +8,20 @@ import (
 
 // table names
 const (
-	TABLE_USER              = "user_table"
-	TABLE_COMPANY           = "company"
-	TABLE_BRANCH            = "branch"
-	TABLE_CATEGORY          = "category"
-	TABLE_U_PERMISSION      = "user_permission_table"
-	TABLE_INVENTORY_ITEM    = "inventory_item"
-	TABLE_BRANCH_ITEM       = "branch_item"
-	TABLE_TRANSACTION       = "business_transaction"
-	TABLE_TRANSACTION_ELEM  = "business_transaction_elem"
+	TABLE_USER             = "user_table"
+	TABLE_COMPANY          = "company"
+	TABLE_BRANCH           = "branch"
+	TABLE_CATEGORY         = "category"
+	TABLE_U_PERMISSION     = "user_permission_table"
+	TABLE_INVENTORY_ITEM   = "inventory_item"
+	TABLE_BRANCH_ITEM      = "branch_item"
+	TABLE_TRANSACTION      = "business_transaction"
+	TABLE_TRANSACTION_ITEM = "business_transaction_item"
 )
 
 var (
 	GlobalDS DataStore
 )
-
 
 // Objects that implement this interface can be used as
 // a store for data in Sheket.
@@ -98,7 +97,7 @@ func ConnectDbStore() (*dbStore, error) {
 		"branch_id		SERIAL PRIMARY KEY, "+
 		"company_id		INTEGER REFERENCES %s(company_id), "+
 		"branch_name	VARCHAR(260) NOT NULL, "+
-		"location 		VARCHAR(200), " +
+		"location 		VARCHAR(200), "+
 
 		"UNIQUE(company_id, branch_name));",
 		TABLE_BRANCH, TABLE_COMPANY))
@@ -174,7 +173,7 @@ func ConnectDbStore() (*dbStore, error) {
 		TABLE_TRANSACTION, TABLE_COMPANY, TABLE_BRANCH, TABLE_USER))
 
 	/**
-	 * Transaction elems looks like
+	 * Transaction items looks like
 	 * { transaction_id, trans_type, item_id, other_branch_id, quantity }
 	 * {@column transaction_id} is a foreign key into transaction table
 	 * {@column trans_type} tells what type of transaction it is
@@ -195,13 +194,13 @@ func ConnectDbStore() (*dbStore, error) {
 	 * {@column quantity} is the number of {@column item_id} in the transaction
 	 */
 	exec(t_name("CREATE TABLE IF NOT EXISTS %s ( "+
-		// transaction-elems table
+		// transaction-items table
 		"transaction_id 	INTEGER REFERENCES %s(transaction_id), "+
 		"trans_type			INTEGER NOT NULL, "+
 		"item_id			INTEGER REFERENCES %s(item_id), "+
 		"other_branch_id 	INTEGER, "+
 		"quantity 			REAL NOT NULL));",
-		TABLE_TRANSACTION_ELEM, TABLE_TRANSACTION, TABLE_INVENTORY_ITEM))
+		TABLE_TRANSACTION_ITEM, TABLE_TRANSACTION, TABLE_INVENTORY_ITEM))
 
 	if err != nil {
 		return nil, err
