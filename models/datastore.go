@@ -147,13 +147,24 @@ func ConnectDbStore() (*dbStore, error) {
 
 	/**
 	 * A Transaction looks like
-	 * { company_id, transaction_id, user_id, date }
-	 * {@column transaction_id} is a unique number across the transactions of a company
+	 * { transaction_id, local_transaction_id, company_id, branch_id, user_id, date }
+	 * {@column transaction_id} is a UNIQUE number across the transactions of a company,
+	 *					the reason it isn't autoincrement is because it ISN'T UNIQUE globally.
+	 * {@column local_transaction_id is an id locally given at a user's end, it is used
+	 * 			to check if the transaction has already been 'posted' to avoid duplicate posting.
+	 *			i.e: a user in a company can't post a transaction with the same
+	 * 				{@column local_transaction_id} twice.
+	 *			it needs to be correctly managed, b/c it might prevent a user from posting
+	 *			just because their local id is fucked up. This might happen if the user
+	 *			losses their local counter and start over from 0, effectively blocking
+	 *			his/her posts until their local_id is greater than the one at the server.
+	 *			To PREVENT this, users will also sync this {@column local_transaction_id}
+	 *			EVERY-TIME.
 	 * {@column user_id} is the person who performed the transaction, globally unique
 	 */
 	exec(t_name("create table if not exists %s ( "+
 		// transaction-table
-		"transaction_id			SERIAL PRIMARY KEY, "+
+		"transaction_id			INTEGER NOT NULL, "+
 		"local_transaction_id	integer not null, "+
 		"company_id				integer references %s(company_id), "+
 		"branch_id				integer references %s(branch_id), "+
