@@ -94,7 +94,7 @@ func TestAddBranchItemInsert(t *testing.T) {
 
 	item := &ShBranchItem{company_id, branch_id,
 		item_id, quantity, item_location}
-	_, err := store.AddItemToBranch(item, "TestAddBranchItemInsert")
+	_, err := store.AddItemToBranch(item)
 
 	if err != nil {
 		_log_err("AddItemToBranch failed '%v'", err)
@@ -118,7 +118,7 @@ func TestAddBranchItemUpdate(t *testing.T) {
 
 	item := &ShBranchItem{company_id, branch_id,
 		item_id, quantity, item_location}
-	_, err := store.AddItemToBranch(item, "TestAddBranchItemUpdate")
+	_, err := store.AddItemToBranch(item)
 
 	if err != nil {
 		_log_err("AddItemToBranch failed '%v'", err)
@@ -141,7 +141,7 @@ func TestAddBranchItemInsertRollback(t *testing.T) {
 
 	item := &ShBranchItem{company_id, branch_id,
 		item_id, quantity, item_location}
-	_, err := store.AddItemToBranch(item, "TestAddBranchItemInsertRollback")
+	_, err := store.AddItemToBranch(item)
 
 	if err == nil {
 		_log_err("AddItemToBranch expected error")
@@ -164,7 +164,7 @@ func TestAddBranchItemUpdateRollback(t *testing.T) {
 
 	item := &ShBranchItem{company_id, branch_id,
 		item_id, quantity, item_location}
-	_, err := store.AddItemToBranch(item, "TestAddBranchItemUpdateRollback")
+	_, err := store.AddItemToBranch(item)
 
 	if err == nil {
 		_log_err("AddItemToBranch expected error")

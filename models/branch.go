@@ -70,7 +70,7 @@ func (s *shStore) ListCompanyBranches(id int64) ([]*ShBranch, error) {
 	return branches, nil
 }
 
-func (s *shStore) AddItemToBranch(item *ShBranchItem, msg string) (*ShBranchItem, error) {
+func (s *shStore) AddItemToBranch(item *ShBranchItem) (*ShBranchItem, error) {
 	tnx, err := s.Begin()
 	if err != nil {
 		return nil, fmt.Errorf("Error creating item %v", err)

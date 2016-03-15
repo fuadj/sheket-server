@@ -124,7 +124,7 @@ func ConnectDbStore() (*dbStore, error) {
 
 	exec(t_name("CREATE TABLE IF NOT EXISTS %s ( "+
 		// item table
-		"item_id		INTEGER NOT NULL, "+
+		"item_id		SERIAL PRIMARY KEY, "+
 		"company_id		INTEGER REFERENCES %s(id), "+
 		"category_id	INTEGER NOT NULL, "+
 		"name			VARCHAR(200) NOT NULL, "+
@@ -153,11 +153,12 @@ func ConnectDbStore() (*dbStore, error) {
 	 */
 	exec(t_name("create table if not exists %s ( "+
 		// transaction-table
-		"transaction_id	integer not null, "+
-		"company_id		integer references %s(company_id), "+
-		"branch_id		integer references %s(branch_id), "+
-		"user_id		integer references %s(user_id), "+
-		"date 			integer, "+
+		"transaction_id			SERIAL PRIMARY KEY, "+
+		"local_transaction_id	integer not null, "+
+		"company_id				integer references %s(company_id), "+
+		"branch_id				integer references %s(branch_id), "+
+		"user_id				integer references %s(user_id), "+
+		"date 					integer, "+
 		"unique(company_id, transaction));",
 		TABLE_TRANSACTION, TABLE_COMPANY, TABLE_BRANCH, TABLE_USER))
 

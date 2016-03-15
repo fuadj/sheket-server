@@ -22,7 +22,7 @@ type ShDataStore interface {
 	GetBranchById(int64) (*ShBranch, error)
 	ListCompanyBranches(int64) ([]*ShBranch, error)
 
-	AddItemToBranch(*ShBranchItem, string) (*ShBranchItem, error)
+	AddItemToBranch(*ShBranchItem) (*ShBranchItem, error)
 	UpdateItemInBranch(*ShBranchItem) (*ShBranchItem, error)
 
 	GetItemsInBranch(int64) ([]*ShBranchItem, error)
