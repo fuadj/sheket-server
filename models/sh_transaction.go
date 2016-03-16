@@ -107,10 +107,102 @@ func (s *shStore) AddShTransactionElem(tnx *sql.Tx, trans *ShTransaction, elem *
 	return elem, nil
 }
 
-func (s *shStore) GetShTransactionById(int64, bool) (*ShTransaction, error) {
-	return nil, nil
+func (s *shStore) GetShTransactionById(id int64, fetch_items bool) (*ShTransaction, error) {
+	msg := fmt.Sprintf("no transaction with id %d", id)
+	transaction, err := _queryShTransaction(s, fetch_items, msg, "where transaction_id = $1", id)
+	if err != nil {
+		return nil, err
+	}
+	if len(transaction) == 0 {
+		return nil, fmt.Errorf("No transaction with id:%d", id)
+	}
+	return transaction[0], nil
 }
 
-func (s *shStore) ListShTransactionSinceTransId(int64) ([]*ShTransaction, error) {
-	return nil, nil
+func (s *shStore) ListShTransactionSinceTransId(prev_id int64) ([]*ShTransaction, error) {
+	msg := fmt.Sprintf("no transactions after id:%d", prev_id)
+	transaction, err := _queryShTransaction(s, false, msg, "where transaction_id > $1", prev_id)
+	if err != nil {
+		return nil, err
+	}
+	return transaction, nil
+}
+
+func _queryShTransaction(s *shStore, fetch_items bool, err_msg string, where_stmt string, args ...interface{}) ([]*ShTransaction, error) {
+	var result []*ShTransaction
+
+	query := fmt.Sprintf("select transaction_id, company_id, " +
+		"local_transaction_id, user_id, date from %s", TABLE_TRANSACTION)
+	sort_by := " ORDER BY transaction_id asc"
+
+	var rows *sql.Rows
+	var err error
+	if len(where_stmt) > 0 {
+		rows, err = s.Query(query+" "+where_stmt+sort_by, args...)
+	} else {
+		rows, err = s.Query(query + sort_by)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("%s %v", err_msg, err)
+	}
+
+	for rows.Next() {
+		t := new(ShTransaction)
+		err := rows.Scan(
+			&t.TransactionId,
+			&t.CompanyId,
+			&t.LocalTransactionId,
+			&t.UserId,
+			&t.Date,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("%s %v", err_msg, err.Error())
+		}
+
+		var items []*ShTransactionItem
+		if fetch_items {
+			items, err = _queryShTransactionItems(s, err_msg, "where transaction_id = $1", t.TransactionId)
+			if err != nil {
+				return nil, err
+			}
+		}
+		t.TransItems = items
+		result = append(result, t)
+	}
+	return result, nil
+}
+
+func _queryShTransactionItems(s *shStore, err_msg string, where_stmt string, args ...interface{}) ([]*ShTransactionItem, error) {
+	var result []*ShTransactionItem
+
+	query := fmt.Sprintf("select transaction_id, trans_type, item_id, " +
+		"other_branch_id, quantity from %s", TABLE_TRANSACTION_ITEM)
+
+	var rows *sql.Rows
+	var err error
+	if len(where_stmt) > 0 {
+		rows, err = s.Query(query+" "+where_stmt, args...)
+	} else {
+		rows, err = s.Query(query)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("%s %v", err_msg, err)
+	}
+
+	for rows.Next() {
+		i := new(ShTransactionItem)
+		err := rows.Scan(
+			&i.TransactionId,
+			&i.TransType,
+			&i.ItemId,
+			&i.OtherBranchId,
+			&i.Quantity,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("%s %v", err_msg, err.Error())
+		}
+
+		result = append(result, i)
+	}
+	return result, nil
 }

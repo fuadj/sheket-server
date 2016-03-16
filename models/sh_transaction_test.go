@@ -74,8 +74,8 @@ func _transMaxExpectation(return_error bool) *sqlmock.ExpectedQuery {
 		expect.WillReturnError(fmt.Errorf("select error"))
 	} else {
 		expect.WillReturnRows(sqlmock.NewRows(_cols("transaction_id")).
-		// the -1 is so the next id will be the test's transaction_id
-		AddRow(transaction_id - 1))
+			// the -1 is so the next id will be the test's transaction_id
+			AddRow(transaction_id - 1))
 	}
 	return expect
 }
@@ -161,7 +161,7 @@ func TestCreateShTransactionNewInsertItemsFail(t *testing.T) {
 	for i := 0; i < len(trans.TransItems); i++ {
 		fail := true
 		_transItemInsertExpectation(int64(i), fail)
-		if fail {	// we can't add expectations that won't be meet
+		if fail { // we can't add expectations that won't be meet
 			break
 		}
 	}
@@ -184,5 +184,117 @@ func TestCreateShTransactionExistError(t *testing.T) {
 	_, err := store.CreateShTransaction(tnx, _dummyShTransaction())
 	if err == nil {
 		_log_err("expected transaction already exist error")
+	}
+}
+
+func _transItemQueryExpectation(n int64, return_error bool) *sqlmock.ExpectedQuery {
+	expect := mock.ExpectQuery(
+		fmt.Sprintf("select (.+) from %s", TABLE_TRANSACTION_ITEM)).
+		WithArgs(transaction_id)
+	if return_error {
+		expect.WillReturnError(fmt.Errorf("insert error"))
+	} else {
+		rows := sqlmock.NewRows(
+			_cols("transaction_id, trans_type, item_id, " +
+				"other_branch_id,quantity"))
+		for i := int64(0); i < n; i++ {
+			rows.AddRow(transaction_id, trans_type, item_id+i,
+				other_branch, trans_quantity)
+		}
+		expect.WillReturnRows(rows)
+	}
+	return expect
+}
+
+func _transQueryRows() sqlmock.Rows {
+	return sqlmock.NewRows(
+		_cols("transaction_id,company_id,local_transaction_id,"+
+			"user_id, date")).
+		AddRow(transaction_id, company_id, local_transaction_id,
+		user_id, date)
+}
+
+func TestGetShTransactionByIdFetchItems(t *testing.T) {
+	mock_setup(t, "TestGetShTransactionByIdFetchItems")
+	defer mock_teardown()
+
+	mock.ExpectQuery(
+		fmt.Sprintf("select (.+) from %s", TABLE_TRANSACTION)).
+		WithArgs(transaction_id).
+		WillReturnRows(_transQueryRows())
+	_transItemQueryExpectation(num_trans_items, false)
+
+	transaction, err := store.GetShTransactionById(transaction_id, true)
+	if err != nil {
+		_log_err("GetShTransactionById error '%v'", err)
+	} else if len(transaction.TransItems) != num_trans_items {
+		_log_err("wanted %d transaction items, got %d",
+			num_trans_items, len(transaction.TransItems))
+	}
+}
+
+func TestGetShTransactionByIdNoTransactionError(t *testing.T) {
+	mock_setup(t, "TestGetShTransactionByIdNoTransactionError")
+	defer mock_teardown()
+
+	mock.ExpectQuery(
+		fmt.Sprintf("select (.+) from %s", TABLE_TRANSACTION)).
+		WithArgs(transaction_id).
+		// make the query succeed, but return no rows on the cursor
+		WillReturnRows(sqlmock.NewRows(_cols("transaction_id,company_id," +
+		"local_transaction_id,user_id, date")))
+
+	_, err := store.GetShTransactionById(transaction_id, true)
+	if err == nil {
+		_log_err("expected error")
+	}
+}
+
+func TestGetShTransactionByIdNoItemsFetch(t *testing.T) {
+	mock_setup(t, "TestGetShTransactionByIdNoItemsFetch")
+	defer mock_teardown()
+
+	mock.ExpectQuery(
+		fmt.Sprintf("select (.+) from %s", TABLE_TRANSACTION)).
+		WithArgs(transaction_id).
+		WillReturnRows(_transQueryRows())
+
+	transaction, err := store.GetShTransactionById(transaction_id, false)
+	if err != nil {
+		_log_err("GetShTransactionById error '%v'", err)
+	} else if len(transaction.TransItems) != 0 {
+		_log_err("wanted %d transaction items, got %d",
+			0, len(transaction.TransItems))
+	}
+}
+
+func TestGetShTransactionByIdFail(t *testing.T) {
+	mock_setup(t, "TestGetShTransactionByIdFail")
+	defer mock_teardown()
+
+	mock.ExpectQuery(
+		fmt.Sprintf("select (.+) from %s", TABLE_TRANSACTION)).
+		WithArgs(transaction_id).
+		WillReturnError(fmt.Errorf("select error"))
+
+	_, err := store.GetShTransactionById(transaction_id, true)
+	if err == nil {
+		_log_err("expected error")
+	}
+}
+
+func TestGetShTransactionByIdFetchItemsFail(t *testing.T) {
+	mock_setup(t, "TestGetShTransactionByIdFetchItemsFail")
+	defer mock_teardown()
+
+	mock.ExpectQuery(
+		fmt.Sprintf("select (.+) from %s", TABLE_TRANSACTION)).
+		WithArgs(transaction_id).
+		WillReturnRows(_transQueryRows())
+	_transItemQueryExpectation(0, true)
+
+	_, err := store.GetShTransactionById(transaction_id, true)
+	if err == nil {
+		_log_err("expected error")
 	}
 }
