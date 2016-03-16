@@ -30,7 +30,7 @@ type ShDataStore interface {
 	ListCompanyBranches(int64) ([]*ShBranch, error)
 
 	AddItemToBranch(*ShBranchItem) (*ShBranchItem, error)
-	UpdateItemInBranch(*ShBranchItem) (*ShBranchItem, error)
+	UpdateItemInBranch(*sql.Tx, *ShBranchItem) (*ShBranchItem, error)
 
 	GetItemsInBranch(int64) ([]*ShBranchItem, error)
 	GetItemsInAllCompanyBranches(int64) ([]*ShBranchItem, error)

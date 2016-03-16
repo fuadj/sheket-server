@@ -171,6 +171,42 @@ func TestAddBranchItemUpdateRollback(t *testing.T) {
 	}
 }
 
+func TestUpdateItemInBranch(t *testing.T) {
+	mock_setup(t, "TestUpdateItemInBranch")
+	defer mock_teardown()
+
+	mock.ExpectBegin()
+	mock.ExpectExec(
+		fmt.Sprintf("update %s", TABLE_BRANCH_ITEM)).
+		WithArgs(quantity, item_location, branch_id, item_id).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+	item := &ShBranchItem{company_id, branch_id,
+		item_id, quantity, item_location}
+	tnx, _ := db.Begin()
+	_, err := store.UpdateItemInBranch(tnx, item)
+	if err != nil {
+		_log_err("UpdateItemInBranch error '%v'", err)
+	}
+}
+
+func TestUpdateItemInBranchFail(t *testing.T) {
+	mock_setup(t, "TestUpdateItemInBranchFail")
+	defer mock_teardown()
+
+	mock.ExpectBegin()
+	mock.ExpectExec(
+		fmt.Sprintf("update %s", TABLE_BRANCH_ITEM)).
+		WithArgs(quantity, item_location, branch_id, item_id).
+		WillReturnError(fmt.Errorf("update error"))
+	item := &ShBranchItem{company_id, branch_id,
+		item_id, quantity, item_location}
+	tnx, _ := db.Begin()
+	_, err := store.UpdateItemInBranch(tnx, item)
+	if err == nil {
+		_log_err("expected error")
+	}
+}
+
 func TestGetItemsInBranch(t *testing.T) {
 	mock_setup(t, "TestGetItemsInBranch")
 	defer mock_teardown()

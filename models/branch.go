@@ -112,8 +112,8 @@ func (s *shStore) AddItemToBranch(item *ShBranchItem) (*ShBranchItem, error) {
 	return item, nil
 }
 
-func (s *shStore) UpdateItemInBranch(item *ShBranchItem) (*ShBranchItem, error) {
-	_, err := s.Exec(fmt.Sprintf("update %s set "+
+func (s *shStore) UpdateItemInBranch(tnx *sql.Tx, item *ShBranchItem) (*ShBranchItem, error) {
+	_, err := tnx.Exec(fmt.Sprintf("update %s set "+
 		"quantity = $1, item_location = $2 "+
 		"where branch_id = $3 and item_id = $4", TABLE_BRANCH_ITEM),
 		item.Quantity, item.ItemLocation, item.BranchId, item.ItemId)
