@@ -17,11 +17,29 @@ type ShItem struct {
 }
 
 func (s *shStore) CreateItem(item *ShItem) (*ShItem, error) {
-	err := s.QueryRow(
+	tnx, err := s.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		if err != nil {
+			tnx.Rollback()
+		}
+	}()
+	created_item, err := s.CreateItemInTransaction(tnx, item)
+	if err != nil {
+		return nil, err
+	}
+	tnx.Commit()
+	return created_item, nil
+}
+
+func (s *shStore) CreateItemInTransaction(tnx *sql.Tx, item *ShItem) (*ShItem, error) {
+	err := tnx.QueryRow(
 		fmt.Sprintf("insert into %s " +
-			"(company_id, category_id, name, model_year, " +
-			"part_number, bar_code, has_bar_code, manual_code) values " +
-			"($1, $2, $3, $4, $5, $6, $7, $8) RETURNING item_id;", TABLE_INVENTORY_ITEM),
+		"(company_id, category_id, name, model_year, " +
+		"part_number, bar_code, has_bar_code, manual_code) values " +
+		"($1, $2, $3, $4, $5, $6, $7, $8) RETURNING item_id;", TABLE_INVENTORY_ITEM),
 		item.CompanyId, item.CategoryId, item.Name, item.ModelYear,
 		item.PartNumber, item.BarCode, item.HasBarCode, item.ManualCode).Scan(&item.ItemId)
 	return item, err

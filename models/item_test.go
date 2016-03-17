@@ -27,6 +27,7 @@ func TestCreateInventoryItem(t *testing.T) {
 	mock_setup(t, "TestCreateInventoryItem")
 	defer mock_teardown()
 
+	mock.ExpectBegin()
 	mock.ExpectQuery(fmt.Sprintf("insert into %s", TABLE_INVENTORY_ITEM)).
 		WithArgs(company_id, category_id, item_name, item_model,
 		item_part_number, item_bar_code, item_has_bar_code, item_manual_code).
@@ -44,6 +45,7 @@ func TestCreateInventoryItemFail(t *testing.T) {
 	mock_setup(t, "TestCreateInventoryItemFail")
 	defer mock_teardown()
 
+	mock.ExpectBegin()
 	mock.ExpectQuery(fmt.Sprintf("insert into %s", TABLE_INVENTORY_ITEM)).
 		WithArgs(company_id, category_id, item_name, item_model,
 		item_part_number, item_bar_code, item_has_bar_code, item_manual_code).

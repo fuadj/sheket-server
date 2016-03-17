@@ -22,6 +22,8 @@ type ShDataStore interface {
 	ListShTransactionSinceTransId(int64) ([]*ShTransaction, error)
 
 	CreateItem(*ShItem) (*ShItem, error)
+	CreateItemInTransaction(*sql.Tx, *ShItem) (*ShItem, error)
+
 	GetItemById(int64) (*ShItem, error)
 	GetAllCompanyItems(int64) ([]*ShItem, error)
 
