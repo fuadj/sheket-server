@@ -2,7 +2,6 @@ package models
 
 import (
 	"database/sql"
-	"fmt"
 	"github.com/DATA-DOG/go-sqlmock"
 	"strings"
 	"testing"
@@ -28,16 +27,14 @@ const (
 )
 
 var (
-	fn_name string
 	ts      *testing.T
 	db      *sql.DB
 	mock    sqlmock.Sqlmock
 	store   ShDataStore
 )
 
-func mock_setup(t *testing.T, f_name string) {
+func mock_setup(t *testing.T) {
 	ts = t
-	fn_name = f_name
 	var err error
 	db, mock, err = sqlmock.New()
 	if err != nil {
@@ -48,13 +45,9 @@ func mock_setup(t *testing.T, f_name string) {
 
 func mock_teardown() {
 	if err := mock.ExpectationsWereMet(); err != nil {
-		_log_err("Expectation not met %v", err)
+		ts.Errorf("Expectation not met %v", err)
 	}
 	db.Close()
-}
-
-func _log_err(format string, args ...interface{}) {
-	ts.Errorf(fmt.Sprintf("%s %s", fn_name, format), args...)
 }
 
 // given CSV format string, returns array of elems

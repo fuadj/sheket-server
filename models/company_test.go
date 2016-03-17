@@ -7,7 +7,7 @@ import (
 )
 
 func TestCreateCompany(t *testing.T) {
-	mock_setup(t, "TestCreateCompany")
+	mock_setup(t)
 	defer mock_teardown()
 
 	mock.ExpectBegin()
@@ -19,12 +19,12 @@ func TestCreateCompany(t *testing.T) {
 	company := &Company{CompanyName: company_name, Contact: company_contact}
 	company, err := store.CreateCompany(nil, company)
 	if err != nil {
-		_log_err("Company create error '%v'", err)
+		t.Errorf("Company create error '%v'", err)
 	}
 }
 
 func TestCreateCompanyFail(t *testing.T) {
-	mock_setup(t, "TestCreateCompany")
+	mock_setup(t)
 	defer mock_teardown()
 
 	mock.ExpectBegin()
@@ -36,12 +36,12 @@ func TestCreateCompanyFail(t *testing.T) {
 	company := &Company{CompanyName: company_name, Contact: company_contact}
 	company, err := store.CreateCompany(nil, company)
 	if err == nil {
-		_log_err("expected error")
+		t.Errorf("expected error")
 	}
 }
 
 func TestCreateCompanyInTransaction(t *testing.T) {
-	mock_setup(t, "TestCreateCompanyInTransaction")
+	mock_setup(t)
 	defer mock_teardown()
 
 	mock.ExpectBegin()
@@ -53,12 +53,12 @@ func TestCreateCompanyInTransaction(t *testing.T) {
 	company := &Company{CompanyName: company_name, Contact: company_contact}
 	company, err = store.CreateCompanyInTransaction(tnx, nil, company)
 	if err != nil {
-		_log_err("Company create error '%v'", err)
+		t.Errorf("Company create error '%v'", err)
 	}
 }
 
 func TestCreateCompanyInTransactionFail(t *testing.T) {
-	mock_setup(t, "TestCreateCompanyInTransactionFail")
+	mock_setup(t)
 	defer mock_teardown()
 
 	mock.ExpectBegin()
@@ -70,12 +70,12 @@ func TestCreateCompanyInTransactionFail(t *testing.T) {
 	company := &Company{CompanyName: company_name, Contact: company_contact}
 	company, err = store.CreateCompanyInTransaction(tnx, nil, company)
 	if err == nil {
-		_log_err("expected an error to occur")
+		t.Errorf("expected an error to occur")
 	}
 }
 
 func TestFindCompanyById(t *testing.T) {
-	mock_setup(t, "TestFindCompanyById")
+	mock_setup(t)
 	defer mock_teardown()
 
 	mock.ExpectQuery(fmt.Sprintf("select (.+) from %s", TABLE_COMPANY)).
@@ -85,8 +85,8 @@ func TestFindCompanyById(t *testing.T) {
 
 	company, err := store.GetCompanyById(company_id)
 	if err != nil {
-		_log_err("GetCompanyById error '%v'", err)
+		t.Errorf("GetCompanyById error '%v'", err)
 	} else if company == nil || company.CompanyId != company_id {
-		_log_err("Invalid company")
+		t.Errorf("Invalid company")
 	}
 }

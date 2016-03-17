@@ -9,7 +9,7 @@ import (
 
 
 func TestCreateBranch(t *testing.T) {
-	mock_setup(t, "TestCreateBranch")
+	mock_setup(t)
 	defer db.Close()
 
 	mock.ExpectQuery(fmt.Sprintf("insert into %s", TABLE_BRANCH)).
@@ -20,18 +20,18 @@ func TestCreateBranch(t *testing.T) {
 
 	branch, err := store.CreateBranch(branch)
 	if err != nil {
-		_log_err("Branch creation failed '%v'", err)
+		t.Errorf("Branch creation failed '%v'", err)
 	} else if branch.BranchId != branch_id {
-		_log_err("Expected brach with id:%d", branch_id)
+		t.Errorf("Expected brach with id:%d", branch_id)
 	}
 
 	if err := mock.ExpectationsWereMet(); err != nil {
-		_log_err("Expectation not met %v", err)
+		t.Errorf("Expectation not met %v", err)
 	}
 }
 
 func TestCreateBranchFail(t *testing.T) {
-	mock_setup(t, "TestCreateBranchFail")
+	mock_setup(t)
 	defer db.Close()
 
 	mock.ExpectQuery(fmt.Sprintf("insert into %s", TABLE_BRANCH)).
@@ -42,12 +42,12 @@ func TestCreateBranchFail(t *testing.T) {
 
 	branch, err := store.CreateBranch(branch)
 	if err == nil {
-		_log_err("error should have returned")
+		t.Errorf("error should have returned")
 	}
 }
 
 func TestGetBranch(t *testing.T) {
-	mock_setup(t, "TestGetBranch")
+	mock_setup(t)
 	defer db.Close()
 
 	get_rows := sqlmock.NewRows(_cols("company_id,branch_id,branch_name,location")).
@@ -58,14 +58,14 @@ func TestGetBranch(t *testing.T) {
 
 	branch, err := store.GetBranchById(branch_id)
 	if err != nil {
-		_log_err("GetBranchById failed '%v'", err)
+		t.Errorf("GetBranchById failed '%v'", err)
 	} else if branch.BranchId != branch_id {
-		_log_err("Expected brach with id:%d", branch_id)
+		t.Errorf("Expected brach with id:%d", branch_id)
 	}
 }
 
 func TestGetBranchFail(t *testing.T) {
-	mock_setup(t, "TestGetBranchFail")
+	mock_setup(t)
 	defer mock_teardown()
 
 	mock.ExpectQuery(fmt.Sprintf("select (.+) from %s", TABLE_BRANCH)).
@@ -74,12 +74,12 @@ func TestGetBranchFail(t *testing.T) {
 
 	_, err := store.GetBranchById(branch_id)
 	if err == nil {
-		_log_err("no branch created, should have failed '%v'", err)
+		t.Errorf("no branch created, should have failed '%v'", err)
 	}
 }
 
 func TestAddBranchItemInsert(t *testing.T) {
-	mock_setup(t, "TestAddBranchItemInsert")
+	mock_setup(t)
 	defer mock_teardown()
 
 	mock.ExpectBegin()
@@ -97,12 +97,12 @@ func TestAddBranchItemInsert(t *testing.T) {
 	_, err := store.AddItemToBranch(item)
 
 	if err != nil {
-		_log_err("AddItemToBranch failed '%v'", err)
+		t.Errorf("AddItemToBranch failed '%v'", err)
 	}
 }
 
 func TestAddBranchItemUpdate(t *testing.T) {
-	mock_setup(t, "TestAddBranchItemUpdate")
+	mock_setup(t)
 	defer mock_teardown()
 
 	mock.ExpectBegin()
@@ -121,12 +121,12 @@ func TestAddBranchItemUpdate(t *testing.T) {
 	_, err := store.AddItemToBranch(item)
 
 	if err != nil {
-		_log_err("AddItemToBranch failed '%v'", err)
+		t.Errorf("AddItemToBranch failed '%v'", err)
 	}
 }
 
 func TestAddBranchItemInsertRollback(t *testing.T) {
-	mock_setup(t, "TestAddBranchItemInsertRollback")
+	mock_setup(t)
 	defer mock_teardown()
 
 	mock.ExpectBegin()
@@ -144,12 +144,12 @@ func TestAddBranchItemInsertRollback(t *testing.T) {
 	_, err := store.AddItemToBranch(item)
 
 	if err == nil {
-		_log_err("AddItemToBranch expected error")
+		t.Errorf("AddItemToBranch expected error")
 	}
 }
 
 func TestAddBranchItemUpdateRollback(t *testing.T) {
-	mock_setup(t, "TestAddBranchItemUpdateRollback")
+	mock_setup(t)
 	defer mock_teardown()
 
 	mock.ExpectBegin()
@@ -167,12 +167,12 @@ func TestAddBranchItemUpdateRollback(t *testing.T) {
 	_, err := store.AddItemToBranch(item)
 
 	if err == nil {
-		_log_err("AddItemToBranch expected error")
+		t.Errorf("AddItemToBranch expected error")
 	}
 }
 
 func TestUpdateItemInBranch(t *testing.T) {
-	mock_setup(t, "TestUpdateItemInBranch")
+	mock_setup(t)
 	defer mock_teardown()
 
 	mock.ExpectBegin()
@@ -185,12 +185,12 @@ func TestUpdateItemInBranch(t *testing.T) {
 	tnx, _ := db.Begin()
 	_, err := store.UpdateItemInBranch(tnx, item)
 	if err != nil {
-		_log_err("UpdateItemInBranch error '%v'", err)
+		t.Errorf("UpdateItemInBranch error '%v'", err)
 	}
 }
 
 func TestUpdateItemInBranchFail(t *testing.T) {
-	mock_setup(t, "TestUpdateItemInBranchFail")
+	mock_setup(t)
 	defer mock_teardown()
 
 	mock.ExpectBegin()
@@ -203,12 +203,12 @@ func TestUpdateItemInBranchFail(t *testing.T) {
 	tnx, _ := db.Begin()
 	_, err := store.UpdateItemInBranch(tnx, item)
 	if err == nil {
-		_log_err("expected error")
+		t.Errorf("expected error")
 	}
 }
 
 func TestGetItemsInBranch(t *testing.T) {
-	mock_setup(t, "TestGetItemsInBranch")
+	mock_setup(t)
 	defer mock_teardown()
 
 	rs := sqlmock.NewRows(strings.Split("company_id,branch_id,item_id,quantity,item_location", ",")).
@@ -219,18 +219,18 @@ func TestGetItemsInBranch(t *testing.T) {
 
 	items, err := store.GetItemsInBranch(branch_id)
 	if err != nil {
-		_log_err("GetItemsInBranch err '%v'", err)
+		t.Errorf("GetItemsInBranch err '%v'", err)
 	}
 	if items == nil || len(items) == 0 {
-		_log_err("No item in branch returned")
+		t.Errorf("No item in branch returned")
 	}
 	if items[0].ItemId != item_id {
-		_log_err("returned item not the item")
+		t.Errorf("returned item not the item")
 	}
 }
 
 func TestGetItemsInBranchFail(t *testing.T) {
-	mock_setup(t, "TestGetItemsInBranchFail")
+	mock_setup(t)
 	defer mock_teardown()
 
 	mock.ExpectQuery(fmt.Sprintf("select (.+) from %s", TABLE_BRANCH_ITEM)).
@@ -239,15 +239,15 @@ func TestGetItemsInBranchFail(t *testing.T) {
 
 	items, err := store.GetItemsInBranch(branch_id)
 	if err == nil {
-		_log_err("GetItemsInBranch should have returned error")
+		t.Errorf("GetItemsInBranch should have returned error")
 	}
 	if items != nil {
-		_log_err("the items result should have been nil")
+		t.Errorf("the items result should have been nil")
 	}
 }
 
 func TestGetItemsInAllCompanyBranches(t *testing.T) {
-	mock_setup(t, "TestGetItemsInAllCompanyBranches")
+	mock_setup(t)
 	defer mock_teardown()
 
 	rs := sqlmock.NewRows(strings.Split("company_id,branch_id,item_id,quantity,item_location", ",")).
@@ -258,18 +258,18 @@ func TestGetItemsInAllCompanyBranches(t *testing.T) {
 
 	items, err := store.GetItemsInAllCompanyBranches(company_id)
 	if err != nil {
-		_log_err("err '%v'", err)
+		t.Errorf("err '%v'", err)
 	}
 	if items == nil || len(items) == 0 {
-		_log_err("No item in all branches returned")
+		t.Errorf("No item in all branches returned")
 	}
 	if items[0].ItemId != item_id {
-		_log_err("returned item not the item")
+		t.Errorf("returned item not the item")
 	}
 }
 
 func TestGetItemsInAllCompanyBranchesFail(t *testing.T) {
-	mock_setup(t, "TestGetItemsInBranchFail")
+	mock_setup(t)
 	defer mock_teardown()
 
 	mock.ExpectQuery(fmt.Sprintf("select (.+) from %s", TABLE_BRANCH_ITEM)).
@@ -278,9 +278,9 @@ func TestGetItemsInAllCompanyBranchesFail(t *testing.T) {
 
 	items, err := store.GetItemsInAllCompanyBranches(branch_id)
 	if err == nil {
-		_log_err("should have returned error")
+		t.Errorf("should have returned error")
 	}
 	if items != nil {
-		_log_err("the items result should have been nil")
+		t.Errorf("the items result should have been nil")
 	}
 }

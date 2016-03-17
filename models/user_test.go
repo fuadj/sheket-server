@@ -7,7 +7,7 @@ import (
 )
 
 func TestCreateUserNotExist(t *testing.T) {
-	mock_setup(t, "TestCreateUserNotExist")
+	mock_setup(t)
 	defer mock_teardown()
 
 	mock.ExpectBegin()
@@ -25,12 +25,12 @@ func TestCreateUserNotExist(t *testing.T) {
 	u := &User{Username: username, HashedPassword: pass_hash}
 	_, err := store.CreateUser(u, password)
 	if err != nil {
-		_log_err("CreateUser error '%v'", err)
+		t.Errorf("CreateUser error '%v'", err)
 	}
 }
 
 func TestCreateUserNotExistFail(t *testing.T) {
-	mock_setup(t, "TestCreateUserNotExistFail")
+	mock_setup(t)
 	defer mock_teardown()
 
 	mock.ExpectBegin()
@@ -47,12 +47,12 @@ func TestCreateUserNotExistFail(t *testing.T) {
 	u := &User{Username: username, HashedPassword: pass_hash}
 	_, err := store.CreateUser(u, password)
 	if err == nil {
-		_log_err("expected error")
+		t.Errorf("expected error")
 	}
 }
 
 func TestCreateUserExistRollback(t *testing.T) {
-	mock_setup(t, "TestCreateUserExistRollback")
+	mock_setup(t)
 	defer mock_teardown()
 
 	mock.ExpectBegin()
@@ -66,12 +66,12 @@ func TestCreateUserExistRollback(t *testing.T) {
 	u := &User{Username: username, HashedPassword: pass_hash}
 	_, err := store.CreateUser(u, password)
 	if err == nil {
-		_log_err("expected user already exists error")
+		t.Errorf("expected user already exists error")
 	}
 }
 
 func TestCreateUserExistFail(t *testing.T) {
-	mock_setup(t, "TestCreateUserExistFail")
+	mock_setup(t)
 	defer mock_teardown()
 
 	mock.ExpectBegin()
@@ -84,12 +84,12 @@ func TestCreateUserExistFail(t *testing.T) {
 	u := &User{Username: username, HashedPassword: pass_hash}
 	_, err := store.CreateUser(u, password)
 	if err == nil {
-		_log_err("expected select error")
+		t.Errorf("expected select error")
 	}
 }
 
 func TestFindUserByName(t *testing.T) {
-	mock_setup(t, "TestFindUserByName")
+	mock_setup(t)
 	defer mock_teardown()
 
 	mock.ExpectQuery(fmt.Sprintf("select (.+) from %s", TABLE_USER)).
@@ -99,12 +99,12 @@ func TestFindUserByName(t *testing.T) {
 
 	_, err := store.FindUserByName(username)
 	if err != nil {
-		_log_err("FindUserByName error '%v'", err)
+		t.Errorf("FindUserByName error '%v'", err)
 	}
 }
 
 func TestFindUserByNameFail(t *testing.T) {
-	mock_setup(t, "TestFindUserByNameFail")
+	mock_setup(t)
 	defer mock_teardown()
 
 	mock.ExpectQuery(fmt.Sprintf("select (.+) from %s", TABLE_USER)).
@@ -113,12 +113,12 @@ func TestFindUserByNameFail(t *testing.T) {
 
 	_, err := store.FindUserByName(username)
 	if err == nil {
-		_log_err("expected an error")
+		t.Errorf("expected an error")
 	}
 }
 
 func TestFindUserById(t *testing.T) {
-	mock_setup(t, "TestFindUserById")
+	mock_setup(t)
 	defer mock_teardown()
 
 	mock.ExpectQuery(fmt.Sprintf("select (.+) from %s", TABLE_USER)).
@@ -128,12 +128,12 @@ func TestFindUserById(t *testing.T) {
 
 	_, err := store.FindUserById(user_id)
 	if err != nil {
-		_log_err("FindUserById error '%v'", err)
+		t.Errorf("FindUserById error '%v'", err)
 	}
 }
 
 func TestFindUserByIdFail(t *testing.T) {
-	mock_setup(t, "TestFindUserByIdFail")
+	mock_setup(t)
 	defer mock_teardown()
 
 	mock.ExpectQuery(fmt.Sprintf("select (.+) from %s", TABLE_USER)).
@@ -142,12 +142,12 @@ func TestFindUserByIdFail(t *testing.T) {
 
 	_, err := store.FindUserById(user_id)
 	if err == nil {
-		_log_err("expected an error")
+		t.Errorf("expected an error")
 	}
 }
 
 func TestGetUserPermission(t *testing.T) {
-	mock_setup(t, "TestGetUserPermission")
+	mock_setup(t)
 	defer mock_teardown()
 
 	mock.ExpectQuery(fmt.Sprintf("select (.+) from %s", TABLE_U_PERMISSION)).
@@ -160,12 +160,12 @@ func TestGetUserPermission(t *testing.T) {
 		PermissionType:permission_type, BranchId:branch_id}
 	p, err := store.GetUserPermission(p)
 	if err != nil {
-		_log_err("GetUserPermission error '%v'", err)
+		t.Errorf("GetUserPermission error '%v'", err)
 	}
 }
 
 func TestGetUserPermissionFail(t *testing.T) {
-	mock_setup(t, "TestGetUserPermissionFail")
+	mock_setup(t)
 	defer mock_teardown()
 
 	mock.ExpectQuery(fmt.Sprintf("select (.+) from %s", TABLE_U_PERMISSION)).
@@ -176,12 +176,12 @@ func TestGetUserPermissionFail(t *testing.T) {
 		PermissionType:permission_type, BranchId:branch_id}
 	_, err := store.GetUserPermission(p)
 	if err == nil {
-		_log_err("expected an error")
+		t.Errorf("expected an error")
 	}
 }
 
 func TestSetUserPermissionInsert(t *testing.T) {
-	mock_setup(t, "TestSetUserPermissionInsert")
+	mock_setup(t)
 	defer mock_teardown()
 
 	mock.ExpectBegin()
@@ -196,12 +196,12 @@ func TestSetUserPermissionInsert(t *testing.T) {
 	p := &UserPermission{company_id, user_id, permission_type, branch_id}
 	p, err := store.SetUserPermission(p)
 	if err != nil {
-		_log_err("SetUserPermission error '%v'", err)
+		t.Errorf("SetUserPermission error '%v'", err)
 	}
 }
 
 func TestSetUserPermissionUpdate(t *testing.T) {
-	mock_setup(t, "TestSetUserPermissionUpdate")
+	mock_setup(t)
 	defer mock_teardown()
 
 	mock.ExpectBegin()
@@ -217,12 +217,12 @@ func TestSetUserPermissionUpdate(t *testing.T) {
 	p := &UserPermission{company_id, user_id, permission_type, branch_id}
 	p, err := store.SetUserPermission(p)
 	if err != nil {
-		_log_err("SetUserPermission error '%v'", err)
+		t.Errorf("SetUserPermission error '%v'", err)
 	}
 }
 
 func TestSetUserPermissionSelectFail(t *testing.T) {
-	mock_setup(t, "TestSetUserPermissionSelectFail")
+	mock_setup(t)
 	defer mock_teardown()
 
 	mock.ExpectBegin()
@@ -234,12 +234,12 @@ func TestSetUserPermissionSelectFail(t *testing.T) {
 	p := &UserPermission{company_id, user_id, permission_type, branch_id}
 	p, err := store.SetUserPermission(p)
 	if err == nil {
-		_log_err("SetUserPermission error '%v'", err)
+		t.Errorf("SetUserPermission error '%v'", err)
 	}
 }
 
 func TestSetUserPermissionInsertFail(t *testing.T) {
-	mock_setup(t, "TestSetUserPermissionInsertFail")
+	mock_setup(t)
 	defer mock_teardown()
 
 	mock.ExpectBegin()
@@ -254,12 +254,12 @@ func TestSetUserPermissionInsertFail(t *testing.T) {
 	p := &UserPermission{company_id, user_id, permission_type, branch_id}
 	p, err := store.SetUserPermission(p)
 	if err == nil {
-		_log_err("expected an error")
+		t.Errorf("expected an error")
 	}
 }
 
 func TestSetUserPermissionUpdateFail(t *testing.T) {
-	mock_setup(t, "TestSetUserPermissionUpdateFail")
+	mock_setup(t)
 	defer mock_teardown()
 
 	mock.ExpectBegin()
@@ -274,12 +274,12 @@ func TestSetUserPermissionUpdateFail(t *testing.T) {
 	p := &UserPermission{company_id, user_id, permission_type, branch_id}
 	p, err := store.SetUserPermission(p)
 	if err == nil {
-		_log_err("expected an error")
+		t.Errorf("expected an error")
 	}
 }
 
 func TestSetUserPermissionInTransactionInsert(t *testing.T) {
-	mock_setup(t, "TestSetUserPermissionInTransactionInsert")
+	mock_setup(t)
 	defer mock_teardown()
 
 	mock.ExpectBegin()
@@ -295,12 +295,12 @@ func TestSetUserPermissionInTransactionInsert(t *testing.T) {
 	p := &UserPermission{company_id, user_id, permission_type, branch_id}
 	p, err = store.SetUserPermissionInTransaction(tnx, p)
 	if err != nil {
-		_log_err("SetUserPermissionInTransaction error '%v'", err)
+		t.Errorf("SetUserPermissionInTransaction error '%v'", err)
 	}
 }
 
 func TestSetUserPermissionInTransactionUpdate(t *testing.T) {
-	mock_setup(t, "TestSetUserPermissionInTransactionUpdate")
+	mock_setup(t)
 	defer mock_teardown()
 
 	mock.ExpectBegin()
@@ -317,12 +317,12 @@ func TestSetUserPermissionInTransactionUpdate(t *testing.T) {
 	p := &UserPermission{company_id, user_id, permission_type, branch_id}
 	p, err = store.SetUserPermissionInTransaction(tnx, p)
 	if err != nil {
-		_log_err("SetUserPermissionInTransaction error '%v'", err)
+		t.Errorf("SetUserPermissionInTransaction error '%v'", err)
 	}
 }
 
 func TestSetUserPermissionSelectInTransactionFail(t *testing.T) {
-	mock_setup(t, "TestSetUserPermissionSelectInTransactionFail")
+	mock_setup(t)
 	defer mock_teardown()
 
 	mock.ExpectBegin()
@@ -335,12 +335,12 @@ func TestSetUserPermissionSelectInTransactionFail(t *testing.T) {
 	p := &UserPermission{company_id, user_id, permission_type, branch_id}
 	p, err = store.SetUserPermissionInTransaction(tnx, p)
 	if err == nil {
-		_log_err("SetUserPermission error '%v'", err)
+		t.Errorf("SetUserPermission error '%v'", err)
 	}
 }
 
 func TestSetUserPermissionInsertInTransactionFail(t *testing.T) {
-	mock_setup(t, "TestSetUserPermissionInsertInTransactionFail")
+	mock_setup(t)
 	defer mock_teardown()
 
 	mock.ExpectBegin()
@@ -355,12 +355,12 @@ func TestSetUserPermissionInsertInTransactionFail(t *testing.T) {
 	p := &UserPermission{company_id, user_id, permission_type, branch_id}
 	p, err = store.SetUserPermissionInTransaction(tnx, p)
 	if err == nil {
-		_log_err("expected an error")
+		t.Errorf("expected an error")
 	}
 }
 
 func TestSetUserPermissionUpdateInTransactionFail(t *testing.T) {
-	mock_setup(t, "TestSetUserPermissionUpdateInTransactionFail")
+	mock_setup(t)
 	defer mock_teardown()
 
 	mock.ExpectBegin()
@@ -376,6 +376,6 @@ func TestSetUserPermissionUpdateInTransactionFail(t *testing.T) {
 	p := &UserPermission{company_id, user_id, permission_type, branch_id}
 	p, err = store.SetUserPermissionInTransaction(tnx, p)
 	if err == nil {
-		_log_err("expected an error")
+		t.Errorf("expected an error")
 	}
 }

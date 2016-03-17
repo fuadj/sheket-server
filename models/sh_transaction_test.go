@@ -92,7 +92,7 @@ func _transInsertExpectation(return_error bool) *sqlmock.ExpectedExec {
 }
 
 func TestCreateShTransactionNew(t *testing.T) {
-	mock_setup(t, "TestCreateShTransactionNew")
+	mock_setup(t)
 	defer mock_teardown()
 
 	trans := _dummyShTransaction()
@@ -109,14 +109,14 @@ func TestCreateShTransactionNew(t *testing.T) {
 
 	updated, err := store.CreateShTransaction(tnx, trans)
 	if err != nil {
-		_log_err("CreateShTransaction error '%v'", err)
+		t.Errorf("CreateShTransaction error '%v'", err)
 	} else if updated.TransactionId != transaction_id {
-		_log_err("Not expected trans id want:%d got:%d", transaction_id, updated.TransactionId)
+		t.Errorf("Not expected trans id want:%d got:%d", transaction_id, updated.TransactionId)
 	}
 }
 
 func TestCreateShTransactionNewFail(t *testing.T) {
-	mock_setup(t, "TestCreateShTransactionNewFail")
+	mock_setup(t)
 	defer mock_teardown()
 
 	trans := _dummyShTransaction()
@@ -128,12 +128,12 @@ func TestCreateShTransactionNewFail(t *testing.T) {
 
 	_, err := store.CreateShTransaction(tnx, trans)
 	if err == nil {
-		_log_err("expected error")
+		t.Errorf("expected error")
 	}
 }
 
 func TestCreateShTransactionNewInsertTransFail(t *testing.T) {
-	mock_setup(t, "TestCreateShTransactionNewInsertTransFail")
+	mock_setup(t)
 	defer mock_teardown()
 
 	mock.ExpectBegin()
@@ -144,12 +144,12 @@ func TestCreateShTransactionNewInsertTransFail(t *testing.T) {
 
 	_, err := store.CreateShTransaction(tnx, _dummyShTransaction())
 	if err == nil {
-		_log_err("expected insert error")
+		t.Errorf("expected insert error")
 	}
 }
 
 func TestCreateShTransactionNewInsertItemsFail(t *testing.T) {
-	mock_setup(t, "TestCreateShTransactionNewInsertItemsFail")
+	mock_setup(t)
 	defer mock_teardown()
 
 	trans := _dummyShTransaction()
@@ -169,12 +169,12 @@ func TestCreateShTransactionNewInsertItemsFail(t *testing.T) {
 
 	_, err := store.CreateShTransaction(tnx, trans)
 	if err == nil {
-		_log_err("expected insert error")
+		t.Errorf("expected insert error")
 	}
 }
 
 func TestCreateShTransactionExistError(t *testing.T) {
-	mock_setup(t, "TestCreateShTransactionExistError")
+	mock_setup(t)
 	defer mock_teardown()
 
 	mock.ExpectBegin()
@@ -183,7 +183,7 @@ func TestCreateShTransactionExistError(t *testing.T) {
 
 	_, err := store.CreateShTransaction(tnx, _dummyShTransaction())
 	if err == nil {
-		_log_err("expected transaction already exist error")
+		t.Errorf("expected transaction already exist error")
 	}
 }
 
@@ -215,7 +215,7 @@ func _transQueryRows() sqlmock.Rows {
 }
 
 func TestGetShTransactionByIdFetchItems(t *testing.T) {
-	mock_setup(t, "TestGetShTransactionByIdFetchItems")
+	mock_setup(t)
 	defer mock_teardown()
 
 	mock.ExpectQuery(
@@ -226,15 +226,15 @@ func TestGetShTransactionByIdFetchItems(t *testing.T) {
 
 	transaction, err := store.GetShTransactionById(transaction_id, true)
 	if err != nil {
-		_log_err("GetShTransactionById error '%v'", err)
+		t.Errorf("GetShTransactionById error '%v'", err)
 	} else if len(transaction.TransItems) != num_trans_items {
-		_log_err("wanted %d transaction items, got %d",
+		t.Errorf("wanted %d transaction items, got %d",
 			num_trans_items, len(transaction.TransItems))
 	}
 }
 
 func TestGetShTransactionByIdNoTransactionError(t *testing.T) {
-	mock_setup(t, "TestGetShTransactionByIdNoTransactionError")
+	mock_setup(t)
 	defer mock_teardown()
 
 	mock.ExpectQuery(
@@ -246,12 +246,12 @@ func TestGetShTransactionByIdNoTransactionError(t *testing.T) {
 
 	_, err := store.GetShTransactionById(transaction_id, true)
 	if err == nil {
-		_log_err("expected error")
+		t.Errorf("expected error")
 	}
 }
 
 func TestGetShTransactionByIdNoItemsFetch(t *testing.T) {
-	mock_setup(t, "TestGetShTransactionByIdNoItemsFetch")
+	mock_setup(t)
 	defer mock_teardown()
 
 	mock.ExpectQuery(
@@ -261,15 +261,15 @@ func TestGetShTransactionByIdNoItemsFetch(t *testing.T) {
 
 	transaction, err := store.GetShTransactionById(transaction_id, false)
 	if err != nil {
-		_log_err("GetShTransactionById error '%v'", err)
+		t.Errorf("GetShTransactionById error '%v'", err)
 	} else if len(transaction.TransItems) != 0 {
-		_log_err("wanted %d transaction items, got %d",
+		t.Errorf("wanted %d transaction items, got %d",
 			0, len(transaction.TransItems))
 	}
 }
 
 func TestGetShTransactionByIdFail(t *testing.T) {
-	mock_setup(t, "TestGetShTransactionByIdFail")
+	mock_setup(t)
 	defer mock_teardown()
 
 	mock.ExpectQuery(
@@ -279,12 +279,12 @@ func TestGetShTransactionByIdFail(t *testing.T) {
 
 	_, err := store.GetShTransactionById(transaction_id, true)
 	if err == nil {
-		_log_err("expected error")
+		t.Errorf("expected error")
 	}
 }
 
 func TestGetShTransactionByIdFetchItemsFail(t *testing.T) {
-	mock_setup(t, "TestGetShTransactionByIdFetchItemsFail")
+	mock_setup(t)
 	defer mock_teardown()
 
 	mock.ExpectQuery(
@@ -295,6 +295,6 @@ func TestGetShTransactionByIdFetchItemsFail(t *testing.T) {
 
 	_, err := store.GetShTransactionById(transaction_id, true)
 	if err == nil {
-		_log_err("expected error")
+		t.Errorf("expected error")
 	}
 }

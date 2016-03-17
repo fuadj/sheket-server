@@ -24,7 +24,7 @@ func dummyTestItem() *ShItem {
 }
 
 func TestCreateInventoryItem(t *testing.T) {
-	mock_setup(t, "TestCreateInventoryItem")
+	mock_setup(t)
 	defer mock_teardown()
 
 	mock.ExpectBegin()
@@ -35,14 +35,14 @@ func TestCreateInventoryItem(t *testing.T) {
 
 	item, err := store.CreateItem(dummyTestItem())
 	if err != nil {
-		_log_err("CreateItem error '%v'", err)
+		t.Errorf("CreateItem error '%v'", err)
 	} else if item.ItemId != item_id {
-		_log_err("Not the expected item")
+		t.Errorf("Not the expected item")
 	}
 }
 
 func TestCreateInventoryItemFail(t *testing.T) {
-	mock_setup(t, "TestCreateInventoryItemFail")
+	mock_setup(t)
 	defer mock_teardown()
 
 	mock.ExpectBegin()
@@ -53,7 +53,7 @@ func TestCreateInventoryItemFail(t *testing.T) {
 
 	_, err := store.CreateItem(dummyTestItem())
 	if err == nil {
-		_log_err("expected error")
+		t.Errorf("expected error")
 	}
 }
 
@@ -69,7 +69,7 @@ func _itemQueryRows() sqlmock.Rows {
 }
 
 func TestGetItemById(t *testing.T) {
-	mock_setup(t, "TestGetItemById")
+	mock_setup(t)
 	defer mock_teardown()
 
 	_itemQueryExpectation().
@@ -78,12 +78,12 @@ func TestGetItemById(t *testing.T) {
 
 	_, err := store.GetItemById(item_id)
 	if err != nil {
-		_log_err("GetItemById error %v", err)
+		t.Errorf("GetItemById error %v", err)
 	}
 }
 
 func TestGetItemByIdFail(t *testing.T) {
-	mock_setup(t, "TestGetItemByIdFail")
+	mock_setup(t)
 	defer mock_teardown()
 
 	_itemQueryExpectation().
@@ -92,12 +92,12 @@ func TestGetItemByIdFail(t *testing.T) {
 
 	_, err := store.GetItemById(item_id)
 	if err == nil {
-		_log_err("expected error")
+		t.Errorf("expected error")
 	}
 }
 
 func TestGetCompanyItems(t *testing.T) {
-	mock_setup(t, "TestGetCompanyItems")
+	mock_setup(t)
 	defer mock_teardown()
 
 	_itemQueryExpectation().
@@ -106,12 +106,12 @@ func TestGetCompanyItems(t *testing.T) {
 
 	items, err := store.GetAllCompanyItems(company_id)
 	if err != nil || len(items) != 1 {
-		_log_err("GetItemById error %v", err)
+		t.Errorf("GetItemById error %v", err)
 	}
 }
 
 func TestGetCompanyItemsFail(t *testing.T) {
-	mock_setup(t, "TestGetCompanyItemsFail")
+	mock_setup(t)
 	defer mock_teardown()
 
 	_itemQueryExpectation().
@@ -120,6 +120,6 @@ func TestGetCompanyItemsFail(t *testing.T) {
 
 	_, err := store.GetAllCompanyItems(company_id)
 	if err == nil {
-		_log_err("expected error")
+		t.Errorf("expected error")
 	}
 }

@@ -1,19 +1,20 @@
 package models
+
 import (
-	"fmt"
 	"database/sql"
+	"fmt"
 )
 
 type ShItem struct {
-	ItemId		int64
-	CompanyId 		int64
-	CategoryId		int64
-	Name 			string
-	ModelYear		string
-	PartNumber		string
-	BarCode 		string
-	HasBarCode		bool
-	ManualCode 		string
+	ItemId     int64	`json:"item_id"`
+	CompanyId  int64	`json:"company_id"`
+	CategoryId int64	`json:"category_id"`
+	Name       string	`json:"name"`
+	ModelYear  string	`json:"model_year"`
+	PartNumber string	`json:"part_number"`
+	BarCode    string	`json:"bar_code,omitempty"`
+	HasBarCode bool		`json:"has_bar_code"`
+	ManualCode string	`json:"manual_code"`
 }
 
 func (s *shStore) CreateItem(item *ShItem) (*ShItem, error) {
@@ -36,10 +37,10 @@ func (s *shStore) CreateItem(item *ShItem) (*ShItem, error) {
 
 func (s *shStore) CreateItemInTransaction(tnx *sql.Tx, item *ShItem) (*ShItem, error) {
 	err := tnx.QueryRow(
-		fmt.Sprintf("insert into %s " +
-		"(company_id, category_id, name, model_year, " +
-		"part_number, bar_code, has_bar_code, manual_code) values " +
-		"($1, $2, $3, $4, $5, $6, $7, $8) RETURNING item_id;", TABLE_INVENTORY_ITEM),
+		fmt.Sprintf("insert into %s "+
+			"(company_id, category_id, name, model_year, "+
+			"part_number, bar_code, has_bar_code, manual_code) values "+
+			"($1, $2, $3, $4, $5, $6, $7, $8) RETURNING item_id;", TABLE_INVENTORY_ITEM),
 		item.CompanyId, item.CategoryId, item.Name, item.ModelYear,
 		item.PartNumber, item.BarCode, item.HasBarCode, item.ManualCode).Scan(&item.ItemId)
 	return item, err
@@ -49,7 +50,7 @@ func (s *shStore) GetItemById(id int64) (*ShItem, error) {
 	msg := fmt.Sprintf("no item with that id %d", id)
 	item, err := _queryInventoryItems(s, msg, "where item_id = $1", id)
 	if err != nil || len(item) == 0 {
-		if err == nil{
+		if err == nil {
 			err = fmt.Errorf("No item with id:%d", id)
 		}
 		return nil, err
@@ -62,7 +63,7 @@ func (s *shStore) GetAllCompanyItems(company_id int64) ([]*ShItem, error) {
 	msg := fmt.Sprintf("no item in company:%d", company_id)
 	item, err := _queryInventoryItems(s, msg, "where company = $1", company_id)
 	if err != nil || len(item) == 0 {
-		if err == nil{
+		if err == nil {
 			err = fmt.Errorf("No items in company:%d", company_id)
 		}
 		return nil, err
@@ -74,7 +75,7 @@ func (s *shStore) GetAllCompanyItems(company_id int64) ([]*ShItem, error) {
 func _queryInventoryItems(s *shStore, err_msg string, where_stmt string, args ...interface{}) ([]*ShItem, error) {
 	var result []*ShItem
 
-	query := fmt.Sprintf("select item_id, company_id, category_id, name, model_year " +
+	query := fmt.Sprintf("select item_id, company_id, category_id, name, model_year "+
 		"part_number, bar_code, has_bar_code, manual_code from %s", TABLE_INVENTORY_ITEM)
 	sort_by := " ORDER BY item_id desc"
 
