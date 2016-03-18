@@ -22,7 +22,7 @@ func (b *shStore) CreateCompany(u *User, c *Company) (*Company, error) {
 		}
 	}()
 
-	company, err := b.CreateCompanyInTransaction(tnx, u, c)
+	company, err := b.CreateCompanyInTx(tnx, u, c)
 	if err != nil {
 		return nil, err
 	}
@@ -32,7 +32,7 @@ func (b *shStore) CreateCompany(u *User, c *Company) (*Company, error) {
 	return company, nil
 }
 
-func (b *shStore) CreateCompanyInTransaction(tnx *sql.Tx, u *User, c *Company) (*Company, error) {
+func (b *shStore) CreateCompanyInTx(tnx *sql.Tx, u *User, c *Company) (*Company, error) {
 	err := tnx.QueryRow(
 		fmt.Sprintf("insert into %s " +
 		"(company_name, contact) values " +

@@ -12,6 +12,7 @@ func TestCreateBranch(t *testing.T) {
 	mock_setup(t)
 	defer db.Close()
 
+	mock.ExpectBegin()
 	mock.ExpectQuery(fmt.Sprintf("insert into %s", TABLE_BRANCH)).
 		WithArgs(company_id, branch_name, branch_location).
 		WillReturnRows(sqlmock.NewRows(_cols("branch_id")).AddRow(branch_id))

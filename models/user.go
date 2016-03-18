@@ -29,7 +29,7 @@ func (b *shStore) CreateUser(u *User, password string) (*User, error) {
 		}
 	}()
 
-	user, err := b.CreateUserInTransaction(tnx, u, password)
+	user, err := b.CreateUserInTx(tnx, u, password)
 	if err != nil {
 		// if user isn't nil, it means it already existed in the db
 		return user, err
@@ -39,7 +39,7 @@ func (b *shStore) CreateUser(u *User, password string) (*User, error) {
 	return user, nil
 }
 
-func (b *shStore) CreateUserInTransaction(tnx *sql.Tx, u *User, password string) (*User, error) {
+func (b *shStore) CreateUserInTx(tnx *sql.Tx, u *User, password string) (*User, error) {
 	prev_user, err := _queryUserTnx(tnx, "user already exists", "where username = $1", u.Username)
 	if prev_user != nil {
 		return prev_user, fmt.Errorf("User:'%s' already exists", u.Username)
@@ -86,7 +86,7 @@ func (b *shStore) SetUserPermission(p *UserPermission) (*UserPermission, error) 
 		}
 	}()
 
-	permission, err := b.SetUserPermissionInTransaction(tnx, p)
+	permission, err := b.SetUserPermissionInTx(tnx, p)
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +95,7 @@ func (b *shStore) SetUserPermission(p *UserPermission) (*UserPermission, error) 
 	return permission, nil
 }
 
-func (b *shStore) SetUserPermissionInTransaction(tnx *sql.Tx, p *UserPermission) (*UserPermission, error) {
+func (b *shStore) SetUserPermissionInTx(tnx *sql.Tx, p *UserPermission) (*UserPermission, error) {
 	rows, err := tnx.Query(
 		fmt.Sprintf("select permission_type from %s "+
 			"where company_id = $1 and user_id = $2", TABLE_U_PERMISSION),

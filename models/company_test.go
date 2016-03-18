@@ -51,7 +51,7 @@ func TestCreateCompanyInTransaction(t *testing.T) {
 
 	tnx, err := db.Begin()
 	company := &Company{CompanyName: company_name, Contact: company_contact}
-	company, err = store.CreateCompanyInTransaction(tnx, nil, company)
+	company, err = store.CreateCompanyInTx(tnx, nil, company)
 	if err != nil {
 		t.Errorf("Company create error '%v'", err)
 	}
@@ -68,7 +68,7 @@ func TestCreateCompanyInTransactionFail(t *testing.T) {
 
 	tnx, err := db.Begin()
 	company := &Company{CompanyName: company_name, Contact: company_contact}
-	company, err = store.CreateCompanyInTransaction(tnx, nil, company)
+	company, err = store.CreateCompanyInTx(tnx, nil, company)
 	if err == nil {
 		t.Errorf("expected an error to occur")
 	}

@@ -19,10 +19,6 @@ const (
 	TABLE_TRANSACTION_ITEM = "business_transaction_item"
 )
 
-var (
-	GlobalDS DataStore
-)
-
 // Objects that implement this interface can be used as
 // a store for data in Sheket.
 type DataStore interface {

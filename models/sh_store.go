@@ -2,9 +2,9 @@ package models
 
 import "database/sql"
 
-var ShStore ShDataStore
-
 type ShDataStore interface {
+	GetDataStore() DataStore
+
 	/**
 	 * This assumes the transaction items are included in the transaction object.
 	 * Creation of a {@code ShTransaction} happens only happens in a database
@@ -22,12 +22,14 @@ type ShDataStore interface {
 	ListShTransactionSinceTransId(int64) ([]*ShTransaction, error)
 
 	CreateItem(*ShItem) (*ShItem, error)
-	CreateItemInTransaction(*sql.Tx, *ShItem) (*ShItem, error)
+	CreateItemInTx(*sql.Tx, *ShItem) (*ShItem, error)
 
 	GetItemById(int64) (*ShItem, error)
 	GetAllCompanyItems(int64) ([]*ShItem, error)
 
 	CreateBranch(*ShBranch) (*ShBranch, error)
+	CreateBranchInTx(*sql.Tx, *ShBranch) (*ShBranch, error)
+
 	GetBranchById(int64) (*ShBranch, error)
 	ListCompanyBranches(int64) ([]*ShBranch, error)
 
@@ -43,11 +45,11 @@ type ShDataStore interface {
 	// the company gets created, it all happens in a single-transaction
 	// NOTE: the transaction is not rolled-back in this method
 	// The CALLER needs to rollback the transaction if error occurs
-	CreateCompanyInTransaction(*sql.Tx, *User, *Company) (*Company, error)
+	CreateCompanyInTx(*sql.Tx, *User, *Company) (*Company, error)
 	GetCompanyById(int64) (*Company, error)
 
 	CreateUser(u *User, password string) (*User, error)
-	CreateUserInTransaction(tnx *sql.Tx, u *User, password string) (*User, error)
+	CreateUserInTx(tnx *sql.Tx, u *User, password string) (*User, error)
 
 	FindUserByName(string) (*User, error)
 	FindUserById(int64) (*User, error)
@@ -65,7 +67,7 @@ type ShDataStore interface {
 	// the admin of the company, that needs to happens in a single transaction with company creation
 	// NOTE: the transaction is not rolled-back in this method
 	// The CALLER needs to rollback the transaction if error occurs
-	SetUserPermissionInTransaction(*sql.Tx, *UserPermission) (*UserPermission, error)
+	SetUserPermissionInTx(*sql.Tx, *UserPermission) (*UserPermission, error)
 
 	// Pass in the user_id and company_id and you will get
 	// the full information about the user permission in that
@@ -81,4 +83,8 @@ type shStore struct {
 func NewShDataStore(ds DataStore) ShDataStore {
 	store := &shStore{ds}
 	return store
+}
+
+func (s *shStore) GetDataStore() DataStore {
+	return s.DataStore
 }

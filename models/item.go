@@ -14,7 +14,7 @@ type ShItem struct {
 	PartNumber string	`json:"part_number"`
 	BarCode    string	`json:"bar_code,omitempty"`
 	HasBarCode bool		`json:"has_bar_code"`
-	ManualCode string	`json:"manual_code"`
+	ManualCode string
 }
 
 func (s *shStore) CreateItem(item *ShItem) (*ShItem, error) {
@@ -27,7 +27,7 @@ func (s *shStore) CreateItem(item *ShItem) (*ShItem, error) {
 			tnx.Rollback()
 		}
 	}()
-	created_item, err := s.CreateItemInTransaction(tnx, item)
+	created_item, err := s.CreateItemInTx(tnx, item)
 	if err != nil {
 		return nil, err
 	}
@@ -35,7 +35,7 @@ func (s *shStore) CreateItem(item *ShItem) (*ShItem, error) {
 	return created_item, nil
 }
 
-func (s *shStore) CreateItemInTransaction(tnx *sql.Tx, item *ShItem) (*ShItem, error) {
+func (s *shStore) CreateItemInTx(tnx *sql.Tx, item *ShItem) (*ShItem, error) {
 	err := tnx.QueryRow(
 		fmt.Sprintf("insert into %s "+
 			"(company_id, category_id, name, model_year, "+

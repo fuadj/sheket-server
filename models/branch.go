@@ -41,10 +41,28 @@ func (s *ShBranchItem) Map() map[string]interface{} {
 }
 
 func (s *shStore) CreateBranch(b *ShBranch) (*ShBranch, error) {
-	err := s.QueryRow(
+	tnx, err := s.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		if err != nil {
+			tnx.Rollback()
+		}
+	}()
+	created, err := s.CreateBranchInTx(tnx, b)
+	if err != nil {
+		return nil, err
+	}
+	tnx.Commit()
+	return created, nil
+}
+
+func (s *shStore) CreateBranchInTx(tnx *sql.Tx, b *ShBranch) (*ShBranch, error) {
+	err := tnx.QueryRow(
 		fmt.Sprintf("insert into %s "+
-			"(company_id, branch_name, location) values "+
-			"($1, $2, $3) returning branch_id;", TABLE_BRANCH),
+		"(company_id, branch_name, location) values "+
+		"($1, $2, $3) returning branch_id;", TABLE_BRANCH),
 		b.CompanyId, b.Name, b.Location).Scan(&b.BranchId)
 	return b, err
 }

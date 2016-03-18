@@ -293,7 +293,7 @@ func TestSetUserPermissionInTransactionInsert(t *testing.T) {
 	tnx, err := db.Begin()
 
 	p := &UserPermission{company_id, user_id, permission_type, branch_id}
-	p, err = store.SetUserPermissionInTransaction(tnx, p)
+	p, err = store.SetUserPermissionInTx(tnx, p)
 	if err != nil {
 		t.Errorf("SetUserPermissionInTransaction error '%v'", err)
 	}
@@ -315,7 +315,7 @@ func TestSetUserPermissionInTransactionUpdate(t *testing.T) {
 	tnx, err := db.Begin()
 
 	p := &UserPermission{company_id, user_id, permission_type, branch_id}
-	p, err = store.SetUserPermissionInTransaction(tnx, p)
+	p, err = store.SetUserPermissionInTx(tnx, p)
 	if err != nil {
 		t.Errorf("SetUserPermissionInTransaction error '%v'", err)
 	}
@@ -333,7 +333,7 @@ func TestSetUserPermissionSelectInTransactionFail(t *testing.T) {
 	tnx, err := db.Begin()
 
 	p := &UserPermission{company_id, user_id, permission_type, branch_id}
-	p, err = store.SetUserPermissionInTransaction(tnx, p)
+	p, err = store.SetUserPermissionInTx(tnx, p)
 	if err == nil {
 		t.Errorf("SetUserPermission error '%v'", err)
 	}
@@ -353,7 +353,7 @@ func TestSetUserPermissionInsertInTransactionFail(t *testing.T) {
 
 	tnx, err := db.Begin()
 	p := &UserPermission{company_id, user_id, permission_type, branch_id}
-	p, err = store.SetUserPermissionInTransaction(tnx, p)
+	p, err = store.SetUserPermissionInTx(tnx, p)
 	if err == nil {
 		t.Errorf("expected an error")
 	}
@@ -374,7 +374,7 @@ func TestSetUserPermissionUpdateInTransactionFail(t *testing.T) {
 
 	tnx, err := db.Begin()
 	p := &UserPermission{company_id, user_id, permission_type, branch_id}
-	p, err = store.SetUserPermissionInTransaction(tnx, p)
+	p, err = store.SetUserPermissionInTx(tnx, p)
 	if err == nil {
 		t.Errorf("expected an error")
 	}
