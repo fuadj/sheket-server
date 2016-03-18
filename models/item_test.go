@@ -57,6 +57,48 @@ func TestCreateInventoryItemFail(t *testing.T) {
 	}
 }
 
+func TestUpdateInventoryItem(t *testing.T) {
+	mock_setup(t)
+
+	defer mock_teardown()
+
+	mock.ExpectBegin()
+	mock.ExpectExec(fmt.Sprintf("update %s", TABLE_INVENTORY_ITEM)).
+		WithArgs(category_id, item_name, item_model,
+		item_part_number, item_bar_code, item_has_bar_code, item_manual_code,
+		item_id).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
+	tnx, _ := db.Begin()
+	item := dummyTestItem()
+	item.ItemId = item_id
+	_, err := store.UpdateItemInTx(tnx, item)
+	if err != nil {
+		t.Errorf("update item failed %v", err)
+	}
+}
+
+func TestUpdateInventoryItemFail(t *testing.T) {
+	mock_setup(t)
+
+	defer mock_teardown()
+
+	mock.ExpectBegin()
+	mock.ExpectExec(fmt.Sprintf("update %s", TABLE_INVENTORY_ITEM)).
+	WithArgs(category_id, item_name, item_model,
+		item_part_number, item_bar_code, item_has_bar_code, item_manual_code,
+		item_id).
+	WillReturnError(fmt.Errorf("update error"))
+
+	tnx, _ := db.Begin()
+	item := dummyTestItem()
+	item.ItemId = item_id
+	_, err := store.UpdateItemInTx(tnx, item)
+	if err == nil {
+		t.Errorf("expected error")
+	}
+}
+
 func _itemQueryExpectation() *sqlmock.ExpectedQuery {
 	return mock.ExpectQuery(fmt.Sprintf("select (.+) from %s", TABLE_INVENTORY_ITEM))
 }
@@ -115,8 +157,8 @@ func TestGetCompanyItemsFail(t *testing.T) {
 	defer mock_teardown()
 
 	_itemQueryExpectation().
-	WithArgs(company_id).
-	WillReturnError(fmt.Errorf("query error"))
+		WithArgs(company_id).
+		WillReturnError(fmt.Errorf("query error"))
 
 	_, err := store.GetAllCompanyItems(company_id)
 	if err == nil {

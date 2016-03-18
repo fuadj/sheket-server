@@ -7,7 +7,6 @@ import (
 	"strings"
 )
 
-
 func TestCreateBranch(t *testing.T) {
 	mock_setup(t)
 	defer db.Close()
@@ -44,6 +43,46 @@ func TestCreateBranchFail(t *testing.T) {
 	branch, err := store.CreateBranch(branch)
 	if err == nil {
 		t.Errorf("error should have returned")
+	}
+}
+
+func TestUpdateBranch(t *testing.T) {
+	mock_setup(t)
+
+	defer mock_teardown()
+
+	mock.ExpectBegin()
+	mock.ExpectExec(fmt.Sprintf("update %s", TABLE_BRANCH)).
+		WithArgs(branch_name, branch_location, branch_id).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
+	tnx, _ := db.Begin()
+	branch := &ShBranch{company_id, 1, branch_name, branch_location}
+
+	branch.BranchId = branch_id
+	_, err := store.UpdateBranchInTx(tnx, branch)
+	if err != nil {
+		t.Errorf("update branch failed %v", err)
+	}
+}
+
+func TestUpdateBranchFail(t *testing.T) {
+	mock_setup(t)
+
+	defer mock_teardown()
+
+	mock.ExpectBegin()
+	mock.ExpectExec(fmt.Sprintf("update %s", TABLE_BRANCH)).
+		WithArgs(branch_name, branch_location, branch_id).
+		WillReturnError(fmt.Errorf("update error"))
+
+	tnx, _ := db.Begin()
+	branch := &ShBranch{company_id, 1, branch_name, branch_location}
+
+	branch.BranchId = branch_id
+	_, err := store.UpdateBranchInTx(tnx, branch)
+	if err == nil {
+		t.Errorf("expected error")
 	}
 }
 
@@ -157,7 +196,7 @@ func TestAddBranchItemUpdateRollback(t *testing.T) {
 	mock.ExpectQuery(fmt.Sprintf("select (.+) from %s", TABLE_BRANCH_ITEM)).
 		WithArgs(branch_id, item_id).
 		WillReturnRows(sqlmock.NewRows(_cols("item_id")).
-			AddRow(item_id))
+		AddRow(item_id))
 	mock.ExpectExec(fmt.Sprintf("update %s", TABLE_BRANCH_ITEM)).
 		WithArgs(quantity, item_location, branch_id, item_id).
 		WillReturnError(fmt.Errorf("update error"))
@@ -184,7 +223,7 @@ func TestUpdateItemInBranch(t *testing.T) {
 	item := &ShBranchItem{company_id, branch_id,
 		item_id, quantity, item_location}
 	tnx, _ := db.Begin()
-	_, err := store.UpdateItemInBranch(tnx, item)
+	_, err := store.UpdateBranchItemInTx(tnx, item)
 	if err != nil {
 		t.Errorf("UpdateItemInBranch error '%v'", err)
 	}
@@ -202,7 +241,7 @@ func TestUpdateItemInBranchFail(t *testing.T) {
 	item := &ShBranchItem{company_id, branch_id,
 		item_id, quantity, item_location}
 	tnx, _ := db.Begin()
-	_, err := store.UpdateItemInBranch(tnx, item)
+	_, err := store.UpdateBranchItemInTx(tnx, item)
 	if err == nil {
 		t.Errorf("expected error")
 	}

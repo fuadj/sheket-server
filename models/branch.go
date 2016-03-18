@@ -67,6 +67,15 @@ func (s *shStore) CreateBranchInTx(tnx *sql.Tx, b *ShBranch) (*ShBranch, error) 
 	return b, err
 }
 
+func (s *shStore) UpdateBranchInTx(tnx *sql.Tx, b *ShBranch) (*ShBranch, error) {
+	_, err := tnx.Exec(
+		fmt.Sprintf("update %s set "+
+		"(branch_name, location) values "+
+		"($1, $2) where branch_id = $3 ", TABLE_BRANCH),
+		b.Name, b.Location, b.BranchId)
+	return b, err
+}
+
 func (s *shStore) GetBranchById(id int64) (*ShBranch, error) {
 	msg := fmt.Sprintf("no branch with that id %d", id)
 	branches, err := _queryBranch(s, msg, "where branch_id = $1", id)
@@ -129,8 +138,7 @@ func (s *shStore) AddItemToBranch(item *ShBranchItem) (*ShBranchItem, error) {
 
 	return item, nil
 }
-
-func (s *shStore) UpdateItemInBranch(tnx *sql.Tx, item *ShBranchItem) (*ShBranchItem, error) {
+func (s *shStore) UpdateBranchItemInTx(tnx *sql.Tx, item *ShBranchItem) (*ShBranchItem, error) {
 	_, err := tnx.Exec(fmt.Sprintf("update %s set "+
 		"quantity = $1, item_location = $2 "+
 		"where branch_id = $3 and item_id = $4", TABLE_BRANCH_ITEM),

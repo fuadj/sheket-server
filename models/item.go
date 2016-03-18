@@ -46,6 +46,19 @@ func (s *shStore) CreateItemInTx(tnx *sql.Tx, item *ShItem) (*ShItem, error) {
 	return item, err
 }
 
+func (s *shStore) UpdateItemInTx(tnx *sql.Tx, item *ShItem) (*ShItem, error) {
+	_, err := tnx.Exec(
+		fmt.Sprintf("update %s set "+
+		"(category_id, name, model_year, "+
+		"part_number, bar_code, has_bar_code, manual_code) values "+
+		"($1, $2, $3, $4, $5, $6, $7) " +
+		"where item_id = $8", TABLE_INVENTORY_ITEM),
+		item.CategoryId, item.Name, item.ModelYear,
+		item.PartNumber, item.BarCode, item.HasBarCode, item.ManualCode,
+		item.ItemId)
+	return item, err
+}
+
 func (s *shStore) GetItemById(id int64) (*ShItem, error) {
 	msg := fmt.Sprintf("no item with that id %d", id)
 	item, err := _queryInventoryItems(s, msg, "where item_id = $1", id)

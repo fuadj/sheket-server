@@ -24,17 +24,20 @@ type ShDataStore interface {
 	CreateItem(*ShItem) (*ShItem, error)
 	CreateItemInTx(*sql.Tx, *ShItem) (*ShItem, error)
 
+	UpdateItemInTx(*sql.Tx, *ShItem) (*ShItem, error)
+
 	GetItemById(int64) (*ShItem, error)
 	GetAllCompanyItems(int64) ([]*ShItem, error)
 
 	CreateBranch(*ShBranch) (*ShBranch, error)
 	CreateBranchInTx(*sql.Tx, *ShBranch) (*ShBranch, error)
+	UpdateBranchInTx(*sql.Tx, *ShBranch) (*ShBranch, error)
 
 	GetBranchById(int64) (*ShBranch, error)
 	ListCompanyBranches(int64) ([]*ShBranch, error)
 
 	AddItemToBranch(*ShBranchItem) (*ShBranchItem, error)
-	UpdateItemInBranch(*sql.Tx, *ShBranchItem) (*ShBranchItem, error)
+	UpdateBranchItemInTx(*sql.Tx, *ShBranchItem) (*ShBranchItem, error)
 
 	GetItemsInBranch(int64) ([]*ShBranchItem, error)
 	GetItemsInAllCompanyBranches(int64) ([]*ShBranchItem, error)
