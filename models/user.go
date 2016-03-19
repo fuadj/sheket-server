@@ -18,7 +18,7 @@ type UserPermission struct {
 	BranchId       int64
 }
 
-func (b *shStore) CreateUser(u *User, password string) (*User, error) {
+func (b *shStore) CreateUser(u *User) (*User, error) {
 	tnx, err := b.Begin()
 	if err != nil {
 		return nil, fmt.Errorf("User create error '%v'", err)
@@ -29,7 +29,7 @@ func (b *shStore) CreateUser(u *User, password string) (*User, error) {
 		}
 	}()
 
-	user, err := b.CreateUserInTx(tnx, u, password)
+	user, err := b.CreateUserInTx(tnx, u)
 	if err != nil {
 		// if user isn't nil, it means it already existed in the db
 		return user, err
@@ -39,7 +39,7 @@ func (b *shStore) CreateUser(u *User, password string) (*User, error) {
 	return user, nil
 }
 
-func (b *shStore) CreateUserInTx(tnx *sql.Tx, u *User, password string) (*User, error) {
+func (b *shStore) CreateUserInTx(tnx *sql.Tx, u *User) (*User, error) {
 	prev_user, err := _queryUserTnx(tnx, "user already exists", "where username = $1", u.Username)
 	if prev_user != nil {
 		return prev_user, fmt.Errorf("User:'%s' already exists", u.Username)

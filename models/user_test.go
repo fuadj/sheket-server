@@ -23,7 +23,7 @@ func TestCreateUserNotExist(t *testing.T) {
 	mock.ExpectCommit()
 
 	u := &User{Username: username, HashedPassword: pass_hash}
-	_, err := store.CreateUser(u, password)
+	_, err := store.CreateUser(u)
 	if err != nil {
 		t.Errorf("CreateUser error '%v'", err)
 	}
@@ -45,7 +45,7 @@ func TestCreateUserNotExistFail(t *testing.T) {
 	mock.ExpectRollback()
 
 	u := &User{Username: username, HashedPassword: pass_hash}
-	_, err := store.CreateUser(u, password)
+	_, err := store.CreateUser(u)
 	if err == nil {
 		t.Errorf("expected error")
 	}
@@ -64,7 +64,7 @@ func TestCreateUserExistRollback(t *testing.T) {
 	mock.ExpectRollback()
 
 	u := &User{Username: username, HashedPassword: pass_hash}
-	_, err := store.CreateUser(u, password)
+	_, err := store.CreateUser(u)
 	if err == nil {
 		t.Errorf("expected user already exists error")
 	}
@@ -82,7 +82,7 @@ func TestCreateUserExistFail(t *testing.T) {
 	mock.ExpectRollback()
 
 	u := &User{Username: username, HashedPassword: pass_hash}
-	_, err := store.CreateUser(u, password)
+	_, err := store.CreateUser(u)
 	if err == nil {
 		t.Errorf("expected select error")
 	}

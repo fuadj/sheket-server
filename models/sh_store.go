@@ -51,8 +51,8 @@ type ShDataStore interface {
 	CreateCompanyInTx(*sql.Tx, *User, *Company) (*Company, error)
 	GetCompanyById(int64) (*Company, error)
 
-	CreateUser(u *User, password string) (*User, error)
-	CreateUserInTx(tnx *sql.Tx, u *User, password string) (*User, error)
+	CreateUser(u *User) (*User, error)
+	CreateUserInTx(tnx *sql.Tx, u *User) (*User, error)
 
 	FindUserByName(string) (*User, error)
 	FindUserById(int64) (*User, error)
