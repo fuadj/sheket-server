@@ -19,7 +19,7 @@ type ShDataStore interface {
 
 	// this doesn't fetch items in the transaction
 	// those need to be specifically queried
-	ListShTransactionSinceTransId(int64) ([]*ShTransaction, error)
+	GetShTransactionSinceTransId(int64) ([]*ShTransaction, error)
 
 	CreateItem(*ShItem) (*ShItem, error)
 	CreateItemInTx(*sql.Tx, *ShItem) (*ShItem, error)
@@ -27,6 +27,7 @@ type ShDataStore interface {
 	UpdateItemInTx(*sql.Tx, *ShItem) (*ShItem, error)
 
 	GetItemById(int64) (*ShItem, error)
+	GetItemByIdInTx(*sql.Tx, int64) (*ShItem, error)
 	GetAllCompanyItems(int64) ([]*ShItem, error)
 
 	CreateBranch(*ShBranch) (*ShBranch, error)
@@ -37,6 +38,12 @@ type ShDataStore interface {
 	ListCompanyBranches(int64) ([]*ShBranch, error)
 
 	AddItemToBranch(*ShBranchItem) (*ShBranchItem, error)
+	AddItemToBranchInTx(*sql.Tx, *ShBranchItem) (*ShBranchItem, error)
+
+	// the *ShBranchItem argument is only used to get the
+	// branch and item id's
+	GetBranchItem(branch_id, item_id int64) (*ShBranchItem, error)
+	GetBranchItemInTx(tnx *sql.Tx, branch_id, item_id int64) (*ShBranchItem, error)
 	UpdateBranchItemInTx(*sql.Tx, *ShBranchItem) (*ShBranchItem, error)
 
 	GetItemsInBranch(int64) ([]*ShBranchItem, error)
@@ -72,10 +79,10 @@ type ShDataStore interface {
 	// The CALLER needs to rollback the transaction if error occurs
 	SetUserPermissionInTx(*sql.Tx, *UserPermission) (*UserPermission, error)
 
-	// Pass in the user_id and company_id and you will get
-	// the full information about the user permission in that
-	// company if it exists.
-	GetUserPermission(*UserPermission) (*UserPermission, error)
+	GetUserPermission(u *User, company_id int64) (*UserPermission, error)
+
+	AddEntityRevisionInTx(*sql.Tx, *ShEntityRevision) (*ShEntityRevision, error)
+	GetRevisionsSince(*ShEntityRevision) ([]*ShEntityRevision, error)
 }
 
 // implements ShDataStore

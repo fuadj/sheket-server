@@ -11,6 +11,16 @@ type User struct {
 	HashedPassword string
 }
 
+const (
+	U_PERMISSION_CREATOR = iota + 1
+	U_PERMISSION_ADMIN
+	U_PERMISSION_MANAGER
+	U_PERMISSION_BRANCH_MANAGER
+	U_PERMISSION_EMPLOYEE_OTHER_BRANCH_ACCESS
+	U_PERMISSION_EMPLOYEE_BRANCH_TRANSACTION
+	U_PERMISSION_EMPLOYEE_BRANCH_ITEM_ACCESS
+)
+
 type UserPermission struct {
 	CompanyId      int64
 	UserId         int64
@@ -126,13 +136,17 @@ func (b *shStore) SetUserPermissionInTx(tnx *sql.Tx, p *UserPermission) (*UserPe
 	return p, nil
 }
 
-func (b *shStore) GetUserPermission(p *UserPermission) (*UserPermission, error) {
+func (b *shStore) GetUserPermission(u *User, company_id int64) (*UserPermission, error) {
 	msg := fmt.Sprintf("error fetching user:'%d' permission for company:'%d'",
-		p.UserId, p.CompanyId)
+		u.UserId, company_id)
 	permission, err := _queryUserPermission(b, msg,
-		"where company_id = $1 and user_id = $2", p.CompanyId, p.UserId)
-	if err != nil || permission == nil {
+		"where company_id = $1 and user_id = $2", company_id, u.UserId)
+	if err != nil {
 		return nil, err
+	}
+	if permission == nil {
+		return nil, fmt.Errorf("user %d, doesn't have permission in company %d",
+			u.UserId, company_id)
 	}
 	return permission, nil
 }

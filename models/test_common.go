@@ -8,29 +8,29 @@ import (
 )
 
 const (
-	company_id      = int64(1)
-	company_name    = "test company"
-	company_contact = "0912646275"
-	username        = "test user"
-	user_id         = int64(12312)
-	password        = "abcd abcd"
-	pass_hash       = "xxkkadlkjaf"
-	branch_name     = "test branch"
-	permission_type = 4 //	means smth
-	category_id     = 2
-	branch_location = "mexico"
-	branch_id       = int64(10)
-	item_id         = int64(88)
-	quantity        = 8.8
-	item_location   = "A10"
-	date            = 87123
+	t_company_id      = int64(1)
+	t_company_name    = "test company"
+	t_company_contact = "0912646275"
+	t_username        = "test user"
+	t_user_id         = int64(12312)
+	t_password        = "abcd abcd"
+	t_pass_hash       = "xxkkadlkjaf"
+	t_branch_name     = "test branch"
+	t_permission_type = 4 //	means smth
+	t_category_id     = 2
+	t_branch_location = "mexico"
+	t_branch_id       = int64(10)
+	t_item_id         = int64(88)
+	t_quantity        = 8.8
+	t_item_location   = "A10"
+	t_date            = 87123
 )
 
 var (
-	ts      *testing.T
-	db      *sql.DB
-	mock    sqlmock.Sqlmock
-	store   ShDataStore
+	ts    *testing.T
+	db    *sql.DB
+	mock  sqlmock.Sqlmock
+	store ShDataStore
 )
 
 func mock_setup(t *testing.T) {

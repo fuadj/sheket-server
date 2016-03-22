@@ -17,6 +17,7 @@ const (
 	TABLE_BRANCH_ITEM      = "branch_item"
 	TABLE_TRANSACTION      = "business_transaction"
 	TABLE_TRANSACTION_ITEM = "business_transaction_item"
+	TABLE_ENTITY_REVISION  = "table_entity_revision"
 )
 
 // Objects that implement this interface can be used as
@@ -197,6 +198,15 @@ func ConnectDbStore() (*dbStore, error) {
 		"other_branch_id 	INTEGER, "+
 		"quantity 			REAL NOT NULL));",
 		TABLE_TRANSACTION_ITEM, TABLE_TRANSACTION, TABLE_INVENTORY_ITEM))
+
+	exec(t_name("create table if not exists %s ( "+
+		"company_id			integer references %s(company_id), "+
+		"revision_number 	integer not null, "+
+		"entity_type 		integer not null, "+
+		"action_type 		integer not null, "+
+		"affected_id 		integer not null, "+
+		"additional_info 	integer));"+
+		TABLE_ENTITY_REVISION, TABLE_COMPANY))
 
 	if err != nil {
 		return nil, err

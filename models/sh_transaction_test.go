@@ -18,16 +18,16 @@ const (
 func _dummyShTransactionItem(i int64) *ShTransactionItem {
 	return &ShTransactionItem{
 		TransType:     trans_type,
-		ItemId:        item_id + i,
+		ItemId:        t_item_id + i,
 		OtherBranchId: other_branch,
 		Quantity:      trans_quantity,
 	}
 }
 
 func _dummyShTransaction() *ShTransaction {
-	trans := &ShTransaction{CompanyId: company_id,
+	trans := &ShTransaction{CompanyId: t_company_id,
 		LocalTransactionId: local_transaction_id,
-		UserId:             user_id, BranchId: branch_id, Date: date,
+		UserId:             t_user_id, BranchId: t_branch_id, Date: t_date,
 		TransItems: make([]*ShTransactionItem, 0)}
 
 	trans.TransItems = make([]*ShTransactionItem, num_trans_items)
@@ -41,7 +41,7 @@ func _dummyShTransaction() *ShTransaction {
 func _transItemInsertExpectation(i int64, return_error bool) *sqlmock.ExpectedExec {
 	expect := mock.ExpectExec(
 		fmt.Sprintf("insert into %s", TABLE_TRANSACTION_ITEM)).
-		WithArgs(transaction_id, trans_type, item_id+i,
+		WithArgs(transaction_id, trans_type, t_item_id +i,
 		other_branch, trans_quantity)
 	if return_error {
 		expect.WillReturnError(fmt.Errorf("insert error"))
@@ -57,7 +57,7 @@ func _transPrevExistExpectation(prev_exist bool, return_error bool) *sqlmock.Exp
 		rs.AddRow(transaction_id)
 	}
 	expect := mock.ExpectQuery(fmt.Sprintf("select (.+) from %s", TABLE_TRANSACTION)).
-		WithArgs(company_id, user_id, local_transaction_id)
+		WithArgs(t_company_id, t_user_id, local_transaction_id)
 	if return_error {
 		expect.WillReturnError(fmt.Errorf("select error"))
 	} else {
@@ -69,7 +69,7 @@ func _transPrevExistExpectation(prev_exist bool, return_error bool) *sqlmock.Exp
 func _transMaxExpectation(return_error bool) *sqlmock.ExpectedQuery {
 	expect := mock.ExpectQuery(
 		fmt.Sprintf("select (.+) from %s", TABLE_TRANSACTION)).
-		WithArgs(company_id)
+		WithArgs(t_company_id)
 	if return_error {
 		expect.WillReturnError(fmt.Errorf("select error"))
 	} else {
@@ -82,7 +82,7 @@ func _transMaxExpectation(return_error bool) *sqlmock.ExpectedQuery {
 
 func _transInsertExpectation(return_error bool) *sqlmock.ExpectedExec {
 	expect := mock.ExpectExec(fmt.Sprintf("insert into %s", TABLE_TRANSACTION)).
-		WithArgs(transaction_id, company_id, user_id, local_transaction_id, branch_id, date)
+		WithArgs(transaction_id, t_company_id, t_user_id, local_transaction_id, t_branch_id, t_date)
 	if return_error {
 		expect.WillReturnError(fmt.Errorf("insert error"))
 	} else {
@@ -198,7 +198,7 @@ func _transItemQueryExpectation(n int64, return_error bool) *sqlmock.ExpectedQue
 			_cols("transaction_id, trans_type, item_id, " +
 				"other_branch_id,quantity"))
 		for i := int64(0); i < n; i++ {
-			rows.AddRow(transaction_id, trans_type, item_id+i,
+			rows.AddRow(transaction_id, trans_type, t_item_id +i,
 				other_branch, trans_quantity)
 		}
 		expect.WillReturnRows(rows)
@@ -210,8 +210,8 @@ func _transQueryRows() sqlmock.Rows {
 	return sqlmock.NewRows(
 		_cols("transaction_id,company_id,local_transaction_id,"+
 			"user_id, date")).
-		AddRow(transaction_id, company_id, local_transaction_id,
-		user_id, date)
+		AddRow(transaction_id, t_company_id, local_transaction_id,
+		t_user_id, t_date)
 }
 
 func TestGetShTransactionByIdFetchItems(t *testing.T) {

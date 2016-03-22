@@ -17,13 +17,43 @@ type ShTransaction struct {
 	TransItems         []*ShTransactionItem
 }
 
+func (s *ShTransaction) Map() map[string]interface{} {
+	result := make(map[string]interface{})
+	result["transaction_id"] = s.TransactionId
+	result["company_id"] = s.CompanyId
+	result["local_trans_id"] = s.LocalTransactionId
+	result["user_id"] = s.UserId
+	result["branch_id"] = s.BranchId
+	result["date"] = s.Date
+	return result
+}
+
 const (
-	TRANS_TYPE_GENERIC                    = 1
-	TRANS_TYPE_SELL_CURRENT_BRANCH_ITEM   = 2
-	TRANS_TYPE_SELL_PURCHASE_ITEM         = 3
-	TRANS_TYPE_SELL_OTHER_BRANCH_ITEM     = 4
-	TRANS_TYPE_TRANSFER_OTHER_BRANCH_ITEM = 5
-	TRANS_TYPE_ADD_PURCHASED_ITEM         = 6
+	// Transaction Type constants
+
+	// This affects stock by decreasing item in current branch
+	TRANS_TYPE_SELL_CURRENT_BRANCH_ITEM = iota + 1
+
+	// This DOES NOT stock as the items are sold directly
+	// from purchase, so branch inventory isn't affected by it
+	TRANS_TYPE_SELL_PURCHASED_ITEM_DIRECTLY
+
+	// This is a 'delegate' type transaction where a purchase
+	// happens in a branch but the items are taken out of the
+	// inventory of another branch, so the 'seller' branch's
+	// stock isn't affected, but it will decrease the branch
+	// from which them items are taken out
+	TRANS_TYPE_SELL_OTHER_BRANCH_ITEM
+
+	// This is a 'resupply' type of transaction, where a shop
+	// request items from another branch(e.g: a warehouse),
+	// i.e: the shop's stock increases where by the warehouse's decrease
+	TRANS_TYPE_TRANSFER_OTHER_BRANCH_ITEM
+
+	// This is the primary means for inventory in a company to INCREASE
+	// This increases stock count of any branch where the goods are
+	// stored after purchase
+	TRANS_TYPE_ADD_PURCHASED_ITEM
 )
 
 type ShTransactionItem struct {
@@ -76,7 +106,7 @@ func (s *shStore) CreateShTransaction(tnx *sql.Tx, trans *ShTransaction) (*ShTra
 	trans.TransactionId = max_trans_id
 
 	_, err = tnx.Exec(fmt.Sprintf("insert into %s "+
-		"(transaction_id, company_id, user_id, local_transaction_id, branch_id, date) values " +
+		"(transaction_id, company_id, user_id, local_transaction_id, branch_id, date) values "+
 		"($1, $2, $3, $4, $5, $6)",
 		TABLE_TRANSACTION),
 		max_trans_id, trans.CompanyId, trans.UserId, trans.LocalTransactionId, trans.BranchId, trans.Date)
@@ -119,7 +149,7 @@ func (s *shStore) GetShTransactionById(id int64, fetch_items bool) (*ShTransacti
 	return transaction[0], nil
 }
 
-func (s *shStore) ListShTransactionSinceTransId(prev_id int64) ([]*ShTransaction, error) {
+func (s *shStore) GetShTransactionSinceTransId(prev_id int64) ([]*ShTransaction, error) {
 	msg := fmt.Sprintf("no transactions after id:%d", prev_id)
 	transaction, err := _queryShTransaction(s, false, msg, "where transaction_id > $1", prev_id)
 	if err != nil {
@@ -131,7 +161,7 @@ func (s *shStore) ListShTransactionSinceTransId(prev_id int64) ([]*ShTransaction
 func _queryShTransaction(s *shStore, fetch_items bool, err_msg string, where_stmt string, args ...interface{}) ([]*ShTransaction, error) {
 	var result []*ShTransaction
 
-	query := fmt.Sprintf("select transaction_id, company_id, " +
+	query := fmt.Sprintf("select transaction_id, company_id, "+
 		"local_transaction_id, user_id, date from %s", TABLE_TRANSACTION)
 	sort_by := " ORDER BY transaction_id asc"
 
@@ -175,7 +205,7 @@ func _queryShTransaction(s *shStore, fetch_items bool, err_msg string, where_stm
 func _queryShTransactionItems(s *shStore, err_msg string, where_stmt string, args ...interface{}) ([]*ShTransactionItem, error) {
 	var result []*ShTransactionItem
 
-	query := fmt.Sprintf("select transaction_id, trans_type, item_id, " +
+	query := fmt.Sprintf("select transaction_id, trans_type, item_id, "+
 		"other_branch_id, quantity from %s", TABLE_TRANSACTION_ITEM)
 
 	var rows *sql.Rows
