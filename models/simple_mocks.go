@@ -58,6 +58,14 @@ func (m *SimpleBranchItemStore) UpdateBranchItemInTx(tnx *sql.Tx, item *ShBranch
 	return item, nil
 }
 
+func (m *SimpleBranchItemStore) GetItemsInBranch(int64) ([]*ShBranchItem, error) {
+	// TODO: not yet implemented
+	return nil, nil
+}
+func (m *SimpleBranchItemStore) GetItemsInAllCompanyBranches(int64) ([]*ShBranchItem, error) {
+	return nil, nil
+}
+
 type SimpleTransactionStore struct {
 	Transactions map[int64]*ShTransaction
 	TransItems   map[int64]map[*ShTransactionItem]bool

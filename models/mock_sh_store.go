@@ -312,6 +312,28 @@ func (_mr *_MockBranchItemStoreRecorder) UpdateBranchItemInTx(arg0, arg1 interfa
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "UpdateBranchItemInTx", arg0, arg1)
 }
 
+func (_m *MockBranchItemStore) GetItemsInBranch(_param0 int64) ([]*ShBranchItem, error) {
+	ret := _m.ctrl.Call(_m, "GetItemsInBranch", _param0)
+	ret0, _ := ret[0].([]*ShBranchItem)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (_mr *_MockBranchItemStoreRecorder) GetItemsInBranch(arg0 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetItemsInBranch", arg0)
+}
+
+func (_m *MockBranchItemStore) GetItemsInAllCompanyBranches(_param0 int64) ([]*ShBranchItem, error) {
+	ret := _m.ctrl.Call(_m, "GetItemsInAllCompanyBranches", _param0)
+	ret0, _ := ret[0].([]*ShBranchItem)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (_mr *_MockBranchItemStoreRecorder) GetItemsInAllCompanyBranches(arg0 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetItemsInAllCompanyBranches", arg0)
+}
+
 // Mock of CompanyStore interface
 type MockCompanyStore struct {
 	ctrl     *gomock.Controller
@@ -746,6 +768,28 @@ func (_m *MockShStore) UpdateBranchItemInTx(_param0 *sql.Tx, _param1 *ShBranchIt
 
 func (_mr *_MockShStoreRecorder) UpdateBranchItemInTx(arg0, arg1 interface{}) *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "UpdateBranchItemInTx", arg0, arg1)
+}
+
+func (_m *MockShStore) GetItemsInBranch(_param0 int64) ([]*ShBranchItem, error) {
+	ret := _m.ctrl.Call(_m, "GetItemsInBranch", _param0)
+	ret0, _ := ret[0].([]*ShBranchItem)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (_mr *_MockShStoreRecorder) GetItemsInBranch(arg0 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetItemsInBranch", arg0)
+}
+
+func (_m *MockShStore) GetItemsInAllCompanyBranches(_param0 int64) ([]*ShBranchItem, error) {
+	ret := _m.ctrl.Call(_m, "GetItemsInAllCompanyBranches", _param0)
+	ret0, _ := ret[0].([]*ShBranchItem)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (_mr *_MockShStoreRecorder) GetItemsInAllCompanyBranches(arg0 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetItemsInAllCompanyBranches", arg0)
 }
 
 func (_m *MockShStore) CreateCompany(u *User, c *Company) (*Company, error) {

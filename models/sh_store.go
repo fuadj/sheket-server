@@ -50,8 +50,8 @@ type BranchItemStore interface {
 	GetBranchItemInTx(tnx *sql.Tx, branch_id, item_id int64) (*ShBranchItem, error)
 	UpdateBranchItemInTx(*sql.Tx, *ShBranchItem) (*ShBranchItem, error)
 
-	//GetItemsInBranch(int64) ([]*ShBranchItem, error)
-	//GetItemsInAllCompanyBranches(int64) ([]*ShBranchItem, error)
+	GetItemsInBranch(int64) ([]*ShBranchItem, error)
+	GetItemsInAllCompanyBranches(int64) ([]*ShBranchItem, error)
 }
 
 type CompanyStore interface {
