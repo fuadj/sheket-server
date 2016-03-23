@@ -30,7 +30,7 @@ var (
 	ts    *testing.T
 	db    *sql.DB
 	mock  sqlmock.Sqlmock
-	store ShDataStore
+	store ShStore
 )
 
 func mock_setup(t *testing.T) {

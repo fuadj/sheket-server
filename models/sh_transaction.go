@@ -17,15 +17,12 @@ type ShTransaction struct {
 	TransItems         []*ShTransactionItem
 }
 
-func (s *ShTransaction) Map() map[string]interface{} {
-	result := make(map[string]interface{})
-	result["transaction_id"] = s.TransactionId
-	result["company_id"] = s.CompanyId
-	result["local_trans_id"] = s.LocalTransactionId
-	result["user_id"] = s.UserId
-	result["branch_id"] = s.BranchId
-	result["date"] = s.Date
-	return result
+type ShTransactionItem struct {
+	TransactionId int64
+	TransType     int64
+	ItemId        int64
+	OtherBranchId int64
+	Quantity      float64
 }
 
 const (
@@ -55,24 +52,6 @@ const (
 	// stored after purchase
 	TRANS_TYPE_ADD_PURCHASED_ITEM
 )
-
-type ShTransactionItem struct {
-	TransactionId int64
-	TransType     int64
-	ItemId        int64
-	OtherBranchId int64
-	Quantity      float64
-}
-
-func (s *ShTransactionItem) Map() map[string]interface{} {
-	result := make(map[string]interface{})
-	result["transaction_id"] = s.TransactionId
-	result["trans_type"] = s.TransType
-	result["item_id"] = s.ItemId
-	result["other_branch"] = s.OtherBranchId
-	result["quantity"] = s.Quantity
-	return result
-}
 
 func (s *shStore) CreateShTransaction(tnx *sql.Tx, trans *ShTransaction) (*ShTransaction, error) {
 	exist_trans, err := tnx.Query(
@@ -115,7 +94,7 @@ func (s *shStore) CreateShTransaction(tnx *sql.Tx, trans *ShTransaction) (*ShTra
 	}
 
 	for i := range trans.TransItems {
-		elem, err := s.AddShTransactionElem(tnx, trans, trans.TransItems[i])
+		elem, err := s.AddShTransactionItem(tnx, trans, trans.TransItems[i])
 		if err != nil {
 			return nil, err
 		}
@@ -125,7 +104,7 @@ func (s *shStore) CreateShTransaction(tnx *sql.Tx, trans *ShTransaction) (*ShTra
 	return trans, nil
 }
 
-func (s *shStore) AddShTransactionElem(tnx *sql.Tx, trans *ShTransaction, elem *ShTransactionItem) (*ShTransactionItem, error) {
+func (s *shStore) AddShTransactionItem(tnx *sql.Tx, trans *ShTransaction, elem *ShTransactionItem) (*ShTransactionItem, error) {
 	_, err := tnx.Exec(fmt.Sprintf("insert into %s "+
 		"(transaction_id, trans_type, item_id, other_branch_id, quantity) values "+
 		"($1, $2, $3, $4, $5)", TABLE_TRANSACTION_ITEM),
