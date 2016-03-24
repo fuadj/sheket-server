@@ -118,7 +118,7 @@ func (s *shStore) AddShTransactionItem(tnx *sql.Tx, trans *ShTransaction, elem *
 
 func (s *shStore) GetShTransactionById(id int64, fetch_items bool) (*ShTransaction, error) {
 	msg := fmt.Sprintf("no transaction with id %d", id)
-	transaction, err := _queryShTransaction(s, fetch_items, msg, "where transaction_id = $1", id)
+	_, transaction, err := _queryShTransaction(0, s, fetch_items, msg, "where transaction_id = $1", id)
 	if err != nil {
 		return nil, err
 	}
@@ -128,31 +128,34 @@ func (s *shStore) GetShTransactionById(id int64, fetch_items bool) (*ShTransacti
 	return transaction[0], nil
 }
 
-func (s *shStore) GetShTransactionSinceTransId(prev_id int64) ([]*ShTransaction, error) {
+func (s *shStore) GetShTransactionSinceTransId(prev_id int64) (max_id int64,
+	trans []*ShTransaction, err error) {
+
 	msg := fmt.Sprintf("no transactions after id:%d", prev_id)
-	transaction, err := _queryShTransaction(s, false, msg, "where transaction_id > $1", prev_id)
+	max_id, transaction, err := _queryShTransaction(max_id, s, false, msg, "where transaction_id > $1", prev_id)
 	if err != nil {
-		return nil, err
+		return max_id, nil, err
 	}
-	return transaction, nil
+	return max_id, transaction, nil
 }
 
-func _queryShTransaction(s *shStore, fetch_items bool, err_msg string, where_stmt string, args ...interface{}) ([]*ShTransaction, error) {
+func _queryShTransaction(prev_max_id int64, s *shStore, fetch_items bool, err_msg string, where_stmt string, args ...interface{}) (max_id int64,
+	trans []*ShTransaction, err error) {
 	var result []*ShTransaction
 
+	max_id = prev_max_id
 	query := fmt.Sprintf("select transaction_id, company_id, "+
 		"local_transaction_id, user_id, date from %s", TABLE_TRANSACTION)
 	sort_by := " ORDER BY transaction_id asc"
 
 	var rows *sql.Rows
-	var err error
 	if len(where_stmt) > 0 {
 		rows, err = s.Query(query+" "+where_stmt+sort_by, args...)
 	} else {
 		rows, err = s.Query(query + sort_by)
 	}
 	if err != nil {
-		return nil, fmt.Errorf("%s %v", err_msg, err)
+		return max_id, nil, fmt.Errorf("%s %v", err_msg, err)
 	}
 
 	for rows.Next() {
@@ -165,20 +168,24 @@ func _queryShTransaction(s *shStore, fetch_items bool, err_msg string, where_stm
 			&t.Date,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("%s %v", err_msg, err.Error())
+			return max_id, nil, fmt.Errorf("%s %v", err_msg, err.Error())
+		}
+
+		if t.TransactionId > max_id {
+			max_id = t.TransactionId
 		}
 
 		var items []*ShTransactionItem
 		if fetch_items {
 			items, err = _queryShTransactionItems(s, err_msg, "where transaction_id = $1", t.TransactionId)
 			if err != nil {
-				return nil, err
+				return max_id, nil, err
 			}
 		}
 		t.TransItems = items
 		result = append(result, t)
 	}
-	return result, nil
+	return max_id, result, nil
 }
 
 func _queryShTransactionItems(s *shStore, err_msg string, where_stmt string, args ...interface{}) ([]*ShTransactionItem, error) {

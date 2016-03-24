@@ -108,8 +108,16 @@ func (s *SimpleTransactionStore) GetShTransactionById(id int64, fetch_items bool
 	return trans, nil
 }
 
-func (s *SimpleTransactionStore) GetShTransactionSinceTransId(int64) ([]*ShTransaction, error) {
-	return nil, nil
+func (s *SimpleTransactionStore) GetShTransactionSinceTransId(int64) (int64, []*ShTransaction, error) {
+	var trans []*ShTransaction
+	var max_id int64
+	for _, t := range s.Transactions {
+		trans = append(trans, t)
+		if t.TransactionId > max_id {
+			max_id = t.TransactionId
+		}
+	}
+	return max_id, trans, nil
 }
 
 type SimpleRevisionStore struct {
@@ -126,6 +134,15 @@ func (s *SimpleRevisionStore) AddEntityRevisionInTx(*sql.Tx, *ShEntityRevision) 
 	return nil, nil
 }
 
-func (s *SimpleRevisionStore) GetRevisionsSince(*ShEntityRevision) ([]*ShEntityRevision, error) {
-	return s.Revisions, nil
+func (s *SimpleRevisionStore) GetRevisionsSince(start_from *ShEntityRevision) (latest_rev int64, since []*ShEntityRevision, err error) {
+	var max_rev int64
+	if len(s.Revisions) > 0 {
+		for _, rev := range s.Revisions {
+			if rev.RevisionNumber > max_rev {
+				max_rev = rev.RevisionNumber
+			}
+		}
+	}
+	return max_rev, s.Revisions, nil
 }
+

@@ -17,7 +17,7 @@ type TransactionStore interface {
 
 	// this doesn't fetch items in the transaction
 	// those need to be specifically queried
-	GetShTransactionSinceTransId(int64) ([]*ShTransaction, error)
+	GetShTransactionSinceTransId(start_id int64) (max_id int64, trans []*ShTransaction, err error)
 }
 
 type ItemStore interface {
@@ -92,7 +92,9 @@ type UserStore interface {
 
 type RevisionStore interface {
 	AddEntityRevisionInTx(*sql.Tx, *ShEntityRevision) (*ShEntityRevision, error)
-	GetRevisionsSince(*ShEntityRevision) ([]*ShEntityRevision, error)
+
+	// returns changes since the start revision
+	GetRevisionsSince(start_from *ShEntityRevision) (latest_rev int64, since []*ShEntityRevision, err error)
 }
 
 type Source interface {

@@ -66,7 +66,7 @@ var parseTransactionTests = []struct {
 	num_items int64
 }{
 	{-5, 100, 2, 1002, 1},
-	{-6, 1027, 8, 201, 100},
+	{-6, 1027, 8, 201, 10},
 }
 
 func TestParseTransactionPost(t *testing.T) {
@@ -578,14 +578,14 @@ func TestTransactionHandler(t *testing.T) {
 		t.Logf("Handler exited with non ok status code %s",
 			http.StatusText(w.Code))
 	}
-	//t.Logf("%s\n", w.Body.Bytes())
+	t.Logf("%s\n", w.Body.Bytes())
 	//t.Logf("Size :%d", len(w.Body.Bytes()))
 }
 
 /**
  * Benchmark tests
  */
-var parseTransactionBenchs = []struct {
+var parseTransactionBenchTests = []struct {
 	trans_id  int64
 	local_id  int64
 	branch_id int64
@@ -600,8 +600,8 @@ func BenchmarkParseTransactionPost(b *testing.B) {
 	trans_rev := int64(10)
 	branch_item_rev := int64(100)
 
-	transactions := make([]interface{}, len(parseTransactionBenchs))
-	for i, test := range parseTransactionBenchs {
+	transactions := make([]interface{}, len(parseTransactionBenchTests))
+	for i, test := range parseTransactionBenchTests {
 		transactions[i] = createTestTransaction(test.trans_id,
 			test.local_id, test.branch_id, test.date, test.num_items)
 	}

@@ -63,8 +63,10 @@ func (s *shStore) AddEntityRevisionInTx(tnx *sql.Tx, rev *ShEntityRevision) (*Sh
 	return rev, nil
 }
 
-func (s *shStore) GetRevisionsSince(prev_rev *ShEntityRevision) ([]*ShEntityRevision, error) {
+func (s *shStore) GetRevisionsSince(prev_rev *ShEntityRevision) (int64, []*ShEntityRevision, error) {
 	var result []*ShEntityRevision
+
+	var max_rev int64 = prev_rev.RevisionNumber
 
 	rows, err := s.Query(
 		fmt.Sprintf("select "+
@@ -74,7 +76,7 @@ func (s *shStore) GetRevisionsSince(prev_rev *ShEntityRevision) ([]*ShEntityRevi
 			"order by revision_number asc", TABLE_ENTITY_REVISION),
 		prev_rev.RevisionNumber)
 	if err != nil {
-		return nil, err
+		return max_rev, nil, err
 	}
 
 	for rows.Next() {
@@ -88,11 +90,15 @@ func (s *shStore) GetRevisionsSince(prev_rev *ShEntityRevision) ([]*ShEntityRevi
 			&rev.AdditionalInfo,
 		)
 		if err != nil {
-			return nil, err
+			return max_rev, nil, err
 		}
 
+		if max_rev < rev.RevisionNumber {
+			max_rev = rev.RevisionNumber
+		}
 		result = append(result, rev)
 	}
 
-	return result, nil
+	return max_rev, result, nil
 }
+

@@ -62,11 +62,12 @@ func (_mr *_MockTransactionStoreRecorder) GetShTransactionById(arg0, arg1 interf
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetShTransactionById", arg0, arg1)
 }
 
-func (_m *MockTransactionStore) GetShTransactionSinceTransId(_param0 int64) ([]*ShTransaction, error) {
-	ret := _m.ctrl.Call(_m, "GetShTransactionSinceTransId", _param0)
-	ret0, _ := ret[0].([]*ShTransaction)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+func (_m *MockTransactionStore) GetShTransactionSinceTransId(start_id int64) (int64, []*ShTransaction, error) {
+	ret := _m.ctrl.Call(_m, "GetShTransactionSinceTransId", start_id)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].([]*ShTransaction)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
 }
 
 func (_mr *_MockTransactionStoreRecorder) GetShTransactionSinceTransId(arg0 interface{}) *gomock.Call {
@@ -518,11 +519,12 @@ func (_mr *_MockRevisionStoreRecorder) AddEntityRevisionInTx(arg0, arg1 interfac
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "AddEntityRevisionInTx", arg0, arg1)
 }
 
-func (_m *MockRevisionStore) GetRevisionsSince(_param0 *ShEntityRevision) ([]*ShEntityRevision, error) {
-	ret := _m.ctrl.Call(_m, "GetRevisionsSince", _param0)
-	ret0, _ := ret[0].([]*ShEntityRevision)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+func (_m *MockRevisionStore) GetRevisionsSince(start_from *ShEntityRevision) (int64, []*ShEntityRevision, error) {
+	ret := _m.ctrl.Call(_m, "GetRevisionsSince", start_from)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].([]*ShEntityRevision)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
 }
 
 func (_mr *_MockRevisionStoreRecorder) GetRevisionsSince(arg0 interface{}) *gomock.Call {
@@ -625,11 +627,12 @@ func (_mr *_MockShStoreRecorder) GetShTransactionById(arg0, arg1 interface{}) *g
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetShTransactionById", arg0, arg1)
 }
 
-func (_m *MockShStore) GetShTransactionSinceTransId(_param0 int64) ([]*ShTransaction, error) {
-	ret := _m.ctrl.Call(_m, "GetShTransactionSinceTransId", _param0)
-	ret0, _ := ret[0].([]*ShTransaction)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+func (_m *MockShStore) GetShTransactionSinceTransId(start_id int64) (int64, []*ShTransaction, error) {
+	ret := _m.ctrl.Call(_m, "GetShTransactionSinceTransId", start_id)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].([]*ShTransaction)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
 }
 
 func (_mr *_MockShStoreRecorder) GetShTransactionSinceTransId(arg0 interface{}) *gomock.Call {
@@ -955,11 +958,12 @@ func (_mr *_MockShStoreRecorder) AddEntityRevisionInTx(arg0, arg1 interface{}) *
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "AddEntityRevisionInTx", arg0, arg1)
 }
 
-func (_m *MockShStore) GetRevisionsSince(_param0 *ShEntityRevision) ([]*ShEntityRevision, error) {
-	ret := _m.ctrl.Call(_m, "GetRevisionsSince", _param0)
-	ret0, _ := ret[0].([]*ShEntityRevision)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+func (_m *MockShStore) GetRevisionsSince(start_from *ShEntityRevision) (int64, []*ShEntityRevision, error) {
+	ret := _m.ctrl.Call(_m, "GetRevisionsSince", start_from)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].([]*ShEntityRevision)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
 }
 
 func (_mr *_MockShStoreRecorder) GetRevisionsSince(arg0 interface{}) *gomock.Call {

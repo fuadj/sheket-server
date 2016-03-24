@@ -13,25 +13,23 @@ import (
 
 const (
 	no_rev     = int64(-1) // this is a default 'nil' revision number
-	invalid_id = int64(-1)
 
-	s_key_user_id    = "user_id"
-	s_key_company_id = "company_id"
+	// this is (upload|download) branch item revision number
+	key_branch_item_rev = "branch_item_rev"
+	key_branch_item_sync = "sync_branch_items"
 
-	s_key_revision_transaction = "transaction_rev"
-	s_key_revision_item        = "item_rev"
-	s_key_revision_branch_item = "branch_item_rev"
+	// this is the downloaded(sent to user) newly created transactions
+	key_new_transactions = "new_transactions"
 
-	s_key_types = "types"
+	// this is the the key of the uploaded transaction array
+	key_upload_transactions = "transactions"
 
-	s_key_created    = "create"
-	s_key_updated    = "update"
-	s_key_deleted    = "delete"
-	s_key_attributes = "attributes"
+	// this is (upload|download) transaction revision number
+	key_trans_rev = "transaction_rev"
 
-	type_items        = "items"
-	type_transactions = "transactions"
-	type_branches     = "branches"
+	// this is sent to the user if they have managerial privileges to
+	// see transaction history
+	key_sync_transactions = "sync_transctions"
 )
 
 type TransSyncData struct {
@@ -47,10 +45,10 @@ func parseTransactionPost(r io.Reader) (*TransSyncData, error) {
 	}
 
 	trans_sync := &TransSyncData{}
-	trans_sync.UserTransRev = data.Get(s_key_revision_transaction).MustInt64(invalid_id)
-	trans_sync.UserBranchItemRev = data.Get(s_key_revision_branch_item).MustInt64(invalid_id)
+	trans_sync.UserTransRev = data.Get(key_trans_rev).MustInt64(no_rev)
+	trans_sync.UserBranchItemRev = data.Get(key_branch_item_rev).MustInt64(no_rev)
 
-	if trans_json, ok := data.CheckGet(type_transactions); ok {
+	if trans_json, ok := data.CheckGet(key_upload_transactions); ok {
 		trans_arr := trans_json.MustArray()
 		trans_sync.NewTrans = make([]*models.ShTransaction, len(trans_arr))
 		for i, v := range trans_arr {
@@ -333,59 +331,69 @@ func TransactionSyncHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tnx, err := Store.Begin()
-	if err != nil {
-		writeErrorResponse(w, http.StatusBadRequest)
-		return
-	}
-	add_trans_result, err := addTransactionsToDataStore(tnx, posted_data.NewTrans, company_id)
-	if err != nil {
-		tnx.Rollback()
-		writeErrorResponse(w, http.StatusBadRequest, err.Error())
-		return
-	}
-	// update items affected by the transactions
-	if err = updateBranchItems(tnx, add_trans_result.AffectedBranchItems, company_id); err != nil {
-		tnx.Rollback()
-		writeErrorResponse(w, http.StatusBadRequest, err.Error())
-		return
-	}
+	pushed_sync_data := make(map[string]interface{})
 
-	tnx.Commit()
-
-	i := int64(0)
-	updated_ids := make([]map[string]int64, len(add_trans_result.NewlyCreatedIds))
-	for old_id, new_id := range add_trans_result.OldId2NewMap {
-		updated_ids[i] = map[string]int64{
-			"o": old_id, "n": new_id,
+	// If the user just polled us to see if there were new
+	// transactions without uploading new transactions,
+	// the "key_new_transactions" will not exist in the response
+	if len(posted_data.NewTrans) > 0 {
+		tnx, err := Store.Begin()
+		if err != nil {
+			writeErrorResponse(w, http.StatusBadRequest)
+			return
 		}
-		i++
+		add_trans_result, err := addTransactionsToDataStore(tnx, posted_data.NewTrans, company_id)
+		if err != nil {
+			tnx.Rollback()
+			writeErrorResponse(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		// update items affected by the transactions
+		if err = updateBranchItems(tnx, add_trans_result.AffectedBranchItems, company_id); err != nil {
+			tnx.Rollback()
+			writeErrorResponse(w, http.StatusBadRequest, err.Error())
+			return
+		}
+
+		tnx.Commit()
+
+		i := int64(0)
+		updated_ids := make([]map[string]int64, len(add_trans_result.NewlyCreatedIds))
+		for old_id, new_id := range add_trans_result.OldId2NewMap {
+			updated_ids[i] = map[string]int64{
+				"o": old_id, "n": new_id,
+			}
+			i++
+		}
+
+		pushed_sync_data[key_new_transactions] = updated_ids
 	}
 
-	sync_result := make(map[string]interface{})
-
-	sync_result["update_local_transactions"] = updated_ids
-
-	// if he/she can see the transaction history
+	// if user does have permission to see transaction history
 	if permission.PermissionType == models.U_PERMISSION_MANAGER {
-		trans_history, err := fetchTransactionsSince(posted_data.UserTransRev)
+		max_trans_id, trans_history, err := fetchTransactionsSince(posted_data.UserTransRev)
 		if err != nil {
 			writeErrorResponse(w, http.StatusInternalServerError)
 			return
 		}
-		sync_result["sync_trans"] = trans_history
+		pushed_sync_data[key_sync_transactions] = trans_history
+		pushed_sync_data[key_trans_rev] = max_trans_id
 	}
 
-	changed_items, err := fetchChangedBranchItemsSinceRev(company_id, posted_data.UserBranchItemRev)
+	latest_rev, changed_items, err := fetchChangedBranchItemsSinceRev(company_id,
+		posted_data.UserBranchItemRev)
 	if err != nil {
 		writeErrorResponse(w, http.StatusInternalServerError)
 		return
 	}
-	sync_result["sync_branch_items"] = changed_items
 
-	// TODO: write the updated revision numbers
+	pushed_sync_data[key_branch_item_rev] = latest_rev
+	// if there are new changes to branch_items since last sync
+	if len(changed_items) > 0 {
+		pushed_sync_data[key_branch_item_sync] = changed_items
+	}
 
-	b, err := json.MarshalIndent(sync_result, "", "    ")
+	b, err := json.MarshalIndent(pushed_sync_data, "", "    ")
 	if err != nil {
 		writeErrorResponse(w, http.StatusInternalServerError)
 		return
@@ -394,10 +402,10 @@ func TransactionSyncHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(b)
 }
 
-func fetchTransactionsSince(trans_rev int64) ([]map[string]interface{}, error) {
-	transactions, err := Store.GetShTransactionSinceTransId(trans_rev)
+func fetchTransactionsSince(trans_rev int64) (latest_revision int64, trans_since []map[string]interface{}, err error) {
+	max_trans_id, transactions, err := Store.GetShTransactionSinceTransId(trans_rev)
 	if err != nil {
-		return nil, err
+		return max_trans_id, nil, err
 	}
 
 	trans_history := make([]map[string]interface{}, len(transactions))
@@ -420,18 +428,21 @@ func fetchTransactionsSince(trans_rev int64) ([]map[string]interface{}, error) {
 			"items":     item_history,
 		}
 	}
-	return trans_history, nil
+	return max_trans_id, trans_history, nil
 }
 
-func fetchChangedBranchItemsSinceRev(company_id, branch_item_rev int64) ([]map[string]interface{}, error) {
-	new_branch_item_revs, err := Store.GetRevisionsSince(
+func fetchChangedBranchItemsSinceRev(company_id, branch_item_rev int64) (latest_revision int64,
+	items_since []map[string]interface{}, err error) {
+
+	// this is guaranteed to return in ascending order till the latest
+	max_rev, new_branch_item_revs, err := Store.GetRevisionsSince(
 		&models.ShEntityRevision{
 			CompanyId:      company_id,
 			EntityType:     models.REV_ENTITY_BRANCH_ITEM,
 			RevisionNumber: branch_item_rev,
 		})
 	if err != nil {
-		return nil, err
+		return max_rev, nil, err
 	}
 
 	result := make([]map[string]interface{}, len(new_branch_item_revs))
@@ -452,5 +463,5 @@ func fetchChangedBranchItemsSinceRev(company_id, branch_item_rev int64) ([]map[s
 			"loc":       branch_item.ItemLocation,
 		}
 	}
-	return result, nil
+	return max_rev, result, nil
 }
