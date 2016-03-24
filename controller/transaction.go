@@ -134,7 +134,7 @@ type Pair_BranchItem struct {
  * changes made to the item. These changes will finally be committed
  * in a single update of the item in the datastore.
  */
-func searchBranchItemInMemory(tnx *sql.Tx, seenItems map[Pair_BranchItem]*CachedBranchItem,
+func searchBranchItemInCache(tnx *sql.Tx, seenItems map[Pair_BranchItem]*CachedBranchItem,
 	search_item *models.ShBranchItem) *CachedBranchItem {
 
 	branch_id := search_item.BranchId
@@ -194,7 +194,7 @@ func addTransactionsToDataStore(tnx *sql.Tx, new_transactions []*models.ShTransa
 		result.NewlyCreatedIds[created.TransactionId] = true
 
 		for _, trans_item := range trans.TransItems {
-			branch_item := searchBranchItemInMemory(tnx, result.AffectedBranchItems,
+			branch_item := searchBranchItemInCache(tnx, result.AffectedBranchItems,
 				&models.ShBranchItem{
 					CompanyId: company_id, BranchId: trans.BranchId,
 					ItemId: trans_item.ItemId,
@@ -218,7 +218,7 @@ func addTransactionsToDataStore(tnx *sql.Tx, new_transactions []*models.ShTransa
 			case models.TRANS_TYPE_TRANSFER_OTHER_BRANCH_ITEM,
 				models.TRANS_TYPE_SELL_OTHER_BRANCH_ITEM:
 
-				other_branch_item := searchBranchItemInMemory(tnx, result.AffectedBranchItems,
+				other_branch_item := searchBranchItemInCache(tnx, result.AffectedBranchItems,
 					&models.ShBranchItem{
 						CompanyId: company_id, BranchId: trans_item.OtherBranchId,
 						ItemId: trans_item.ItemId,
