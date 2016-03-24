@@ -133,7 +133,7 @@ func parseTransactionPost(r io.Reader) (*TransSyncData, error) {
  * in memory. It is more efficient to update the object in memory than to
  * update it on datastore.
  */
-type SyncBranchItem struct {
+type CachedBranchItem struct {
 	*models.ShBranchItem
 
 	itemExistsInBranch bool
@@ -157,8 +157,8 @@ type Pair_BranchItem struct {
  * changes made to the item. These changes will finally be committed
  * in a single update of the item in the datastore.
  */
-func searchBranchItemInMemory(tnx *sql.Tx, seenItems map[Pair_BranchItem]*SyncBranchItem,
-	search_item *models.ShBranchItem) *SyncBranchItem {
+func searchBranchItemInMemory(tnx *sql.Tx, seenItems map[Pair_BranchItem]*CachedBranchItem,
+	search_item *models.ShBranchItem) *CachedBranchItem {
 
 	branch_id := search_item.BranchId
 	item_id := search_item.ItemId
@@ -169,33 +169,33 @@ func searchBranchItemInMemory(tnx *sql.Tx, seenItems map[Pair_BranchItem]*SyncBr
 
 	// we've not found the item, so query datastore and add it to seenItems
 
-	var sync_branch_item *SyncBranchItem
+	var cached_branch_item *CachedBranchItem
 	branch_item, err := Store.GetBranchItemInTx(tnx,
 		search_item.BranchId, search_item.ItemId)
 
 	if err != nil { // the item doesn't exist in the branch-items list
-		sync_branch_item = &SyncBranchItem{
+		cached_branch_item = &CachedBranchItem{
 			ShBranchItem:       search_item,
 			itemExistsInBranch: false}
 	} else {
-		sync_branch_item = &SyncBranchItem{
+		cached_branch_item = &CachedBranchItem{
 			ShBranchItem:       branch_item,
 			itemExistsInBranch: true}
 	}
 
-	sync_branch_item.firstTimeSeenItem = true
-	if !sync_branch_item.itemExistsInBranch {
-		sync_branch_item.Quantity = float64(0)
+	cached_branch_item.firstTimeSeenItem = true
+	if !cached_branch_item.itemExistsInBranch {
+		cached_branch_item.Quantity = float64(0)
 	}
 
-	seenItems[Pair_BranchItem{branch_id, item_id}] = sync_branch_item
-	return sync_branch_item
+	seenItems[Pair_BranchItem{branch_id, item_id}] = cached_branch_item
+	return cached_branch_item
 }
 
 type TransactionResult struct {
 	OldId2NewMap        map[int64]int64
 	NewlyCreatedIds     map[int64]bool
-	AffectedBranchItems map[Pair_BranchItem]*SyncBranchItem
+	AffectedBranchItems map[Pair_BranchItem]*CachedBranchItem
 }
 
 func addTransactionsToDataStore(tnx *sql.Tx, new_transactions []*models.ShTransaction,
@@ -206,7 +206,7 @@ func addTransactionsToDataStore(tnx *sql.Tx, new_transactions []*models.ShTransa
 	result.OldId2NewMap = make(map[int64]int64, len(new_transactions))
 	result.NewlyCreatedIds = make(map[int64]bool, len(new_transactions))
 
-	result.AffectedBranchItems = make(map[Pair_BranchItem]*SyncBranchItem)
+	result.AffectedBranchItems = make(map[Pair_BranchItem]*CachedBranchItem)
 	for _, trans := range new_transactions {
 		user_trans_id := trans.TransactionId
 		created, t_err := Store.CreateShTransaction(tnx, trans)
@@ -275,16 +275,16 @@ func addTransactionsToDataStore(tnx *sql.Tx, new_transactions []*models.ShTransa
  *
  * the {@args changed_branch_items} is a map with key of Pair{branch_id, item_id}
  */
-func updateBranchItems(tnx *sql.Tx, changed_branch_items map[Pair_BranchItem]*SyncBranchItem,
+func updateBranchItems(tnx *sql.Tx, cached_branch_items map[Pair_BranchItem]*CachedBranchItem,
 	company_id int64) error {
 
-	for pair_branch_item, sync_item := range changed_branch_items {
+	for pair_branch_item, cached_item := range cached_branch_items {
 		action_type := int64(models.REV_ACTION_CREATE)
-		if sync_item.itemExistsInBranch {
-			Store.UpdateBranchItemInTx(tnx, sync_item.ShBranchItem)
+		if cached_item.itemExistsInBranch {
+			Store.UpdateBranchItemInTx(tnx, cached_item.ShBranchItem)
 			action_type = models.REV_ACTION_UPDATE
 		} else {
-			Store.AddItemToBranchInTx(tnx, sync_item.ShBranchItem)
+			Store.AddItemToBranchInTx(tnx, cached_item.ShBranchItem)
 		}
 
 		rev := &models.ShEntityRevision{
