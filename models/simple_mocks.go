@@ -111,3 +111,21 @@ func (s *SimpleTransactionStore) GetShTransactionById(id int64, fetch_items bool
 func (s *SimpleTransactionStore) GetShTransactionSinceTransId(int64) ([]*ShTransaction, error) {
 	return nil, nil
 }
+
+type SimpleRevisionStore struct {
+	Revisions []*ShEntityRevision
+}
+
+func NewSimpleRevisionStore(revs []*ShEntityRevision) *SimpleRevisionStore {
+	s := &SimpleRevisionStore{}
+	s.Revisions = revs
+	return s
+}
+
+func (s *SimpleRevisionStore) AddEntityRevisionInTx(*sql.Tx, *ShEntityRevision) (*ShEntityRevision, error) {
+	return nil, nil
+}
+
+func (s *SimpleRevisionStore) GetRevisionsSince(*ShEntityRevision) ([]*ShEntityRevision, error) {
+	return s.Revisions, nil
+}

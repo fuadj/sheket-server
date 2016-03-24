@@ -16,7 +16,7 @@ type ComposableShStoreMock struct {
 	UserStore
 	RevisionStore
 
-	DataStore
+	Source
 }
 
 func NewComposableShStoreMock(ctrl *gomock.Controller) *ComposableShStoreMock {
@@ -28,10 +28,8 @@ func NewComposableShStoreMock(ctrl *gomock.Controller) *ComposableShStoreMock {
 	c.CompanyStore = NewMockCompanyStore(ctrl)
 	c.UserStore = NewMockUserStore(ctrl)
 	c.RevisionStore = NewMockRevisionStore(ctrl)
+	c.Source = NewMockSource(ctrl)
 
 	return c
 }
 
-func (c *ComposableShStoreMock) GetDataStore() DataStore {
-	return c.DataStore
-}

@@ -305,6 +305,9 @@ func updateBranchItems(tnx *sql.Tx, changed_branch_items map[Pair_BranchItem]*Sy
 	return nil
 }
 
+// used in testing
+var currentUserGetter = auth.GetCurrentUser
+
 func TransactionSyncHandler(w http.ResponseWriter, r *http.Request) {
 	company_id := GetCurrentCompanyId(r)
 	if company_id == INVALID_COMPANY_ID {
@@ -312,7 +315,7 @@ func TransactionSyncHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := auth.GetCurrentUser(r)
+	user, err := currentUserGetter(r)
 	if err != nil {
 		writeErrorResponse(w, http.StatusNonAuthoritativeInfo, err.Error())
 		return
@@ -330,7 +333,7 @@ func TransactionSyncHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tnx, err := Store.GetDataStore().Begin()
+	tnx, err := Store.Begin()
 	if err != nil {
 		writeErrorResponse(w, http.StatusBadRequest)
 		return

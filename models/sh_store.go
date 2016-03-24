@@ -95,6 +95,14 @@ type RevisionStore interface {
 	GetRevisionsSince(*ShEntityRevision) ([]*ShEntityRevision, error)
 }
 
+type Source interface {
+	GetDataStore() DataStore
+
+	// used to start transactions
+	// queries the DataStore
+	Begin() (*sql.Tx, error)
+}
+
 type ShStore interface {
 	TransactionStore
 	ItemStore
@@ -104,7 +112,7 @@ type ShStore interface {
 	UserStore
 	RevisionStore
 
-	GetDataStore() DataStore
+	Source
 }
 
 // implements ShDataStore
@@ -119,4 +127,8 @@ func NewShDataStore(ds DataStore) ShStore {
 
 func (s *shStore) GetDataStore() DataStore {
 	return s.DataStore
+}
+
+func (s *shStore) Begin() (*sql.Tx, error) {
+	return s.DataStore.Begin()
 }

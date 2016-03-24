@@ -529,6 +529,48 @@ func (_mr *_MockRevisionStoreRecorder) GetRevisionsSince(arg0 interface{}) *gomo
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetRevisionsSince", arg0)
 }
 
+// Mock of Source interface
+type MockSource struct {
+	ctrl     *gomock.Controller
+	recorder *_MockSourceRecorder
+}
+
+// Recorder for MockSource (not exported)
+type _MockSourceRecorder struct {
+	mock *MockSource
+}
+
+func NewMockSource(ctrl *gomock.Controller) *MockSource {
+	mock := &MockSource{ctrl: ctrl}
+	mock.recorder = &_MockSourceRecorder{mock}
+	return mock
+}
+
+func (_m *MockSource) EXPECT() *_MockSourceRecorder {
+	return _m.recorder
+}
+
+func (_m *MockSource) GetDataStore() DataStore {
+	ret := _m.ctrl.Call(_m, "GetDataStore")
+	ret0, _ := ret[0].(DataStore)
+	return ret0
+}
+
+func (_mr *_MockSourceRecorder) GetDataStore() *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetDataStore")
+}
+
+func (_m *MockSource) Begin() (*sql.Tx, error) {
+	ret := _m.ctrl.Call(_m, "Begin")
+	ret0, _ := ret[0].(*sql.Tx)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (_mr *_MockSourceRecorder) Begin() *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "Begin")
+}
+
 // Mock of ShStore interface
 type MockShStore struct {
 	ctrl     *gomock.Controller
@@ -932,4 +974,15 @@ func (_m *MockShStore) GetDataStore() DataStore {
 
 func (_mr *_MockShStoreRecorder) GetDataStore() *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetDataStore")
+}
+
+func (_m *MockShStore) Begin() (*sql.Tx, error) {
+	ret := _m.ctrl.Call(_m, "Begin")
+	ret0, _ := ret[0].(*sql.Tx)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (_mr *_MockShStoreRecorder) Begin() *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "Begin")
 }

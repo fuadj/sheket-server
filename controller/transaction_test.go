@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/golang/mock/gomock"
 	"math"
 	"math/rand"
@@ -461,9 +462,97 @@ func TestAddTransactionFinalQuantity(t *testing.T) {
 	}
 }
 
+const (
+	trans_rev       = int64(10)
+	branch_item_rev = int64(100)
+	company_id      = int64(100)
+	user_id         = int64(12)
+)
+
+
+var ctrl *gomock.Controller
+var mock *models.ComposableShStoreMock
+var save_store models.ShStore
+var user *models.User
+
+var save_getter func(*http.Request)(*models.User, error)
+
+func setup_user(t *testing.T, user_id int64) {
+	save_getter = currentUserGetter
+	user = &models.User{UserId: user_id}
+	currentUserGetter = func(*http.Request) (*models.User, error) {
+		return user, nil
+	}
+}
+
+func teardown_user() {
+	currentUserGetter = save_getter
+}
+
+func setup_store(t *testing.T) {
+	save_store = Store
+	ctrl = gomock.NewController(t)
+	mock = models.NewComposableShStoreMock(ctrl)
+	Store = mock
+}
+
+func teardown_store() {
+	ctrl.Finish()
+	Store = save_store
+}
+
+var tnx_setup bool = false
+var tnx *sql.Tx
+var db *sql.DB
+var db_mock sqlmock.Sqlmock
+
+func setup_tnx(t *testing.T) {
+	tnx_setup = true
+	var err error
+	db, db_mock, err = sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when testing db", err)
+	}
+
+	db_mock.ExpectBegin()
+	tnx, _ = db.Begin()
+}
+
+func teardown_tnx() {
+	if tnx_setup {
+		db.Close()
+	}
+	tnx_setup = false
+}
+
 func TestTransactionHandler(t *testing.T) {
-	trans_rev := int64(10)
-	branch_item_rev := int64(100)
+	setup_store(t)
+	defer teardown_store()
+
+	setup_user(t, user_id)
+	defer teardown_user()
+
+	setup_tnx(t)
+	defer teardown_tnx()
+
+	start_qty := make(map[models.BranchItemPair]float64, 10)
+	for _, item := range initialQty {
+		start_qty[models.BranchItemPair{item.branch_id, item.item_id}] = item.initial_qty
+	}
+	mock.BranchItemStore = models.NewSimpleBranchItemStore(start_qty)
+	mock.TransactionStore = models.NewSimpleTransactionStore()
+
+	source := models.NewMockSource(ctrl)
+	source.EXPECT().Begin().Return(tnx, nil)
+	mock.Source = source
+
+	user_store := models.NewMockUserStore(ctrl)
+	permission := &models.UserPermission{CompanyId: company_id,
+		UserId: user_id, PermissionType: models.U_PERMISSION_MANAGER, BranchId: -1}
+	user_store.EXPECT().GetUserPermission(user, company_id).Return(permission, nil)
+	mock.UserStore = user_store
+
+	mock.RevisionStore = models.NewSimpleRevisionStore(nil)
 
 	transactions := make([]interface{}, len(parseTransactionTests))
 	for i, test := range parseTransactionTests {
@@ -481,13 +570,16 @@ func TestTransactionHandler(t *testing.T) {
 	if err != nil {
 		t.Fatalf("request error '%v'", err)
 	}
+	req.Header.Set(KEY_COMPANY_ID, fmt.Sprintf("%d", company_id))
 
 	w := httptest.NewRecorder()
 	TransactionSyncHandler(w, req)
 	if w.Code != http.StatusOK {
-		fmt.Errorf("Handler exited with non ok status code %s",
+		t.Logf("Handler exited with non ok status code %s",
 			http.StatusText(w.Code))
 	}
+	//t.Logf("%s\n", w.Body.Bytes())
+	//t.Logf("Size :%d", len(w.Body.Bytes()))
 }
 
 /**
