@@ -1,11 +1,12 @@
 package controller
 
 /*
-	A user's transaction upload looks like
-	// NOTE: the user_id and company_id are not part of the body of
-	// the upload but are part of the header. user_id is obviously stored
- 	// in a secure cookie. the company_id is sent raw.
+	Transaction Sync Upload format
 	{
+		// NOTE: the user_id and company_id are not part of the body of
+		// the upload but are part of the header. user_id is obviously stored
+		// in a secure cookie. the company_id is sent raw.
+
 		"transaction_rev":rev_number,
 		"branch_item_rev":rev_number,
 
@@ -44,7 +45,7 @@ package controller
 		},
 	}
 
-	A successful transaction response looks like
+	Transaction Sync download format
 	{
 		"transaction_rev":latest transaction revision
 		"branch_item_rev":latest branch_item revision
@@ -75,6 +76,7 @@ package controller
 		]
 	}
 
+	Entity Sync upload format
 	{
 		"item_rev":item_rev_number
 		"branch_rev":branch_rev_number
@@ -103,48 +105,48 @@ package controller
 		}
 	}
 
-	-- INTERNAL FIELDS --
-	"items":
-		// these 2 fields are necessary for all CRUD operations
-		// the rest is defined by each CRUD method
-		"company_id: (int)
-		"item_id": (int)
-		// the item_id should be negative if it is a create operation
-		// the negative value will then be replaced with a global value
-		// generated at the server. This ensures synchronization.
+	-- INTERNAL FIELDS -- of Entity Upload format
+		"items":
+			// these 2 fields are necessary for all CRUD operations
+			// the rest is defined by each CRUD method
+			"company_id: (int)
+			"item_id": (int)
+			// the item_id should be negative if it is a create operation
+			// the negative value will then be replaced with a global value
+			// generated at the server. This ensures synchronization.
 
-		// used on CREATE and UPDATE
-		// if it is UPDATE, any missing fields are assumed to NOT change
-		"name": (string)
-		"model_year": (string)
-		"part_number": (string)
-		"bar_code": (string)
-		"has_bar_code": (bool)
-		"manual_code": (string)
+			// used on CREATE and UPDATE
+			// if it is UPDATE, any missing fields are assumed to NOT change
+			"name": (string)
+			"model_year": (string)
+			"part_number": (string)
+			"bar_code": (string)
+			"has_bar_code": (bool)
+			"manual_code": (string)
 
-	"branches":
-		// these 2 fields are necessary for all CRUD operations
-		"company_id": (int)
-		"branch_id": (int)
-		// if it is create, "branch_id" should be negative for synchronization
-		// see "items"."item_id" for more description
+		"branches":
+			// these 2 fields are necessary for all CRUD operations
+			"company_id": (int)
+			"branch_id": (int)
+			// if it is create, "branch_id" should be negative for synchronization
+			// see "items"."item_id" for more description
 
-		// used on CREATE and UPDATE
-		// if it is UPDATE, any missing fields are assumed to NOT change
-		"name": (string)
-		"location": (string)
+			// used on CREATE and UPDATE
+			// if it is UPDATE, any missing fields are assumed to NOT change
+			"name": (string)
+			"location": (string)
 
-	"branch-items":
-		// these 3 fields are necessary for all CRUD operations
-		"company_id": (int)
-		// these 2 could be -ve, see descriptions of
-		// "items"."item_id" & "branches"."branch_id"
-		"item_id": (int)
-		"branch_id": (int)
+		"branch-items":
+			// these 3 fields are necessary for all CRUD operations
+			"company_id": (int)
+			// these 2 could be -ve, see descriptions of
+			// "items"."item_id" & "branches"."branch_id"
+			"item_id": (int)
+			"branch_id": (int)
 
-		// used on CREATE and UPDATE
-		// if it is UPDATE, any missing fields are assumed to NOT change
-		"quantity": (float)
-		"item_location": (string)
+			// used on CREATE and UPDATE
+			// if it is UPDATE, any missing fields are assumed to NOT change
+			"quantity": (float)
+			"item_location": (string)
 
 */
