@@ -82,9 +82,9 @@ package controller
 		"branch_rev":branch_rev_number
 		"branch_item_rev":branch_item_rev_number
 
-		"types": [ changed entities {"items" | "branches" | "branch-items"} ]
+		"types": [ changed entities {"items" | "branches" | "branch_items"} ]
 
-		// could be {"items" OR "branches" OR "branch-items"}
+		// could be {"items" OR "branches" OR "branch_items"}
 		"entity": {
 			// ids will be different for each type
 			// e.g: it will be integer for "items" and "branches"
@@ -136,7 +136,7 @@ package controller
 			"name": (string)
 			"location": (string)
 
-		"branch-items":
+		"branch_items":
 			// these 3 fields are necessary for all CRUD operations
 			"company_id": (int)
 			// these 2 could be -ve, see descriptions of

@@ -48,80 +48,61 @@ func parseTransactionPost(r io.Reader) (*TransSyncData, error) {
 	trans_sync.UserTransRev = data.Get(key_trans_rev).MustInt64(no_rev)
 	trans_sync.UserBranchItemRev = data.Get(key_branch_item_rev).MustInt64(no_rev)
 
-	if trans_json, ok := data.CheckGet(key_upload_transactions); ok {
-		trans_arr := trans_json.MustArray()
-		trans_sync.NewTrans = make([]*models.ShTransaction, len(trans_arr))
-		for i, v := range trans_arr {
-			fields, ok := v.(map[string]interface{})
-			if !ok {
-				return nil, fmt.Errorf("malformed transactions array")
-			}
+	if _, ok := data.CheckGet(key_upload_transactions); !ok {
+		// there is nothing more to see!!!
+		return trans_sync, nil
+	}
 
-			trans := &models.ShTransaction{}
-			trans.TransactionId = _toInt64(fields["trans_id"])
-			trans.LocalTransactionId = _toInt64(fields["local_id"])
-			trans.BranchId = _toInt64(fields["branch_id"])
-			trans.Date = _toInt64(fields["date"])
-
-			items_arr, ok := fields["items"].([]interface{})
-			if !ok {
-				return nil, fmt.Errorf("items field non-existant in transaction")
-			}
-			trans_items := make([]*models.ShTransactionItem, len(items_arr))
-			for j, v := range items_arr {
-				fields, ok := v.([]interface{})
-				if !ok {
-					return nil, fmt.Errorf("malformed items array")
-				}
-
-				toInt := func(i interface{}) (int64, error) {
-					var err error
-					if val, ok := i.(json.Number); ok {
-						var int_val int64
-						int_val, err = val.Int64()
-						if err == nil {
-							return int_val, nil
-						}
-					}
-					return 0, fmt.Errorf("'%v' not an integer", i)
-				}
-
-				toFloat := func(i interface{}) (float64, error) {
-					var err error
-					if val, ok := i.(json.Number); ok {
-						var float_val float64
-						float_val, err = val.Float64()
-						if err == nil {
-							return float_val, nil
-						}
-					}
-					return 0, fmt.Errorf("'%v' not a float", i)
-				}
-
-				var err error
-				item := &models.ShTransactionItem{}
-				item.TransType, err = toInt(fields[0])
-				if err != nil {
-					return nil, err
-				}
-				item.ItemId, err = toInt(fields[1])
-				if err != nil {
-					return nil, err
-				}
-				item.OtherBranchId, err = toInt(fields[2])
-				if err != nil {
-					return nil, err
-				}
-				item.Quantity, err = toFloat(fields[3])
-				if err != nil {
-					return nil, err
-				}
-				trans_items[j] = item
-			}
-			trans.TransItems = trans_items
-
-			trans_sync.NewTrans[i] = trans
+	trans_arr := data.Get(key_upload_transactions).MustArray()
+	trans_sync.NewTrans = make([]*models.ShTransaction, len(trans_arr))
+	for i, v := range trans_arr {
+		fields, ok := v.(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("malformed transactions array")
 		}
+
+		trans := &models.ShTransaction{}
+		trans.TransactionId = toInt64(fields["trans_id"])
+		trans.LocalTransactionId = toInt64(fields["local_id"])
+		trans.BranchId = toInt64(fields["branch_id"])
+		trans.Date = toInt64(fields["date"])
+
+		items_arr, ok := fields["items"].([]interface{})
+		if !ok {
+			return nil, fmt.Errorf("items field non-existant in transaction")
+		}
+		trans_items := make([]*models.ShTransactionItem, len(items_arr))
+		for j, v := range items_arr {
+			fields, ok := v.([]interface{})
+			if !ok {
+				return nil, fmt.Errorf("malformed items array")
+			} else if len(fields) < 4 {
+				return nil, fmt.Errorf("not enought elements in items fields: '%v'", v)
+			}
+
+			var err error
+			item := &models.ShTransactionItem{}
+			item.TransType, err = toIntErr(fields[0])
+			if err != nil {
+				return nil, err
+			}
+			item.ItemId, err = toIntErr(fields[1])
+			if err != nil {
+				return nil, err
+			}
+			item.OtherBranchId, err = toIntErr(fields[2])
+			if err != nil {
+				return nil, err
+			}
+			item.Quantity, err = toFloatErr(fields[3])
+			if err != nil {
+				return nil, err
+			}
+			trans_items[j] = item
+		}
+		trans.TransItems = trans_items
+
+		trans_sync.NewTrans[i] = trans
 	}
 
 	return trans_sync, nil
@@ -137,10 +118,6 @@ type CachedBranchItem struct {
 	*models.ShBranchItem
 
 	itemExistsInBranch bool
-	// in combination with {@field itemExistsInBranch}, it is used
-	// to "initialize" the branch item if the item doesn't exist in
-	// the branch and we are seeing it for the first time
-	firstTimeSeenItem bool
 }
 
 // Useful in map's as a key
@@ -183,7 +160,6 @@ func searchBranchItemInMemory(tnx *sql.Tx, seenItems map[Pair_BranchItem]*Cached
 			itemExistsInBranch: true}
 	}
 
-	cached_branch_item.firstTimeSeenItem = true
 	if !cached_branch_item.itemExistsInBranch {
 		cached_branch_item.Quantity = float64(0)
 	}
@@ -193,7 +169,7 @@ func searchBranchItemInMemory(tnx *sql.Tx, seenItems map[Pair_BranchItem]*Cached
 }
 
 type TransactionResult struct {
-	OldId2NewMap        map[int64]int64
+	OldId2New           map[int64]int64
 	NewlyCreatedIds     map[int64]bool
 	AffectedBranchItems map[Pair_BranchItem]*CachedBranchItem
 }
@@ -203,7 +179,7 @@ func addTransactionsToDataStore(tnx *sql.Tx, new_transactions []*models.ShTransa
 
 	result := &TransactionResult{}
 
-	result.OldId2NewMap = make(map[int64]int64, len(new_transactions))
+	result.OldId2New = make(map[int64]int64, len(new_transactions))
 	result.NewlyCreatedIds = make(map[int64]bool, len(new_transactions))
 
 	result.AffectedBranchItems = make(map[Pair_BranchItem]*CachedBranchItem)
@@ -214,7 +190,7 @@ func addTransactionsToDataStore(tnx *sql.Tx, new_transactions []*models.ShTransa
 			return nil, fmt.Errorf(http.StatusText(http.StatusInternalServerError))
 		}
 
-		result.OldId2NewMap[user_trans_id] = created.TransactionId
+		result.OldId2New[user_trans_id] = created.TransactionId
 		result.NewlyCreatedIds[created.TransactionId] = true
 
 		for _, trans_item := range trans.TransItems {
@@ -359,7 +335,7 @@ func TransactionSyncHandler(w http.ResponseWriter, r *http.Request) {
 
 		i := int64(0)
 		updated_ids := make([]map[string]int64, len(add_trans_result.NewlyCreatedIds))
-		for old_id, new_id := range add_trans_result.OldId2NewMap {
+		for old_id, new_id := range add_trans_result.OldId2New {
 			updated_ids[i] = map[string]int64{
 				"o": old_id, "n": new_id,
 			}
