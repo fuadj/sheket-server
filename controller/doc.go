@@ -20,7 +20,7 @@ package controller
 				"trans_id":transaction_id
 
 				// The only use of this id is to prevent possible duplicate
-			// posting. This might happen if the user "upload's" their
+				// posting. This might happen if the user "upload's" their
 				// changes and the server commits those changes, but the
 				// connection with the user is cut before the server
 				// could inform the user to update values with the sync'ed
@@ -87,25 +87,30 @@ package controller
 		// could be {"items" OR "branches" OR "branch_items"}
 		"entity": {
 			// ids will be different for each type
-			// e.g: it will be integer for "items" and "branches"
-			//		but it will be a string of "branch_id:item_id" for branch item
+			// look at -- ENTITY ID TYPES -- for details
 
 			"create": [ ids ... ],
 			"update": [ ids ... ],
 			"delete": [ ids ... ],
 
-			"fields": {
-				// a map of "id" => objects affected
-				// look above description to see what "id" means
-				"id": {
-					// look at -- INTERNAL FIELDS -- for details about fields of each entity
-				},
-				...
-			}
+			"fields": [
+				// an array of entities
+				// look at -- INTERNAL FIELDS -- for details about fields of each entity
+				{		}, ...
+			]
 		}
 	}
 
-	-- INTERNAL FIELDS -- of Entity Upload format
+	-- ENTITY ID TYPES -- of Entity Upload Format
+	"items":
+		id is integer
+	"branches":
+		id is integer
+	"branch_items":
+		id is a colon separated string of branch_id & item_id => "branch_id:item_id"
+
+
+	-- INTERNAL FIELDS -- of Entity Upload Format
 		"items":
 			// these 2 fields are necessary for all CRUD operations
 			// the rest is defined by each CRUD method
@@ -137,12 +142,11 @@ package controller
 			"location": (string)
 
 		"branch_items":
-			// these 3 fields are necessary for all CRUD operations
+			// The "id" field can contain -ve values is either branch|item is being created.
+			// see "items"."item_id" & "branches"."branch_id" for more info
+			// The "id" and & "company_id" fields are necessary.
+			"id": (string) 	// "branch_id:item_id"
 			"company_id": (int)
-			// these 2 could be -ve, see descriptions of
-			// "items"."item_id" & "branches"."branch_id"
-			"item_id": (int)
-			"branch_id": (int)
 
 			// used on CREATE and UPDATE
 			// if it is UPDATE, any missing fields are assumed to NOT change

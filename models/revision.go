@@ -6,18 +6,18 @@ import (
 )
 
 type ShEntityRevision struct {
-	CompanyId      int64
-	RevisionNumber int64
+	CompanyId        int64
+	RevisionNumber   int64
 	// The type of element this revision applies,
 	// e.g:(transaction, items, ...)
-	EntityType int64
+	EntityType       int64
 	// The action that caused the revision # to change
 	// e.g:(insert, update, ...)
-	ActionType int64
-	// The affected element id
-	AffectedId int64
+	ActionType       int64
+	// The entity id affected by the change
+	EntityAffectedId int64
 	// Any other info necessary
-	AdditionalInfo int64
+	AdditionalInfo   int64
 }
 
 const (
@@ -56,7 +56,7 @@ func (s *shStore) AddEntityRevisionInTx(tnx *sql.Tx, rev *ShEntityRevision) (*Sh
 			"affected_id, additional_info values "+
 			"($1, $2, $3, $4, $5, $6)", TABLE_ENTITY_REVISION),
 		rev.CompanyId, max_rev, rev.EntityType, rev.ActionType,
-		rev.AffectedId, rev.AdditionalInfo)
+		rev.EntityAffectedId, rev.AdditionalInfo)
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +86,7 @@ func (s *shStore) GetRevisionsSince(prev_rev *ShEntityRevision) (int64, []*ShEnt
 			&rev.RevisionNumber,
 			&rev.EntityType,
 			&rev.ActionType,
-			&rev.AffectedId,
+			&rev.EntityAffectedId,
 			&rev.AdditionalInfo,
 		)
 		if err != nil {

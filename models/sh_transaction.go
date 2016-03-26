@@ -17,6 +17,14 @@ type ShTransaction struct {
 	TransItems         []*ShTransactionItem
 }
 
+const (
+	TRANS_JSON_TRANS_ID = "trans_id"
+	TRANS_JSON_LOCAL_ID = "local_id"
+	TRANS_JSON_BRANCH_ID = "branch_id"
+	TRANS_JSON_DATE = "date"
+	TRANS_JSON_ITEMS = "items"
+)
+
 type ShTransactionItem struct {
 	TransactionId int64
 	TransType     int64

@@ -6,16 +6,26 @@ import (
 )
 
 type ShItem struct {
-	ItemId     int64	`json:"item_id"`
-	CompanyId  int64	`json:"company_id"`
-	CategoryId int64	`json:"category_id"`
-	Name       string	`json:"name"`
-	ModelYear  string	`json:"model_year"`
-	PartNumber string	`json:"part_number"`
-	BarCode    string	`json:"bar_code,omitempty"`
-	HasBarCode bool		`json:"has_bar_code"`
+	ItemId     int64
+	CompanyId  int64
+	CategoryId int64
+	Name       string
+	ModelYear  string
+	PartNumber string
+	BarCode    string
+	HasBarCode bool
 	ManualCode string
 }
+
+const (
+	ITEM_JSON_ITEM_ID = "item_id"
+	ITEM_JSON_COMPANY_ID = "company_id"
+	ITEM_JSON_MODEL_YEAR = "model_year"
+	ITEM_JSON_PART_NUMBER = "part_number"
+	ITEM_JSON_BAR_CODE = "bar_code"
+	ITEM_JSON_MANUAL_CODE = "manual_code"
+	ITEM_JSON_HAS_BAR_CODE = "has_bar_code"
+)
 
 func (s *shStore) CreateItem(item *ShItem) (*ShItem, error) {
 	tnx, err := s.Begin()

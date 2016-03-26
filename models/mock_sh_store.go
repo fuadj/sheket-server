@@ -226,6 +226,17 @@ func (_mr *_MockBranchStoreRecorder) GetBranchById(arg0 interface{}) *gomock.Cal
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetBranchById", arg0)
 }
 
+func (_m *MockBranchStore) GetBranchByIdInTx(_param0 *sql.Tx, _param1 int64) (*ShBranch, error) {
+	ret := _m.ctrl.Call(_m, "GetBranchByIdInTx", _param0, _param1)
+	ret0, _ := ret[0].(*ShBranch)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (_mr *_MockBranchStoreRecorder) GetBranchByIdInTx(arg0, arg1 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetBranchByIdInTx", arg0, arg1)
+}
+
 func (_m *MockBranchStore) ListCompanyBranches(_param0 int64) ([]*ShBranch, error) {
 	ret := _m.ctrl.Call(_m, "ListCompanyBranches", _param0)
 	ret0, _ := ret[0].([]*ShBranch)
@@ -747,6 +758,17 @@ func (_m *MockShStore) GetBranchById(_param0 int64) (*ShBranch, error) {
 
 func (_mr *_MockShStoreRecorder) GetBranchById(arg0 interface{}) *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetBranchById", arg0)
+}
+
+func (_m *MockShStore) GetBranchByIdInTx(_param0 *sql.Tx, _param1 int64) (*ShBranch, error) {
+	ret := _m.ctrl.Call(_m, "GetBranchByIdInTx", _param0, _param1)
+	ret0, _ := ret[0].(*ShBranch)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (_mr *_MockShStoreRecorder) GetBranchByIdInTx(arg0, arg1 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetBranchByIdInTx", arg0, arg1)
 }
 
 func (_m *MockShStore) ListCompanyBranches(_param0 int64) ([]*ShBranch, error) {

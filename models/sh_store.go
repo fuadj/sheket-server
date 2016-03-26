@@ -37,6 +37,7 @@ type BranchStore interface {
 	UpdateBranchInTx(*sql.Tx, *ShBranch) (*ShBranch, error)
 
 	GetBranchById(int64) (*ShBranch, error)
+	GetBranchByIdInTx(*sql.Tx,int64) (*ShBranch, error)
 	ListCompanyBranches(int64) ([]*ShBranch, error)
 }
 

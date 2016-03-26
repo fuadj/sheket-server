@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/golang/mock/gomock"
 	"math"
 	"math/rand"
@@ -242,8 +241,6 @@ var (
 	t_item_2 int64 = 12
 	t_item_3 int64 = 13
 
-	t_company_id int64 = 10
-
 	initialQty = []struct {
 		branch_id, item_id int64
 		initial_qty        float64
@@ -470,61 +467,6 @@ const (
 )
 
 
-var ctrl *gomock.Controller
-var mock *models.ComposableShStoreMock
-var save_store models.ShStore
-var user *models.User
-
-var save_getter func(*http.Request)(*models.User, error)
-
-func setup_user(t *testing.T, user_id int64) {
-	save_getter = currentUserGetter
-	user = &models.User{UserId: user_id}
-	currentUserGetter = func(*http.Request) (*models.User, error) {
-		return user, nil
-	}
-}
-
-func teardown_user() {
-	currentUserGetter = save_getter
-}
-
-func setup_store(t *testing.T) {
-	save_store = Store
-	ctrl = gomock.NewController(t)
-	mock = models.NewComposableShStoreMock(ctrl)
-	Store = mock
-}
-
-func teardown_store() {
-	ctrl.Finish()
-	Store = save_store
-}
-
-var tnx_setup bool = false
-var tnx *sql.Tx
-var db *sql.DB
-var db_mock sqlmock.Sqlmock
-
-func setup_tnx(t *testing.T) {
-	tnx_setup = true
-	var err error
-	db, db_mock, err = sqlmock.New()
-	if err != nil {
-		t.Fatalf("an error '%s' was not expected when testing db", err)
-	}
-
-	db_mock.ExpectBegin()
-	tnx, _ = db.Begin()
-}
-
-func teardown_tnx() {
-	if tnx_setup {
-		db.Close()
-	}
-	tnx_setup = false
-}
-
 func TestTransactionHandler(t *testing.T) {
 	setup_store(t)
 	defer teardown_store()
@@ -578,8 +520,6 @@ func TestTransactionHandler(t *testing.T) {
 		t.Logf("Handler exited with non ok status code %s",
 			http.StatusText(w.Code))
 	}
-	t.Logf("%s\n", w.Body.Bytes())
-	//t.Logf("Size :%d", len(w.Body.Bytes()))
 }
 
 /**
