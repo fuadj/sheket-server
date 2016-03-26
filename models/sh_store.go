@@ -73,6 +73,8 @@ type UserStore interface {
 	FindUserByName(string) (*User, error)
 	FindUserById(int64) (*User, error)
 
+	FindUserByNameInTx(*sql.Tx, string) (*User, error)
+
 	/**
 	 * Permission is given to a user on a company basis.
 	 * A permission typical looks like

@@ -465,6 +465,17 @@ func (_mr *_MockUserStoreRecorder) FindUserById(arg0 interface{}) *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "FindUserById", arg0)
 }
 
+func (_m *MockUserStore) FindUserByNameInTx(_param0 *sql.Tx, _param1 string) (*User, error) {
+	ret := _m.ctrl.Call(_m, "FindUserByNameInTx", _param0, _param1)
+	ret0, _ := ret[0].(*User)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (_mr *_MockUserStoreRecorder) FindUserByNameInTx(arg0, arg1 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "FindUserByNameInTx", arg0, arg1)
+}
+
 func (_m *MockUserStore) SetUserPermission(_param0 *UserPermission) (*UserPermission, error) {
 	ret := _m.ctrl.Call(_m, "SetUserPermission", _param0)
 	ret0, _ := ret[0].(*UserPermission)
@@ -934,6 +945,17 @@ func (_m *MockShStore) FindUserById(_param0 int64) (*User, error) {
 
 func (_mr *_MockShStoreRecorder) FindUserById(arg0 interface{}) *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "FindUserById", arg0)
+}
+
+func (_m *MockShStore) FindUserByNameInTx(_param0 *sql.Tx, _param1 string) (*User, error) {
+	ret := _m.ctrl.Call(_m, "FindUserByNameInTx", _param0, _param1)
+	ret0, _ := ret[0].(*User)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (_mr *_MockShStoreRecorder) FindUserByNameInTx(arg0, arg1 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "FindUserByNameInTx", arg0, arg1)
 }
 
 func (_m *MockShStore) SetUserPermission(_param0 *UserPermission) (*UserPermission, error) {

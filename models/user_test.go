@@ -14,7 +14,7 @@ func TestCreateUserNotExist(t *testing.T) {
 	mock.ExpectQuery(
 		fmt.Sprintf("select (.+) from %s", TABLE_USER)).
 		WithArgs(t_username).
-		WillReturnRows(sqlmock.NewRows(_cols("id, username, hashpass")))
+		WillReturnRows(sqlmock.NewRows(_cols("user_id, username, hashpass")))
 	mock.ExpectQuery(
 		fmt.Sprintf("insert into %s", TABLE_USER)).
 		WithArgs(t_username, t_pass_hash).
@@ -37,7 +37,7 @@ func TestCreateUserNotExistFail(t *testing.T) {
 	mock.ExpectQuery(
 		fmt.Sprintf("select (.+) from %s", TABLE_USER)).
 		WithArgs(t_username).
-		WillReturnRows(sqlmock.NewRows(_cols("id, username, hashpass")))
+		WillReturnRows(sqlmock.NewRows(_cols("user_id, username, hashpass")))
 	mock.ExpectQuery(
 		fmt.Sprintf("insert into %s", TABLE_USER)).
 		WithArgs(t_username, t_pass_hash).WillReturnError(fmt.Errorf("insert error"))
@@ -59,7 +59,7 @@ func TestCreateUserExistRollback(t *testing.T) {
 	mock.ExpectQuery(
 		fmt.Sprintf("select (.+) from %s", TABLE_USER)).
 		WithArgs(t_username).
-		WillReturnRows(sqlmock.NewRows(_cols("id, username, hashpass")).
+		WillReturnRows(sqlmock.NewRows(_cols("user_id, username, hashpass")).
 		AddRow(t_user_id, t_username, t_pass_hash))
 	mock.ExpectRollback()
 
@@ -94,7 +94,7 @@ func TestFindUserByName(t *testing.T) {
 
 	mock.ExpectQuery(fmt.Sprintf("select (.+) from %s", TABLE_USER)).
 		WithArgs(t_username).
-		WillReturnRows(sqlmock.NewRows(_cols("id, username, hashpass")).
+		WillReturnRows(sqlmock.NewRows(_cols("user_id, username, hashpass")).
 		AddRow(t_user_id, t_username, t_pass_hash))
 
 	_, err := store.FindUserByName(t_username)
@@ -123,7 +123,7 @@ func TestFindUserById(t *testing.T) {
 
 	mock.ExpectQuery(fmt.Sprintf("select (.+) from %s", TABLE_USER)).
 	WithArgs(t_user_id).
-	WillReturnRows(sqlmock.NewRows(_cols("id, username, hashpass")).
+	WillReturnRows(sqlmock.NewRows(_cols("user_id, username, hashpass")).
 	AddRow(t_user_id, t_username, t_pass_hash))
 
 	_, err := store.FindUserById(t_user_id)

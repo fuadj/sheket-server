@@ -41,8 +41,7 @@ func (b *shStore) CreateUser(u *User) (*User, error) {
 
 	user, err := b.CreateUserInTx(tnx, u)
 	if err != nil {
-		// if user isn't nil, it means it already existed in the db
-		return user, err
+		return nil, err
 	}
 
 	tnx.Commit()
@@ -50,9 +49,9 @@ func (b *shStore) CreateUser(u *User) (*User, error) {
 }
 
 func (b *shStore) CreateUserInTx(tnx *sql.Tx, u *User) (*User, error) {
-	prev_user, err := _queryUserTnx(tnx, "user already exists", "where username = $1", u.Username)
+	prev_user, err := _queryUserTnx(tnx, "query user error", "where username = $1", u.Username)
 	if prev_user != nil {
-		return prev_user, fmt.Errorf("User:'%s' already exists", u.Username)
+		return nil, fmt.Errorf("username '%s' already exists", u.Username)
 	}
 
 	err = tnx.QueryRow(
@@ -74,6 +73,11 @@ func (b *shStore) FindUserByName(username string) (*User, error) {
 		return nil, err
 	}
 	return user, nil
+}
+
+func (b *shStore) FindUserByNameInTx(tnx *sql.Tx, username string) (*User, error) {
+	return _queryUserTnx(tnx, fmt.Sprintf("no user with %s name", username),
+		"where username = $1", username)
 }
 
 func (b *shStore) FindUserById(id int64) (*User, error) {
@@ -153,7 +157,7 @@ func (b *shStore) GetUserPermission(u *User, company_id int64) (*UserPermission,
 
 func _queryUser(s *shStore, err_msg string, where_stmt string, args ...interface{}) (*User, error) {
 	u := new(User)
-	query := fmt.Sprintf("select id, username, hashpass from %s", TABLE_USER)
+	query := fmt.Sprintf("select user_id, username, hashpass from %s", TABLE_USER)
 
 	var row *sql.Row
 	if len(where_stmt) > 0 {
@@ -171,7 +175,7 @@ func _queryUser(s *shStore, err_msg string, where_stmt string, args ...interface
 
 func _queryUserTnx(tnx *sql.Tx, err_msg string, where_stmt string, args ...interface{}) (*User, error) {
 	u := new(User)
-	query := fmt.Sprintf("select id, username, hashpass from %s", TABLE_USER)
+	query := fmt.Sprintf("select user_id, username, hashpass from %s", TABLE_USER)
 
 	var row *sql.Row
 	if len(where_stmt) > 0 {

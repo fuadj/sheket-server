@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"time"
+	"strings"
 )
 
 func trace(msg string) func() {
@@ -16,13 +17,11 @@ func trace(msg string) func() {
 
 func writeErrorResponse(w http.ResponseWriter, err_code int, err_msg ...string) {
 	w.WriteHeader(err_code)
-	if len(err_msg) > 0 {
-		w.Write([]byte(fmt.Sprintf(
-			`{
-			"error_message":%s,
-			"error_code":%d
-			}`, err_msg[0], err_code)))
-	}
+	w.Write([]byte(fmt.Sprintf(
+		`{
+		"error_message":[%s],
+		"error_code":%d
+		}`, strings.Join(err_msg, ", "), err_code)))
 }
 
 func toInt64(i interface{}, def ...int64) int64 {

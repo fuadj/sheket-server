@@ -8,16 +8,16 @@ import (
 
 // table names
 const (
-	TABLE_USER             = "user_table"
-	TABLE_COMPANY          = "company"
-	TABLE_BRANCH           = "branch"
-	TABLE_CATEGORY         = "category"
-	TABLE_U_PERMISSION     = "user_permission_table"
-	TABLE_INVENTORY_ITEM   = "inventory_item"
-	TABLE_BRANCH_ITEM      = "branch_item"
-	TABLE_TRANSACTION      = "business_transaction"
-	TABLE_TRANSACTION_ITEM = "business_transaction_item"
-	TABLE_ENTITY_REVISION  = "table_entity_revision"
+	TABLE_USER             = "s_user_table"
+	TABLE_COMPANY          = "s_company"
+	TABLE_BRANCH           = "s_branch"
+	TABLE_CATEGORY         = "s_category"
+	TABLE_U_PERMISSION     = "s_user_permission_table"
+	TABLE_INVENTORY_ITEM   = "s_inventory_item"
+	TABLE_BRANCH_ITEM      = "s_branch_item"
+	TABLE_TRANSACTION      = "s_business_transaction"
+	TABLE_TRANSACTION_ITEM = "s_business_transaction_item"
+	TABLE_ENTITY_REVISION  = "s_table_entity_revision"
 )
 
 // Objects that implement this interface can be used as
@@ -67,6 +67,7 @@ func ConnectDbStore() (*dbStore, error) {
 
 	exec := func(q string, args ...interface{}) {
 		if err != nil {
+			fmt.Printf("stmt before %s", q)
 			return
 		}
 		_, err = db.Exec(q, args...)
@@ -87,7 +88,7 @@ func ConnectDbStore() (*dbStore, error) {
 		"company_id		SERIAL PRIMARY KEY, "+
 		"company_name	VARCHAR(100) NOT NULL, "+
 		"contact		VARCHAR(260) NOT NULL, "+
-		"UNIQUE(name));", TABLE_COMPANY))
+		"UNIQUE(company_name));", TABLE_COMPANY))
 
 	exec(t_name("CREATE TABLE IF NOT EXISTS %s ( "+
 		// branch-table
@@ -121,7 +122,7 @@ func ConnectDbStore() (*dbStore, error) {
 	exec(t_name("CREATE TABLE IF NOT EXISTS %s ( "+
 		// item table
 		"item_id		SERIAL PRIMARY KEY, "+
-		"company_id		INTEGER REFERENCES %s(id), "+
+		"company_id		INTEGER REFERENCES %s(company_id), "+
 		"category_id	INTEGER NOT NULL, "+
 		"name			VARCHAR(200) NOT NULL, "+
 		"model_year		VARCHAR(10), "+
@@ -146,6 +147,8 @@ func ConnectDbStore() (*dbStore, error) {
 	 * { transaction_id, local_transaction_id, company_id, branch_id, user_id, date }
 	 * {@column transaction_id} is a UNIQUE number across the transactions of a company,
 	 *					the reason it isn't autoincrement is because it ISN'T UNIQUE globally.
+	 // TODO: check why it can't be unique globally(if it is better to have a smoothly incrementing
+	 // value for a single company
 	 * {@column local_transaction_id is an id locally given at a user's end, it is used
 	 * 			to check if the transaction has already been 'posted' to avoid duplicate posting.
 	 *			i.e: a user in a company can't post a transaction with the same
@@ -166,7 +169,7 @@ func ConnectDbStore() (*dbStore, error) {
 		"branch_id				integer references %s(branch_id), "+
 		"user_id				integer references %s(user_id), "+
 		"date 					integer, "+
-		"unique(company_id, transaction));",
+		"unique(transaction_id));",
 		TABLE_TRANSACTION, TABLE_COMPANY, TABLE_BRANCH, TABLE_USER))
 
 	/**
@@ -196,7 +199,7 @@ func ConnectDbStore() (*dbStore, error) {
 		"trans_type			INTEGER NOT NULL, "+
 		"item_id			INTEGER REFERENCES %s(item_id), "+
 		"other_branch_id 	INTEGER, "+
-		"quantity 			REAL NOT NULL));",
+		"quantity 			REAL NOT NULL);",
 		TABLE_TRANSACTION_ITEM, TABLE_TRANSACTION, TABLE_INVENTORY_ITEM))
 
 	exec(t_name("create table if not exists %s ( "+
@@ -205,7 +208,7 @@ func ConnectDbStore() (*dbStore, error) {
 		"entity_type 		integer not null, "+
 		"action_type 		integer not null, "+
 		"affected_id 		integer not null, "+
-		"additional_info 	integer));"+
+		"additional_info 	integer);",
 		TABLE_ENTITY_REVISION, TABLE_COMPANY))
 
 	if err != nil {
