@@ -3,21 +3,14 @@ package models
 import "database/sql"
 
 type TransactionStore interface {
-	/**
-	 * This assumes the transaction items are included in the transaction object.
-	 * Creation of a {@code ShTransaction} happens only happens in a database
-	 * transaction because either all or none of a user's business transactions
-	 * should be committed.
-	 */
-	CreateShTransaction(*sql.Tx, *ShTransaction) (*ShTransaction, error)
-	AddShTransactionItem(*sql.Tx, *ShTransaction, *ShTransactionItem) (*ShTransactionItem, error)
+	CreateShTransactionInTx(*sql.Tx, *ShTransaction) (*ShTransaction, error)
+	AddShTransactionItemInTx(*sql.Tx, *ShTransaction, *ShTransactionItem) (*ShTransactionItem, error)
 
 	// @args fetch_items 	whether you want the items in the transaction
-	GetShTransactionById(id int64, fetch_items bool) (*ShTransaction, error)
+	GetShTransactionById(company_id, trans_id int64, fetch_items bool) (*ShTransaction, error)
+	GetShTransactionByUUIDInTx(*sql.Tx, string) (*ShTransaction, error)
 
-	// this doesn't fetch items in the transaction
-	// those need to be specifically queried
-	GetShTransactionSinceTransId(start_id int64) (max_id int64, trans []*ShTransaction, err error)
+	GetShTransactionSinceTransId(company_id, start_id int64) (trans []*ShTransaction, err error)
 }
 
 type ItemStore interface {
@@ -27,6 +20,7 @@ type ItemStore interface {
 	UpdateItemInTx(*sql.Tx, *ShItem) (*ShItem, error)
 
 	GetItemById(int64) (*ShItem, error)
+	GetItemByUUIDInTx(*sql.Tx, string) (*ShItem, error)
 	GetItemByIdInTx(*sql.Tx, int64) (*ShItem, error)
 	GetAllCompanyItems(int64) ([]*ShItem, error)
 }
@@ -36,6 +30,7 @@ type BranchStore interface {
 	CreateBranchInTx(*sql.Tx, *ShBranch) (*ShBranch, error)
 	UpdateBranchInTx(*sql.Tx, *ShBranch) (*ShBranch, error)
 
+	GetBranchByUUIDInTx(*sql.Tx, string) (*ShBranch, error)
 	GetBranchById(int64) (*ShBranch, error)
 	GetBranchByIdInTx(*sql.Tx,int64) (*ShBranch, error)
 	ListCompanyBranches(int64) ([]*ShBranch, error)
@@ -78,9 +73,7 @@ type UserStore interface {
 	/**
 	 * Permission is given to a user on a company basis.
 	 * A permission typical looks like
-	 * { company_id, user_id, permission_type, [optional branch_id] }
-	 * if the permission_type requires a user be given permission for a
-	 * specific branch only, then the branch_id will be used.
+	 * { company_id, user_id, permission }
 	 */
 	SetUserPermission(*UserPermission) (*UserPermission, error)
 
@@ -91,6 +84,10 @@ type UserStore interface {
 	SetUserPermissionInTx(*sql.Tx, *UserPermission) (*UserPermission, error)
 
 	GetUserPermission(u *User, company_id int64) (*UserPermission, error)
+
+	GetUserCompanyPermissions(u *User) ([]*Pair_Company_UserPermission, error)
+
+	GetCompanyMembersPermissions(c *Company) ([]*Pair_User_UserPermission, error)
 }
 
 type RevisionStore interface {
@@ -120,12 +117,12 @@ type ShStore interface {
 	Source
 }
 
-// implements ShDataStore
+// implements ShStore
 type shStore struct {
 	DataStore
 }
 
-func NewShDataStore(ds DataStore) ShStore {
+func NewShStore(ds DataStore) ShStore {
 	store := &shStore{ds}
 	return store
 }

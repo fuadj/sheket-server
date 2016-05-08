@@ -9,13 +9,14 @@ import (
 	"net/http"
 	"sheket/server/controller/auth"
 	"sheket/server/models"
+	//"net/http/httputil"
 )
 
 const (
-	no_rev     = int64(-1) // this is a default 'nil' revision number
+	no_rev = int64(-1) // this is a default 'nil' revision number
 
 	// this is (upload|download) branch item revision number
-	key_branch_item_rev = "branch_item_rev"
+	key_branch_item_rev  = "branch_item_rev"
 	key_branch_item_sync = "sync_branch_items"
 
 	// this is the downloaded(sent to user) newly created transactions
@@ -29,7 +30,7 @@ const (
 
 	// this is sent to the user if they have managerial privileges to
 	// see transaction history
-	key_sync_transactions = "sync_transctions"
+	key_sync_transactions = "sync_transactions"
 )
 
 type TransSyncData struct {
@@ -38,7 +39,7 @@ type TransSyncData struct {
 	NewTrans          []*models.ShTransaction
 }
 
-func parseTransactionPost(r io.Reader) (*TransSyncData, error) {
+func parseTransactionPost(r io.Reader, info *IdentityInfo) (*TransSyncData, error) {
 	data, err := simplejson.NewFromReader(r)
 	if err != nil {
 		return nil, err
@@ -63,9 +64,14 @@ func parseTransactionPost(r io.Reader) (*TransSyncData, error) {
 
 		trans := &models.ShTransaction{}
 		trans.TransactionId = toInt64(fields[models.TRANS_JSON_TRANS_ID])
-		trans.LocalTransactionId = toInt64(fields[models.TRANS_JSON_LOCAL_ID])
 		trans.BranchId = toInt64(fields[models.TRANS_JSON_BRANCH_ID])
 		trans.Date = toInt64(fields[models.TRANS_JSON_DATE])
+		if trans.ClientUUID, ok = fields[models.TRANS_JSON_UUID].(string); !ok {
+			return nil, fmt.Errorf("transaction %d missing uuid", i)
+		}
+
+		trans.CompanyId = info.CompanyId
+		trans.UserId = info.User.UserId
 
 		items_arr, ok := fields[models.TRANS_JSON_ITEMS].([]interface{})
 		if !ok {
@@ -82,6 +88,7 @@ func parseTransactionPost(r io.Reader) (*TransSyncData, error) {
 
 			var err error
 			item := &models.ShTransactionItem{}
+			item.CompanyId = info.CompanyId
 			item.TransType, err = toIntErr(fields[0])
 			if err != nil {
 				return nil, err
@@ -118,6 +125,7 @@ type CachedBranchItem struct {
 	*models.ShBranchItem
 
 	itemExistsInBranch bool
+	itemVisited        bool
 }
 
 /**
@@ -145,12 +153,16 @@ func searchBranchItemInCache(tnx *sql.Tx, seenItems map[Pair_BranchItem]*CachedB
 	if err != nil { // the item doesn't exist in the branch-items list
 		cached_branch_item = &CachedBranchItem{
 			ShBranchItem:       search_item,
-			itemExistsInBranch: false}
+			itemExistsInBranch: false,
+			itemVisited: false}
 	} else {
 		cached_branch_item = &CachedBranchItem{
 			ShBranchItem:       branch_item,
-			itemExistsInBranch: true}
+			itemExistsInBranch: true,
+			itemVisited: false}
 	}
+
+	cached_branch_item.itemVisited = false
 
 	if !cached_branch_item.itemExistsInBranch {
 		cached_branch_item.Quantity = float64(0)
@@ -177,9 +189,24 @@ func addTransactionsToDataStore(tnx *sql.Tx, new_transactions []*models.ShTransa
 	result.AffectedBranchItems = make(map[Pair_BranchItem]*CachedBranchItem)
 	for _, trans := range new_transactions {
 		user_trans_id := trans.TransactionId
-		created, t_err := Store.CreateShTransaction(tnx, trans)
+
+		/**
+		 * If the transaction already exists, that must mean the user didn't
+		 * get acknowledgement when posting and is trying to re-post, so just send
+		 * them the id.
+		 */
+		prev_trans, t_err := Store.GetShTransactionByUUIDInTx(tnx, trans.ClientUUID)
 		if t_err != nil {
-			return nil, fmt.Errorf(http.StatusText(http.StatusInternalServerError))
+			return nil, t_err
+		} else if prev_trans != nil {
+			result.OldId2New[user_trans_id] = prev_trans.TransactionId
+			result.NewlyCreatedIds[prev_trans.TransactionId] = true
+			continue
+		}
+
+		created, t_err := Store.CreateShTransactionInTx(tnx, trans)
+		if t_err != nil {
+			return nil, t_err
 		}
 
 		result.OldId2New[user_trans_id] = created.TransactionId
@@ -191,14 +218,18 @@ func addTransactionsToDataStore(tnx *sql.Tx, new_transactions []*models.ShTransa
 					CompanyId: company_id, BranchId: trans.BranchId,
 					ItemId: trans_item.ItemId,
 				})
+			branch_item.itemVisited = true
 
 			switch trans_item.TransType {
-			case models.TRANS_TYPE_ADD_PURCHASED_ITEM:
+			case models.TRANS_TYPE_ADD_PURCHASED,
+				models.TRANS_TYPE_ADD_RETURN_ITEM:
+
 				branch_item.Quantity += trans_item.Quantity
-			case models.TRANS_TYPE_SELL_CURRENT_BRANCH_ITEM:
+
+			case models.TRANS_TYPE_SUB_CURRENT_BRANCH_SALE:
 				branch_item.Quantity -= trans_item.Quantity
 
-			case models.TRANS_TYPE_SELL_PURCHASED_ITEM_DIRECTLY:
+			case models.TRANS_TYPE_SUB_DIRECT_SALE:
 			// this doesn't affect inventory levels as the
 			// items are being sold directly after purchase without
 			// entering a store's inventory list. This is only
@@ -207,23 +238,25 @@ func addTransactionsToDataStore(tnx *sql.Tx, new_transactions []*models.ShTransa
 
 			// these 2 affect another branch
 			// so, grab that branch and update it also
-			case models.TRANS_TYPE_TRANSFER_OTHER_BRANCH_ITEM,
-				models.TRANS_TYPE_SELL_OTHER_BRANCH_ITEM:
+			case models.TRANS_TYPE_ADD_TRANSFER_FROM_OTHER,
+				models.TRANS_TYPE_SUB_TRANSFER_TO_OTHER:
 
 				other_branch_item := searchBranchItemInCache(tnx, result.AffectedBranchItems,
 					&models.ShBranchItem{
 						CompanyId: company_id, BranchId: trans_item.OtherBranchId,
 						ItemId: trans_item.ItemId,
 					})
-				if !other_branch_item.itemExistsInBranch {
+				if !other_branch_item.itemVisited {
 					other_branch_item.Quantity = float64(0)
 				}
+				other_branch_item.itemVisited = true
 
-				if trans_item.TransType == models.TRANS_TYPE_TRANSFER_OTHER_BRANCH_ITEM {
+				if trans_item.TransType == models.TRANS_TYPE_ADD_TRANSFER_FROM_OTHER {
 					branch_item.Quantity += trans_item.Quantity
 					other_branch_item.Quantity -= trans_item.Quantity
-				} else if trans_item.TransType == models.TRANS_TYPE_SELL_OTHER_BRANCH_ITEM {
-					other_branch_item.Quantity -= trans_item.Quantity
+				} else if trans_item.TransType == models.TRANS_TYPE_SUB_TRANSFER_TO_OTHER {
+					branch_item.Quantity -= trans_item.Quantity
+					other_branch_item.Quantity += trans_item.Quantity
 				}
 			}
 		}
@@ -247,7 +280,7 @@ func updateBranchItems(tnx *sql.Tx, cached_branch_items map[Pair_BranchItem]*Cac
 	company_id int64) error {
 
 	for pair_branch_item, cached_item := range cached_branch_items {
-		action_type := int64(models.REV_ACTION_CREATE)
+		action_type := models.REV_ACTION_CREATE
 		if cached_item.itemExistsInBranch {
 			Store.UpdateBranchItemInTx(tnx, cached_item.ShBranchItem)
 			action_type = models.REV_ACTION_UPDATE
@@ -256,11 +289,11 @@ func updateBranchItems(tnx *sql.Tx, cached_branch_items map[Pair_BranchItem]*Cac
 		}
 
 		rev := &models.ShEntityRevision{
-			CompanyId:      company_id,
-			EntityType:     models.REV_ENTITY_BRANCH_ITEM,
-			ActionType:     action_type,
-			EntityAffectedId:     pair_branch_item.BranchId,
-			AdditionalInfo: pair_branch_item.ItemId,
+			CompanyId:        company_id,
+			EntityType:       models.REV_ENTITY_BRANCH_ITEM,
+			ActionType:       action_type,
+			EntityAffectedId: pair_branch_item.BranchId,
+			AdditionalInfo:   pair_branch_item.ItemId,
 		}
 
 		_, err := Store.AddEntityRevisionInTx(tnx, rev)
@@ -275,6 +308,14 @@ func updateBranchItems(tnx *sql.Tx, cached_branch_items map[Pair_BranchItem]*Cac
 var currentUserGetter = auth.GetCurrentUser
 
 func TransactionSyncHandler(w http.ResponseWriter, r *http.Request) {
+	defer trace("TransactionSyncHandler")()
+	/*
+		d, err := httputil.DumpRequest(r, true)
+		if err == nil {
+			fmt.Printf("Request %s\n", string(d))
+		}
+	*/
+
 	company_id := GetCurrentCompanyId(r)
 	if company_id == INVALID_COMPANY_ID {
 		writeErrorResponse(w, http.StatusNonAuthoritativeInfo)
@@ -293,13 +334,17 @@ func TransactionSyncHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	posted_data, err := parseTransactionPost(r.Body)
+	info := &IdentityInfo{CompanyId: company_id, User: user, Permission: permission}
+	posted_data, err := parseTransactionPost(r.Body, info)
 	if err != nil {
 		writeErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	sync_result := make(map[string]interface{})
+	sync_result[JSON_KEY_COMPANY_ID] = company_id
+
+	var newly_created_trans_ids map[int64]bool
 
 	// If the user just polled us to see if there were new
 	// transactions without uploading new transactions,
@@ -316,6 +361,8 @@ func TransactionSyncHandler(w http.ResponseWriter, r *http.Request) {
 			writeErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
 		}
+		newly_created_trans_ids = add_trans_result.NewlyCreatedIds
+
 		// update items affected by the transactions
 		if err = updateBranchItems(tnx, add_trans_result.AffectedBranchItems, company_id); err != nil {
 			tnx.Rollback()
@@ -339,13 +386,16 @@ func TransactionSyncHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// if user does have permission to see transaction history
-	if permission.PermissionType == models.U_PERMISSION_MANAGER {
-		max_trans_id, trans_history, err := fetchTransactionsSince(posted_data.UserTransRev)
+	if permission.PermissionType <= models.PERMISSION_TYPE_BRANCH_MANAGER {
+		max_trans_id, trans_history, err := fetchTransactionsSince(company_id,
+			posted_data.UserTransRev, newly_created_trans_ids)
 		if err != nil {
 			writeErrorResponse(w, http.StatusInternalServerError)
 			return
 		}
-		sync_result[key_sync_transactions] = trans_history
+		if len(trans_history) > 0 {
+			sync_result[key_sync_transactions] = trans_history
+		}
 		sync_result[key_trans_rev] = max_trans_id
 	}
 
@@ -369,16 +419,30 @@ func TransactionSyncHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusOK)
 	w.Write(b)
+	s := string(b)
+	fmt.Printf("Transaction Sync response size:(%d)bytes\n%s\n\n\n", len(s), s)
 }
 
-func fetchTransactionsSince(trans_rev int64) (latest_revision int64, trans_since []map[string]interface{}, err error) {
-	max_trans_id, transactions, err := Store.GetShTransactionSinceTransId(trans_rev)
+func fetchTransactionsSince(company_id, trans_rev int64, newly_created_ids map[int64]bool) (store_max_rev int64,
+	trans_since []map[string]interface{}, err error) {
+
+	store_max_rev = trans_rev
+	transactions, err := Store.GetShTransactionSinceTransId(company_id, trans_rev)
 	if err != nil {
-		return max_trans_id, nil, err
+		return store_max_rev, nil, err
 	}
 
 	trans_history := make([]map[string]interface{}, len(transactions))
-	for i, trans := range transactions {
+	i := 0
+	for _, trans := range transactions {
+		if trans.TransactionId > store_max_rev {
+			store_max_rev = trans.TransactionId
+		}
+		// ignore currently added new transactions in the sync
+		if newly_created_ids[trans.TransactionId] {
+			continue
+		}
+
 		item_history := make([]map[string]interface{}, len(trans.TransItems))
 		for j, trans_item := range trans.TransItems {
 			item_history[j] = map[string]interface{}{
@@ -390,14 +454,16 @@ func fetchTransactionsSince(trans_rev int64) (latest_revision int64, trans_since
 		}
 
 		trans_history[i] = map[string]interface{}{
-			"trans_id":  trans.TransactionId,
-			"user_id":   trans.UserId,
-			"branch_id": trans.BranchId,
-			"date":      trans.Date,
-			"items":     item_history,
+			models.TRANS_JSON_TRANS_ID:  trans.TransactionId,
+			models.TRANS_JSON_UUID:      trans.ClientUUID,
+			models.TRANS_JSON_USER_ID:   trans.UserId,
+			models.TRANS_JSON_BRANCH_ID: trans.BranchId,
+			models.TRANS_JSON_DATE:      trans.Date,
+			models.TRANS_JSON_ITEMS:     item_history,
 		}
+		i++
 	}
-	return max_trans_id, trans_history, nil
+	return store_max_rev, trans_history[:i], nil
 }
 
 func fetchChangedBranchItemsSinceRev(company_id, branch_item_rev int64) (latest_revision int64,

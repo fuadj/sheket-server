@@ -16,7 +16,7 @@ const (
 	t_password        = "abcd abcd"
 	t_pass_hash       = "xxkkadlkjaf"
 	t_branch_name     = "test branch"
-	t_permission_type = 4 //	means smth
+	t_permission      = "{}"
 	t_category_id     = 2
 	t_branch_location = "mexico"
 	t_branch_id       = int64(10)
@@ -40,7 +40,7 @@ func mock_setup(t *testing.T) {
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when testing db", err)
 	}
-	store = NewShDataStore(db)
+	store = NewShStore(db)
 }
 
 func mock_teardown() {

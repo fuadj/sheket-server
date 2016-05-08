@@ -7,8 +7,8 @@ import (
 
 type ShItem struct {
 	ItemId     int64
+	ClientUUID string
 	CompanyId  int64
-	CategoryId int64
 	Name       string
 	ModelYear  string
 	PartNumber string
@@ -18,13 +18,15 @@ type ShItem struct {
 }
 
 const (
-	ITEM_JSON_ITEM_ID = "item_id"
-	ITEM_JSON_COMPANY_ID = "company_id"
-	ITEM_JSON_MODEL_YEAR = "model_year"
-	ITEM_JSON_PART_NUMBER = "part_number"
-	ITEM_JSON_BAR_CODE = "bar_code"
-	ITEM_JSON_MANUAL_CODE = "manual_code"
+	ITEM_JSON_ITEM_ID      = "item_id"
+	ITEM_JSON_UUID         = "client_uuid"
+	ITEM_JSON_COMPANY_ID   = "company_id"
+	ITEM_JSON_ITEM_NAME    = "item_name"
+	ITEM_JSON_MODEL_YEAR   = "model_year"
+	ITEM_JSON_PART_NUMBER  = "part_number"
+	ITEM_JSON_BAR_CODE     = "bar_code"
 	ITEM_JSON_HAS_BAR_CODE = "has_bar_code"
+	ITEM_JSON_MANUAL_CODE  = "manual_code"
 )
 
 func (s *shStore) CreateItem(item *ShItem) (*ShItem, error) {
@@ -48,35 +50,49 @@ func (s *shStore) CreateItem(item *ShItem) (*ShItem, error) {
 func (s *shStore) CreateItemInTx(tnx *sql.Tx, item *ShItem) (*ShItem, error) {
 	err := tnx.QueryRow(
 		fmt.Sprintf("insert into %s "+
-			"(company_id, category_id, name, model_year, "+
-			"part_number, bar_code, has_bar_code, manual_code) values "+
+			"(company_id, name, model_year, "+
+			"part_number, bar_code, has_bar_code, manual_code, client_uuid) values "+
 			"($1, $2, $3, $4, $5, $6, $7, $8) RETURNING item_id;", TABLE_INVENTORY_ITEM),
-		item.CompanyId, item.CategoryId, item.Name, item.ModelYear,
-		item.PartNumber, item.BarCode, item.HasBarCode, item.ManualCode).Scan(&item.ItemId)
+		item.CompanyId, item.Name, item.ModelYear,
+		item.PartNumber, item.BarCode, item.HasBarCode, item.ManualCode, item.ClientUUID).
+		Scan(&item.ItemId)
 	return item, err
 }
 
 func (s *shStore) UpdateItemInTx(tnx *sql.Tx, item *ShItem) (*ShItem, error) {
 	_, err := tnx.Exec(
 		fmt.Sprintf("update %s set "+
-		"(category_id, name, model_year, "+
-		"part_number, bar_code, has_bar_code, manual_code) values "+
-		"($1, $2, $3, $4, $5, $6, $7) " +
-		"where item_id = $8", TABLE_INVENTORY_ITEM),
-		item.CategoryId, item.Name, item.ModelYear,
-		item.PartNumber, item.BarCode, item.HasBarCode, item.ManualCode,
+			"name = $1, model_year = $2, "+
+			"part_number = $3, bar_code = $4, has_bar_code = $5, manual_code = $6 "+
+			"where item_id = $8", TABLE_INVENTORY_ITEM),
+		item.Name, item.ModelYear, item.PartNumber,
+		item.BarCode, item.HasBarCode, item.ManualCode,
 		item.ItemId)
 	return item, err
+}
+
+func (s *shStore) GetItemByUUIDInTx(tnx *sql.Tx, uid string) (*ShItem, error) {
+	msg := fmt.Sprintf("no item with that uuid:%s", uid)
+	item, err := _queryInventoryItemsInTx(tnx, msg, "where client_uuid = $1", uid)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(item) == 0 {
+		return nil, nil
+	}
+
+	return item[0], nil
 }
 
 func (s *shStore) GetItemById(id int64) (*ShItem, error) {
 	msg := fmt.Sprintf("no item with that id %d", id)
 	item, err := _queryInventoryItems(s, msg, "where item_id = $1", id)
-	if err != nil || len(item) == 0 {
-		if err == nil {
-			err = fmt.Errorf("No item with id:%d", id)
-		}
+	if err != nil {
 		return nil, err
+	}
+	if len(item) == 0 {
+		return nil, fmt.Errorf("error getting item:%d", id)
 	}
 
 	return item[0], nil
@@ -84,12 +100,12 @@ func (s *shStore) GetItemById(id int64) (*ShItem, error) {
 
 func (s *shStore) GetItemByIdInTx(tnx *sql.Tx, id int64) (*ShItem, error) {
 	msg := fmt.Sprintf("no item with that id %d", id)
-	item, err := _queryInventoryItemsInTx(s, tnx, msg, "where item_id = $1", id)
-	if err != nil || len(item) == 0 {
-		if err == nil {
-			err = fmt.Errorf("No item with id:%d", id)
-		}
+	item, err := _queryInventoryItemsInTx(tnx, msg, "where item_id = $1", id)
+	if err != nil {
 		return nil, err
+	}
+	if len(item) == 0 {
+		return nil, fmt.Errorf("error getting item:%d", id)
 	}
 
 	return item[0], nil
@@ -98,11 +114,11 @@ func (s *shStore) GetItemByIdInTx(tnx *sql.Tx, id int64) (*ShItem, error) {
 func (s *shStore) GetAllCompanyItems(company_id int64) ([]*ShItem, error) {
 	msg := fmt.Sprintf("no item in company:%d", company_id)
 	item, err := _queryInventoryItems(s, msg, "where company = $1", company_id)
-	if err != nil || len(item) == 0 {
-		if err == nil {
-			err = fmt.Errorf("No items in company:%d", company_id)
-		}
+	if err != nil {
 		return nil, err
+	}
+	if len(item) == 0 {
+		return nil, fmt.Errorf("error getting items in company:%d", company_id)
 	}
 
 	return item, nil
@@ -111,8 +127,8 @@ func (s *shStore) GetAllCompanyItems(company_id int64) ([]*ShItem, error) {
 func _queryInventoryItems(s *shStore, err_msg string, where_stmt string, args ...interface{}) ([]*ShItem, error) {
 	var result []*ShItem
 
-	query := fmt.Sprintf("select item_id, company_id, category_id, name, model_year "+
-	"part_number, bar_code, has_bar_code, manual_code from %s", TABLE_INVENTORY_ITEM)
+	query := fmt.Sprintf("select item_id, company_id, name, model_year, "+
+		"part_number, bar_code, has_bar_code, manual_code, client_uuid from %s", TABLE_INVENTORY_ITEM)
 	sort_by := " ORDER BY item_id desc"
 
 	var rows *sql.Rows
@@ -131,13 +147,13 @@ func _queryInventoryItems(s *shStore, err_msg string, where_stmt string, args ..
 		err := rows.Scan(
 			&i.ItemId,
 			&i.CompanyId,
-			&i.CategoryId,
 			&i.Name,
 			&i.ModelYear,
 			&i.PartNumber,
 			&i.BarCode,
 			&i.HasBarCode,
 			&i.ManualCode,
+			&i.ClientUUID,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("%s %v", err_msg, err.Error())
@@ -148,11 +164,11 @@ func _queryInventoryItems(s *shStore, err_msg string, where_stmt string, args ..
 	return result, nil
 }
 
-func _queryInventoryItemsInTx(s *shStore, tnx *sql.Tx, err_msg string, where_stmt string, args ...interface{}) ([]*ShItem, error) {
+func _queryInventoryItemsInTx(tnx *sql.Tx, err_msg string, where_stmt string, args ...interface{}) ([]*ShItem, error) {
 	var result []*ShItem
 
-	query := fmt.Sprintf("select item_id, company_id, category_id, name, model_year "+
-	"part_number, bar_code, has_bar_code, manual_code from %s", TABLE_INVENTORY_ITEM)
+	query := fmt.Sprintf("select item_id, company_id, name, model_year, "+
+		"part_number, bar_code, has_bar_code, manual_code, client_uuid from %s", TABLE_INVENTORY_ITEM)
 	sort_by := " ORDER BY item_id desc"
 
 	var rows *sql.Rows
@@ -171,13 +187,13 @@ func _queryInventoryItemsInTx(s *shStore, tnx *sql.Tx, err_msg string, where_stm
 		err := rows.Scan(
 			&i.ItemId,
 			&i.CompanyId,
-			&i.CategoryId,
 			&i.Name,
 			&i.ModelYear,
 			&i.PartNumber,
 			&i.BarCode,
 			&i.HasBarCode,
 			&i.ManualCode,
+			&i.ClientUUID,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("%s %v", err_msg, err.Error())
@@ -185,5 +201,6 @@ func _queryInventoryItemsInTx(s *shStore, tnx *sql.Tx, err_msg string, where_stm
 
 		result = append(result, i)
 	}
+	rows.Close()
 	return result, nil
 }

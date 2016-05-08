@@ -9,6 +9,7 @@ import (
 type ShBranch struct {
 	CompanyId int64
 	BranchId  int64
+	ClientUUID string
 	Name      string
 	Location  string
 }
@@ -16,6 +17,7 @@ type ShBranch struct {
 const (
 	BRANCH_JSON_COMPANY_ID = "company_id"
 	BRANCH_JSON_BRANCH_ID  = "branch_id"
+	BRANCH_JSON_UUID = "client_uuid"
 	BRANCH_JSON_NAME       = "name"
 	BRANCH_JSON_LOCATION   = "location"
 )
@@ -30,7 +32,7 @@ type ShBranchItem struct {
 
 const (
 	// the val of this should be string of "branch_id:item_id"
-	BRANCH_ITEM_JSON_ID            = "id"
+	BRANCH_ITEM_JSON_ID            = "branch_item_id"
 
 	BRANCH_ITEM_JSON_COMPANY_ID    = "company_id"
 	BRANCH_ITEM_JSON_BRANCH_ID     = "branch_id"
@@ -60,17 +62,17 @@ func (s *shStore) CreateBranch(b *ShBranch) (*ShBranch, error) {
 func (s *shStore) CreateBranchInTx(tnx *sql.Tx, b *ShBranch) (*ShBranch, error) {
 	err := tnx.QueryRow(
 		fmt.Sprintf("insert into %s "+
-			"(company_id, branch_name, location) values "+
-			"($1, $2, $3) returning branch_id;", TABLE_BRANCH),
-		b.CompanyId, b.Name, b.Location).Scan(&b.BranchId)
+			"(company_id, branch_name, location, client_uuid) values "+
+			"($1, $2, $3, $4) returning branch_id;", TABLE_BRANCH),
+		b.CompanyId, b.Name, b.Location, b.ClientUUID).Scan(&b.BranchId)
 	return b, err
 }
 
 func (s *shStore) UpdateBranchInTx(tnx *sql.Tx, b *ShBranch) (*ShBranch, error) {
 	_, err := tnx.Exec(
 		fmt.Sprintf("update %s set "+
-			"(branch_name, location) values "+
-			"($1, $2) where branch_id = $3 ", TABLE_BRANCH),
+			" branch_name = $1, location = $2 " +
+			" where branch_id = $3 ", TABLE_BRANCH),
 		b.Name, b.Location, b.BranchId)
 	return b, err
 }
@@ -95,6 +97,18 @@ func (s *shStore) GetBranchByIdInTx(tnx *sql.Tx, id int64) (*ShBranch, error) {
 	}
 	if len(branches) == 0 {
 		return nil, errors.New(fmt.Sprintf("No branch with id:%d", id))
+	}
+	return branches[0], nil
+}
+
+func (s *shStore) GetBranchByUUIDInTx(tnx *sql.Tx, uid string) (*ShBranch, error) {
+	msg := fmt.Sprintf("no branch with that uuid:%s", uid)
+	branches, err := _queryBranchInTx(tnx, msg, "where client_uuid = $1", uid)
+	if err != nil {
+		return nil, err
+	}
+	if len(branches) == 0 {
+		return nil, nil
 	}
 	return branches[0], nil
 }
@@ -136,8 +150,8 @@ func (s *shStore) AddItemToBranchInTx(tnx *sql.Tx, item *ShBranchItem) (*ShBranc
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 	if rows.Next() { // if the item already exists, overwrite it
+		rows.Close()
 		stmt := fmt.Sprintf("update %s set "+
 			"quantity = $1, item_location = $2 "+
 			"where branch_id = $3 and item_id = $4", TABLE_BRANCH_ITEM)
@@ -146,6 +160,7 @@ func (s *shStore) AddItemToBranchInTx(tnx *sql.Tx, item *ShBranchItem) (*ShBranc
 			return nil, err
 		}
 	} else {
+		rows.Close()
 		_, err = tnx.Exec(
 			fmt.Sprintf("insert into %s "+
 				"(company_id, branch_id, item_id, quantity, item_location) values "+
@@ -218,7 +233,8 @@ func (s *shStore) GetItemsInAllCompanyBranches(id int64) ([]*ShBranchItem, error
 func _queryBranch(s *shStore, err_msg string, where_stmt string, args ...interface{}) ([]*ShBranch, error) {
 	var result []*ShBranch
 
-	query := fmt.Sprintf("select company_id, branch_id, branch_name, location from %s", TABLE_BRANCH)
+	query := fmt.Sprintf("select company_id, branch_id, branch_name, location, client_uuid from %s",
+		TABLE_BRANCH)
 	sort_by := " ORDER BY branch_id desc"
 
 	var rows *sql.Rows
@@ -239,6 +255,7 @@ func _queryBranch(s *shStore, err_msg string, where_stmt string, args ...interfa
 			&b.BranchId,
 			&b.Name,
 			&b.Location,
+			&b.ClientUUID,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("%s %v", err_msg, err.Error())
@@ -252,7 +269,8 @@ func _queryBranch(s *shStore, err_msg string, where_stmt string, args ...interfa
 func _queryBranchInTx(tnx *sql.Tx, err_msg string, where_stmt string, args ...interface{}) ([]*ShBranch, error) {
 	var result []*ShBranch
 
-	query := fmt.Sprintf("select company_id, branch_id, branch_name, location from %s", TABLE_BRANCH)
+	query := fmt.Sprintf("select company_id, branch_id, branch_name, location, client_uuid from %s",
+		TABLE_BRANCH)
 	sort_by := " ORDER BY branch_id desc"
 
 	var rows *sql.Rows
@@ -273,6 +291,7 @@ func _queryBranchInTx(tnx *sql.Tx, err_msg string, where_stmt string, args ...in
 			&b.BranchId,
 			&b.Name,
 			&b.Location,
+			&b.ClientUUID,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("%s %v", err_msg, err.Error())

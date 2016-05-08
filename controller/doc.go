@@ -10,23 +10,13 @@ package controller
 		"transaction_rev":rev_number,
 		"branch_item_rev":rev_number,
 
+		// this only exists if the user has created transactions!!
 		"transactions": [
 			// this is an array of transactions
 			{
-				// this is a negative value as an offline user is giving
-				// a transaction a "temporary id" value until sync time
-				// when it will be replaced with the global value
-				// generated at the server.
+				// this is a temporary value assigned at the user's end
+				// and replaced by a unique global value
 				"trans_id":transaction_id
-
-				// The only use of this id is to prevent possible duplicate
-				// posting. This might happen if the user "upload's" their
-				// changes and the server commits those changes, but the
-				// connection with the user is cut before the server
-				// could inform the user to update values with the sync'ed
-				// values. So, when the user tries to "upload" again, we
-				// need some way to tell that those were previously uploaded.
-				"local_id":local_id
 
 				// the branch the transactions originated in
 				"branch_id":branch_id
@@ -45,7 +35,7 @@ package controller
 		},
 	}
 
-	Transaction Sync download format
+	Transaction Sync response format
 	{
 		"transaction_rev":latest transaction revision
 		"branch_item_rev":latest branch_item revision
@@ -69,20 +59,22 @@ package controller
 		// those global id's are then sent to user so they may
 		// update their local ids. If there was no new transactions
 		// uploaded, this will not exist, it is to minimize network usage.
-		"update_local_transactions": [
+		"updated_trans_ids": [
 			{
 				"n":new_id, "o":old_id
 			}, ...
 		]
 	}
 
+	// The company id and user_id are sent in the header, and not in the json
+	// This simplifies error checking even before parsing the request body
 	Entity Sync upload format
 	{
 		"item_rev":item_rev_number
 		"branch_rev":branch_rev_number
 		"branch_item_rev":branch_item_rev_number
 
-		"types": [ changed entities {"items" | "branches" | "branch_items"} ]
+		"types": [ see "ENTITY TYPES" ]
 
 		// could be {"items" OR "branches" OR "branch_items"}
 		"entity": {
@@ -101,9 +93,19 @@ package controller
 		}
 	}
 
+
+	-- ENTITY TYPES --
+	1) "items"
+	2) "members"
+	3) "branches"
+	4) "branch_items"
+	-- END ENTITY TYPES --
+
 	-- ENTITY ID TYPES -- of Entity Upload Format
 	"items":
 		id is integer
+	"members":
+		id is integer(it is the user's id)
 	"branches":
 		id is integer
 	"branch_items":
@@ -112,9 +114,7 @@ package controller
 
 	-- INTERNAL FIELDS -- of Entity Upload Format
 		"items":
-			// these 2 fields are necessary for all CRUD operations
-			// the rest is defined by each CRUD method
-			"company_id: (int)
+			// This is necessary for all CRUD types
 			"item_id": (int)
 			// the item_id should be negative if it is a create operation
 			// the negative value will then be replaced with a global value
@@ -129,9 +129,13 @@ package controller
 			"has_bar_code": (bool)
 			"manual_code": (string)
 
+		// TODO: not implemented yet
+		"members":
+			"user_id": (int)
+			"permission": (string)
+
 		"branches":
-			// these 2 fields are necessary for all CRUD operations
-			"company_id": (int)
+			// This is necessary for all CRUD types
 			"branch_id": (int)
 			// if it is create, "branch_id" should be negative for synchronization
 			// see "items"."item_id" for more description
@@ -146,11 +150,70 @@ package controller
 			// see "items"."item_id" & "branches"."branch_id" for more info
 			// The "id" and & "company_id" fields are necessary.
 			"id": (string) 	// "branch_id:item_id"
-			"company_id": (int)
 
 			// used on CREATE and UPDATE
 			// if it is UPDATE, any missing fields are assumed to NOT change
 			"quantity": (float)
 			"item_location": (string)
 
+	Entity Sync Result format
+	{
+		"company_id":company_id
+		"item_rev":item_rev
+		"branch_rev": branch_rev
+
+		// only exists if user uploaded new items and server assigned new ids to them
+		"updated_item_ids": [
+			{"o": old_id, "n":new_id}, ...
+		]
+
+		// only exists if user uploaded new branches and server assigned new ids to them
+		"updated_branch_ids": [
+			{"o": old_id, "n":new_id}, ...
+		]
+
+		// only exists if there are added|changed items
+		"sync_items": [
+			{
+				"item_id":,
+				"item_name":,
+				"model_year":,
+				"part_number":,
+				"bar_code":,
+				"manual_code":,
+				"has_bar_code":
+			}, ...
+		]
+
+		// TODO: not implemented yet
+		// only exists if there are changed members
+		"sync_members": [
+			{
+				"user_id":,
+				"user_name":,
+				"permission":
+			}, ...
+		]
+
+		// only exists if there are added|changed branches
+		"sync_branches": [
+			{
+				"branch_id":,
+				"name":,
+				"location":,
+			}, ...
+		]
+	}
+
+	User Sign-up Format
+	{
+		"username":username
+		"password":password
+	}
+
+	User Sign-up Response
+	{
+		"username":username
+		"new_user_id":user_id
+	}
 */

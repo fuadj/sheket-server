@@ -10,24 +10,24 @@ import (
 )
 
 var (
-	ctrl       *gomock.Controller
-	mock       *models.ComposableShStoreMock
-	save_store models.ShStore
-	user       *models.User
+	t_ctrl       *gomock.Controller
+	t_mock       *models.ComposableShStoreMock
+	t_save_store models.ShStore
+	t_user       *models.User
 
-	tnx_setup bool = false
-	tnx       *sql.Tx
-	db        *sql.DB
-	db_mock   sqlmock.Sqlmock
+	t_tnx_setup bool = false
+	t_tnx       *sql.Tx
+	t_db        *sql.DB
+	t_db_mock   sqlmock.Sqlmock
 )
 
 var save_getter func(*http.Request) (*models.User, error)
 
 func setup_user(t *testing.T, user_id int64) {
 	save_getter = currentUserGetter
-	user = &models.User{UserId: user_id}
+	t_user = &models.User{UserId: user_id}
 	currentUserGetter = func(*http.Request) (*models.User, error) {
-		return user, nil
+		return t_user, nil
 	}
 }
 
@@ -36,32 +36,32 @@ func teardown_user() {
 }
 
 func setup_store(t *testing.T) {
-	save_store = Store
-	ctrl = gomock.NewController(t)
-	mock = models.NewComposableShStoreMock(ctrl)
-	Store = mock
+	t_save_store = Store
+	t_ctrl = gomock.NewController(t)
+	t_mock = models.NewComposableShStoreMock(t_ctrl)
+	Store = t_mock
 }
 
 func teardown_store() {
-	ctrl.Finish()
-	Store = save_store
+	t_ctrl.Finish()
+	Store = t_save_store
 }
 
 func setup_tnx(t *testing.T) {
-	tnx_setup = true
+	t_tnx_setup = true
 	var err error
-	db, db_mock, err = sqlmock.New()
+	t_db, t_db_mock, err = sqlmock.New()
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when testing db", err)
 	}
 
-	db_mock.ExpectBegin()
-	tnx, _ = db.Begin()
+	t_db_mock.ExpectBegin()
+	t_tnx, _ = t_db.Begin()
 }
 
 func teardown_tnx() {
-	if tnx_setup {
-		db.Close()
+	if t_tnx_setup {
+		t_db.Close()
 	}
-	tnx_setup = false
+	t_tnx_setup = false
 }

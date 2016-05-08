@@ -180,28 +180,28 @@ func TestEntitySyncHandler(t *testing.T) {
 	setup_tnx(t)
 	defer teardown_tnx()
 
-	source := models.NewMockSource(ctrl)
-	mock.Source = source
+	source := models.NewMockSource(t_ctrl)
+	t_mock.Source = source
 
-	user_store := models.NewMockUserStore(ctrl)
-	permission := &models.UserPermission{CompanyId: company_id,
-		UserId: user_id, PermissionType: models.U_PERMISSION_MANAGER, BranchId: -1}
-	mock.UserStore = user_store
+	user_store := models.NewMockUserStore(t_ctrl)
+	permission := &models.UserPermission{PermissionType:models.PERMISSION_TYPE_CREATOR}
+	permission.Encode()
+	t_mock.UserStore = user_store
 
-	mock.BranchStore = models.NewSimpleBranchStore()
-	mock.BranchItemStore = models.NewSimpleBranchItemStore(nil)
-	mock.RevisionStore = models.NewSimpleRevisionStore(nil)
+	t_mock.BranchStore = models.NewSimpleBranchStore()
+	t_mock.BranchItemStore = models.NewSimpleBranchItemStore(nil)
+	t_mock.RevisionStore = models.NewSimpleRevisionStore(nil)
 
 	for i, test := range itemsParseTest {
 		// this is called for each test
-		user_store.EXPECT().GetUserPermission(user, company_id).Return(permission, nil)
+		user_store.EXPECT().GetUserPermission(t_user, company_id).Return(permission, nil)
 		if test.wantResponse != http.StatusBadRequest {
 			// if there was a problem parsing, we won't get into the
 			// creating the transaction stage.
-			source.EXPECT().Begin().Return(tnx, nil)
+			source.EXPECT().Begin().Return(t_tnx, nil)
 		}
 
-		mock.ItemStore = models.NewSimpleItemStore(test.existingItems)
+		t_mock.ItemStore = models.NewSimpleItemStore(test.existingItems)
 
 		s := fmt.Sprintf(syncJsonFormat,
 			t_item_rev, t_branch_rev, t_branch_item_rev,
@@ -211,7 +211,7 @@ func TestEntitySyncHandler(t *testing.T) {
 		if err != nil {
 			t.Fatalf("request error '%v'", err)
 		}
-		req.Header.Set(KEY_COMPANY_ID, fmt.Sprintf("%d", company_id))
+		req.Header.Set(JSON_KEY_COMPANY_ID, fmt.Sprintf("%d", company_id))
 		w := httptest.NewRecorder()
 		EntitySyncHandler(w, req)
 		if w.Code != test.wantResponse {

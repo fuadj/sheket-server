@@ -10,11 +10,13 @@ import (
 	"sheket/server/models"
 	"strconv"
 	"strings"
+	"net/http/httputil"
 )
 
 const (
 	key_item_revision   = "item_rev"
 	key_branch_revision = "branch_rev"
+	key_member_revision = "member_rev"
 
 	key_types = "types"
 
@@ -27,6 +29,7 @@ const (
 	type_items        = "items"
 	type_branches     = "branches"
 	type_branch_items = "branch_items"
+	type_members      = "members"
 
 	// used in the response json to hold the newly updated item ids
 	key_updated_item_ids = "updated_item_ids"
@@ -39,6 +42,8 @@ const (
 
 	// key of json holding any updated branches since last sync
 	key_sync_branches = "sync_branches"
+
+	key_sync_members = "sync_members"
 )
 
 type CRUD_ACTION int64
@@ -53,6 +58,7 @@ type EntitySyncData struct {
 	RevisionItem        int64
 	RevisionBranch      int64
 	RevisionBranch_Item int64
+	RevisionMember      int64
 
 	// This holds the 'type' of items in the upload
 	Types map[string]bool
@@ -64,6 +70,9 @@ type EntitySyncData struct {
 
 	BranchIds    map[CRUD_ACTION]map[int64]bool
 	BranchFields map[int64]*SyncBranch
+
+	MemberIds    map[CRUD_ACTION]map[int64]bool
+	MemberFields map[int64]*SyncMember
 
 	Branch_ItemIds    map[CRUD_ACTION]map[Pair_BranchItem]bool
 	Branch_ItemFields map[Pair_BranchItem]*SyncBranchItem
@@ -83,7 +92,6 @@ type SyncInventoryItem struct {
 	models.ShItem
 	PostType int64
 
-	// This is especially useful in update mode
 	SuppliedFields
 }
 
@@ -91,7 +99,6 @@ type SyncBranch struct {
 	models.ShBranch
 	PostType int64
 
-	// This is especially useful in update mode
 	SuppliedFields
 }
 
@@ -99,34 +106,44 @@ type SyncBranchItem struct {
 	models.ShBranchItem
 	PostType int64
 
-	// This is especially useful in update mode
 	SuppliedFields
 }
 
-func CreateSubMaps(m map[CRUD_ACTION]map[int64]bool, size int) {
-	m[ACTION_CREATE] = make(map[int64]bool, size)
-	m[ACTION_UPDATE] = make(map[int64]bool, size)
-	m[ACTION_DELETE] = make(map[int64]bool, size)
+type SyncMember struct {
+	models.UserPermission
+	PostType int64
+
+	SuppliedFields
+}
+
+func CreateCRUDMaps(m map[CRUD_ACTION]map[int64]bool) {
+	m[ACTION_CREATE] = make(map[int64]bool)
+	m[ACTION_UPDATE] = make(map[int64]bool)
+	m[ACTION_DELETE] = make(map[int64]bool)
 }
 
 func NewEntitySyncData() *EntitySyncData {
 	s := &EntitySyncData{}
-	s.Types = make(map[string]bool, 3)
-	DEFAULT_SIZE := 10
-	s.ItemIds = make(map[CRUD_ACTION]map[int64]bool, DEFAULT_SIZE)
-	s.ItemFields = make(map[int64]*SyncInventoryItem, DEFAULT_SIZE)
 
-	s.BranchIds = make(map[CRUD_ACTION]map[int64]bool, DEFAULT_SIZE)
-	s.BranchFields = make(map[int64]*SyncBranch, DEFAULT_SIZE)
+	s.Types = make(map[string]bool)
+	s.ItemIds = make(map[CRUD_ACTION]map[int64]bool)
+	s.ItemFields = make(map[int64]*SyncInventoryItem)
 
-	CreateSubMaps(s.ItemIds, DEFAULT_SIZE)
-	CreateSubMaps(s.BranchIds, DEFAULT_SIZE)
+	s.BranchIds = make(map[CRUD_ACTION]map[int64]bool)
+	s.BranchFields = make(map[int64]*SyncBranch)
 
-	s.Branch_ItemIds = make(map[CRUD_ACTION]map[Pair_BranchItem]bool, DEFAULT_SIZE)
-	s.Branch_ItemIds[ACTION_CREATE] = make(map[Pair_BranchItem]bool, DEFAULT_SIZE)
-	s.Branch_ItemIds[ACTION_UPDATE] = make(map[Pair_BranchItem]bool, DEFAULT_SIZE)
-	s.Branch_ItemIds[ACTION_DELETE] = make(map[Pair_BranchItem]bool, DEFAULT_SIZE)
-	s.Branch_ItemFields = make(map[Pair_BranchItem]*SyncBranchItem, DEFAULT_SIZE)
+	s.MemberIds = make(map[CRUD_ACTION]map[int64]bool)
+	s.MemberFields = make(map[int64]*SyncMember)
+
+	CreateCRUDMaps(s.ItemIds)
+	CreateCRUDMaps(s.BranchIds)
+	CreateCRUDMaps(s.MemberIds)
+
+	s.Branch_ItemIds = make(map[CRUD_ACTION]map[Pair_BranchItem]bool)
+	s.Branch_ItemIds[ACTION_CREATE] = make(map[Pair_BranchItem]bool)
+	s.Branch_ItemIds[ACTION_UPDATE] = make(map[Pair_BranchItem]bool)
+	s.Branch_ItemIds[ACTION_DELETE] = make(map[Pair_BranchItem]bool)
+	s.Branch_ItemFields = make(map[Pair_BranchItem]*SyncBranchItem)
 
 	return s
 }
@@ -152,6 +169,7 @@ func parseEntityPost(r io.Reader, parsers map[string]EntityParser, info *Identit
 	entity_sync_data.RevisionBranch = data.Get(key_branch_revision).MustInt64(no_rev)
 	// not used now, but might be needed in the future
 	entity_sync_data.RevisionBranch_Item = data.Get(key_branch_item_rev).MustInt64(no_rev)
+	entity_sync_data.RevisionMember = data.Get(key_member_revision).MustInt64(no_rev)
 
 	for _, v := range data.Get(key_types).MustArray() {
 		t, ok := v.(string)
@@ -184,6 +202,7 @@ var parsers = map[string]EntityParser{
 	type_items:        itemParser,
 	type_branches:     branchParser,
 	type_branch_items: branchItemParser,
+	type_members:      memberParser,
 }
 
 // checks if the json has { create & update & delete } keys
@@ -274,6 +293,9 @@ func itemParser(sync_data *EntitySyncData, root *simplejson.Json, info *Identity
 		}
 
 		item.CompanyId = info.CompanyId
+		if item.Name, err = check_string_set(models.ITEM_JSON_ITEM_NAME); err != nil {
+			return err
+		}
 		if item.ModelYear, err = check_string_set(models.ITEM_JSON_MODEL_YEAR); err != nil {
 			return err
 		}
@@ -284,6 +306,9 @@ func itemParser(sync_data *EntitySyncData, root *simplejson.Json, info *Identity
 			return err
 		}
 		if item.ManualCode, err = check_string_set(models.ITEM_JSON_MANUAL_CODE); err != nil {
+			return err
+		}
+		if item.ClientUUID, err = check_string_set(models.ITEM_JSON_UUID); err != nil {
 			return err
 		}
 
@@ -341,19 +366,21 @@ func branchParser(sync_data *EntitySyncData, root *simplejson.Json, info *Identi
 			return "", nil
 		}
 
-		var s_branch_id string
-		if s_branch_id, err = check_string_set(models.BRANCH_JSON_BRANCH_ID); err != nil {
-			return err
+		if val, ok := members[models.BRANCH_JSON_BRANCH_ID]; ok {
+			branch_id, ok := val.(json.Number)
+			if !ok {
+				return fmt.Errorf("invalid 'branch_id' '%v'", val)
+			}
+			branch.SetFields[models.BRANCH_JSON_BRANCH_ID] = true
+			branch.BranchId, err = branch_id.Int64()
+			if err != nil {
+				return err
+			}
+		} else {
+			return fmt.Errorf("branch_id missing %v", v)
 		}
 
-		branch_id, err := strconv.ParseInt(s_branch_id, 10, 64)
-		if err != err {
-			return err
-		}
-
-		branch.BranchId = branch_id
 		branch.CompanyId = info.CompanyId
-		branch.BranchId = branch_id
 
 		if branch.Name, err = check_string_set(models.BRANCH_JSON_NAME); err != nil {
 			return err
@@ -361,18 +388,21 @@ func branchParser(sync_data *EntitySyncData, root *simplejson.Json, info *Identi
 		if branch.Location, err = check_string_set(models.BRANCH_JSON_LOCATION); err != nil {
 			return err
 		}
-
-		if sync_data.BranchIds[ACTION_CREATE][branch_id] {
-			branch.PostType = POST_TYPE_CREATE
-		} else if sync_data.BranchIds[ACTION_UPDATE][branch_id] {
-			branch.PostType = POST_TYPE_UPDATE
-		} else if sync_data.BranchIds[ACTION_DELETE][branch_id] {
-			branch.PostType = POST_TYPE_DELETE
-		} else {
-			fmt.Errorf("branch not listed in any of CRUD operations:%d", branch_id)
+		if branch.ClientUUID, err = check_string_set(models.BRANCH_JSON_UUID); err != nil {
+			return err
 		}
 
-		sync_data.BranchFields[branch_id] = branch
+		if sync_data.BranchIds[ACTION_CREATE][branch.BranchId] {
+			branch.PostType = POST_TYPE_CREATE
+		} else if sync_data.BranchIds[ACTION_UPDATE][branch.BranchId] {
+			branch.PostType = POST_TYPE_UPDATE
+		} else if sync_data.BranchIds[ACTION_DELETE][branch.BranchId] {
+			branch.PostType = POST_TYPE_DELETE
+		} else {
+			fmt.Errorf("branch not listed in any of CRUD operations:%d", branch.BranchId)
+		}
+
+		sync_data.BranchFields[branch.BranchId] = branch
 	}
 
 	return nil
@@ -444,7 +474,7 @@ func branchItemParser(sync_data *EntitySyncData, root *simplejson.Json, info *Id
 	for _, v := range root.Get(key_fields).MustArray() {
 		members, ok := v.(map[string]interface{})
 		if !ok {
-			return fmt.Errorf("invalid branch fields %v", v)
+			return fmt.Errorf("invalid branch item fields %v", v)
 		}
 
 		branch_item := &SyncBranchItem{}
@@ -480,12 +510,15 @@ func branchItemParser(sync_data *EntitySyncData, root *simplejson.Json, info *Id
 			return err
 		}
 		if val, ok := members[models.BRANCH_ITEM_JSON_QUANTITY]; ok {
-			q, ok := val.(float64)
+			q, ok := val.(json.Number)
 			if !ok {
 				return fmt.Errorf("invalid 'quantity' val %v", val)
 			}
 			branch_item.SetFields[models.BRANCH_ITEM_JSON_QUANTITY] = true
-			branch_item.Quantity = q
+			branch_item.Quantity, err = q.Float64()
+			if err != nil {
+				return err
+			}
 		}
 
 		if sync_data.Branch_ItemIds[ACTION_CREATE][pair_branch_item] {
@@ -504,12 +537,74 @@ func branchItemParser(sync_data *EntitySyncData, root *simplejson.Json, info *Id
 	return nil
 }
 
+func memberParser(sync_data *EntitySyncData, root *simplejson.Json, info *IdentityInfo) error {
+	if err := parserCommon("member", root, sync_data.MemberIds); err != nil {
+		return err
+	}
+
+	for _, v := range root.Get(key_fields).MustArray() {
+		fields, ok := v.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("Invalid member fields '%v'", v)
+		}
+
+		member := &SyncMember{}
+		member.CompanyId = info.CompanyId
+		member.SetFields = make(map[string]bool)
+
+		var err error
+		if val, ok := fields[models.PERMISSION_JSON_MEMBER_ID]; ok {
+			member_id, ok := val.(json.Number)
+			if !ok {
+				return fmt.Errorf("invalid 'member_id' '%v'", val)
+			}
+			member.SetFields[models.PERMISSION_JSON_MEMBER_ID] = true
+			if member.UserId, err = member_id.Int64(); err != nil {
+				return err
+			}
+		} else {
+			return fmt.Errorf("member_id missing %v", v)
+		}
+
+		if val, ok := fields[models.PERMISSION_JSON_MEMBER_PERMISSION]; ok {
+			member.EncodedPermission, ok = val.(string)
+			if !ok {
+				return fmt.Errorf("invalid 'member_permission' '%v'", val)
+			}
+			member.SetFields[models.PERMISSION_JSON_MEMBER_PERMISSION] = true
+		} else {
+			return fmt.Errorf("member_permission missing %v", v)
+		}
+
+		if sync_data.MemberIds[ACTION_CREATE][member.UserId] {
+			member.PostType = POST_TYPE_CREATE
+		} else if sync_data.MemberIds[ACTION_UPDATE][member.UserId] {
+			member.PostType = POST_TYPE_UPDATE
+		} else if sync_data.MemberIds[ACTION_DELETE][member.UserId] {
+			member.PostType = POST_TYPE_DELETE
+		}
+
+		sync_data.MemberFields[member.UserId] = member
+	}
+
+	return nil
+}
+
 type EntityResult struct {
 	OldId2New_Items    map[int64]int64
 	OldId2New_Branches map[int64]int64
+
+	NewlyCreatedItemIds   map[int64]bool
+	NewlyCreatedBranchIds map[int64]bool
 }
 
 func EntitySyncHandler(w http.ResponseWriter, r *http.Request) {
+	defer trace("EntitySyncHandler")()
+	d, err := httputil.DumpRequest(r, true)
+	if err == nil {
+		fmt.Printf("Request %s\n", string(d))
+	}
+
 	company_id := GetCurrentCompanyId(r)
 	if company_id == INVALID_COMPANY_ID {
 		writeErrorResponse(w, http.StatusNonAuthoritativeInfo)
@@ -535,21 +630,22 @@ func EntitySyncHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sync_result := make(map[string]interface{})
-
 	tnx, err := Store.Begin()
 	if err != nil {
-		writeErrorResponse(w, http.StatusInternalServerError)
+		writeErrorResponse(w, http.StatusInternalServerError, "e0")
 		return
 	}
 
 	result, err := applyEntityOperations(tnx, posted_data, info)
 	if err != nil {
 		tnx.Rollback()
-		writeErrorResponse(w, http.StatusInternalServerError, err.Error())
+		writeErrorResponse(w, http.StatusInternalServerError, err.Error()+"e1")
 		return
 	}
 	tnx.Commit()
+
+	sync_result := make(map[string]interface{})
+	sync_result[JSON_KEY_COMPANY_ID] = info.CompanyId
 
 	// if there were newly added items, send to user updated ids
 	if len(result.OldId2New_Items) > 0 {
@@ -580,9 +676,9 @@ func EntitySyncHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	latest_item_rev, changed_items, err := fetchChangedItemsSinceRev(company_id,
-		posted_data.RevisionItem)
+		posted_data.RevisionItem, result.NewlyCreatedItemIds)
 	if err != nil {
-		writeErrorResponse(w, http.StatusInternalServerError)
+		writeErrorResponse(w, http.StatusInternalServerError, err.Error()+"e2")
 		return
 	}
 	sync_result[key_item_revision] = latest_item_rev
@@ -590,9 +686,9 @@ func EntitySyncHandler(w http.ResponseWriter, r *http.Request) {
 		sync_result[key_sync_items] = changed_items
 	}
 	latest_branch_rev, changed_branches, err := fetchChangedBranchesSinceRev(company_id,
-		posted_data.RevisionBranch)
+		posted_data.RevisionBranch, result.NewlyCreatedBranchIds)
 	if err != nil {
-		writeErrorResponse(w, http.StatusInternalServerError)
+		writeErrorResponse(w, http.StatusInternalServerError, err.Error()+"e3")
 		return
 	}
 	sync_result[key_branch_revision] = latest_branch_rev
@@ -600,164 +696,368 @@ func EntitySyncHandler(w http.ResponseWriter, r *http.Request) {
 		sync_result[key_sync_branches] = changed_branches
 	}
 
+	if permission.PermissionType <= models.PERMISSION_TYPE_BRANCH_MANAGER {
+		max_member_rev, members, err := fetchChangedMemberSinceRev(company_id,
+		posted_data.RevisionMember)
+		if err != nil {
+			writeErrorResponse(w, http.StatusInternalServerError)
+			return
+		}
+		if len(members) > 0 {
+			sync_result[key_sync_members] = members
+		}
+		sync_result[key_member_revision] = max_member_rev
+	}
+
 	b, err := json.MarshalIndent(sync_result, "", "    ")
 	if err != nil {
-		writeErrorResponse(w, http.StatusInternalServerError)
+		writeErrorResponse(w, http.StatusInternalServerError, "e4")
 		return
 	}
 	w.WriteHeader(http.StatusOK)
 	w.Write(b)
+	s := string(b)
+	fmt.Printf("Entity Sync response size:(%d)bytes\n%s\n\n\n", len(s), s)
 }
 
 func applyEntityOperations(tnx *sql.Tx, posted_data *EntitySyncData, info *IdentityInfo) (*EntityResult, error) {
 	result := &EntityResult{}
-	result.OldId2New_Items = make(map[int64]int64, 10)
-	result.OldId2New_Branches = make(map[int64]int64, 10)
+	result.OldId2New_Items = make(map[int64]int64)
+	result.OldId2New_Branches = make(map[int64]int64)
 
-	// there were items in the post
-	if len(posted_data.ItemFields) > 0 {
-		// for the newly created items, get a globally after adding them to datastore
-		for old_item_id := range posted_data.ItemIds[ACTION_CREATE] {
-			item, ok := posted_data.ItemFields[old_item_id]
-			if !ok {
-				return nil, fmt.Errorf("item:%d doesn't have members defined", old_item_id)
-			}
-			created_item, err := Store.CreateItemInTx(tnx, &item.ShItem)
-			if err != nil {
-				return nil, fmt.Errorf("error creating item %s", err.Error())
-			}
-			result.OldId2New_Items[old_item_id] = created_item.ItemId
-		}
-		// for items being updated, see which members the user uploaded,
-		// and update those
-		for item_id := range posted_data.ItemIds[ACTION_UPDATE] {
-			item, ok := posted_data.ItemFields[item_id]
-			if !ok {
-				return nil, fmt.Errorf("item:%d doesn't have members defined", item_id)
-			}
-			previous_item, err := Store.GetItemByIdInTx(tnx, item_id)
-			if err != nil {
-				return nil, fmt.Errorf("error retriving item:%d", item_id)
-			}
+	result.NewlyCreatedItemIds = make(map[int64]bool)
+	result.NewlyCreatedBranchIds = make(map[int64]bool)
 
-			if item.SetFields[models.ITEM_JSON_MODEL_YEAR] {
-				previous_item.ModelYear = item.ModelYear
-			}
-			if item.SetFields[models.ITEM_JSON_PART_NUMBER] {
-				previous_item.PartNumber = item.PartNumber
-			}
-			if item.SetFields[models.ITEM_JSON_BAR_CODE] {
-				previous_item.BarCode = item.BarCode
-			}
-			if item.SetFields[models.ITEM_JSON_MANUAL_CODE] {
-				previous_item.ManualCode = item.ManualCode
-			}
-			if item.SetFields[models.ITEM_JSON_HAS_BAR_CODE] {
-				previous_item.HasBarCode = item.HasBarCode
-			}
-
-			if _, err = Store.UpdateItemInTx(tnx, previous_item); err != nil {
-				return nil, fmt.Errorf("error updating item:%d '%v'", item_id, err.Error())
-			}
-		}
-		// TODO: delete item not yet implemented
+	var err error
+	result, err = applyItemOperations(tnx, posted_data, info, result)
+	if err != nil {
+		return nil, err
 	}
 
-	// if there were branches in the post
-	if len(posted_data.BranchFields) > 0 {
-		for old_branch_id := range posted_data.BranchIds[ACTION_CREATE] {
-			branch, ok := posted_data.BranchFields[old_branch_id]
-			if !ok {
-				return nil, fmt.Errorf("branch:%d doesn't have members defined")
-			}
-			created_branch, err := Store.CreateBranchInTx(tnx, &branch.ShBranch)
-			if err != nil {
-				return nil, fmt.Errorf("error creating branch %s", err.Error())
-			}
-			result.OldId2New_Branches[old_branch_id] = created_branch.BranchId
-		}
-		for branch_id := range posted_data.BranchIds[ACTION_UPDATE] {
-			branch, ok := posted_data.BranchFields[branch_id]
-			if !ok {
-				return nil, fmt.Errorf("branch:%d doesn't have members defined")
-			}
-			previous_branch, err := Store.GetBranchByIdInTx(tnx, branch_id)
-			if err != nil {
-				return nil, fmt.Errorf("error retriving branch:%d", branch_id)
-			}
-
-			if branch.SetFields[models.BRANCH_JSON_NAME] {
-				previous_branch.Name = branch.Name
-			}
-			if branch.SetFields[models.BRANCH_JSON_LOCATION] {
-				previous_branch.Location = branch.Location
-			}
-
-			if _, err = Store.UpdateBranchInTx(tnx, previous_branch); err != nil {
-				return nil, fmt.Errorf("error updating branch:%d '%v'", branch_id, err.Error())
-			}
-		}
-		// TODO: delete branch not yet implemented
+	result, err = applyBranchOperations(tnx, posted_data, info, result)
+	if err != nil {
+		return nil, err
 	}
 
-	// if there were branch items in the post
-	if len(posted_data.Branch_ItemFields) > 0 {
-		for pair_branch_item := range posted_data.Branch_ItemIds[ACTION_CREATE] {
-			branch_item, ok := posted_data.Branch_ItemFields[pair_branch_item]
-			if !ok {
-				return nil, fmt.Errorf("branchItem:(%d,%d) doesn't have members defined",
-					pair_branch_item.BranchId, pair_branch_item.ItemId)
-			}
-			branch_id, item_id := pair_branch_item.BranchId, pair_branch_item.ItemId
-
-			// if the id's of the branch item were the locally user generated(yet to be replaced with
-			// server generated global ids), then use the server's
-			if new_branch_id, ok := result.OldId2New_Branches[branch_id]; ok {
-				branch_item.BranchId = new_branch_id
-			}
-			if new_item_id, ok := result.OldId2New_Items[item_id]; ok {
-				branch_item.ItemId = new_item_id
-			}
-
-			if _, err := Store.AddItemToBranchInTx(tnx, &branch_item.ShBranchItem); err != nil {
-				return nil, fmt.Errorf("error adding item:%d to branch:%d '%s'",
-					branch_item.ItemId, branch_item.BranchId, err.Error())
-			}
-		}
-		for pair_branch_item := range posted_data.Branch_ItemIds[ACTION_UPDATE] {
-			posted_branch_item, ok := posted_data.Branch_ItemFields[pair_branch_item]
-			if !ok {
-				return nil, fmt.Errorf("branchItem:(%d,%d) doesn't have members defined",
-					pair_branch_item.BranchId, pair_branch_item.ItemId)
-			}
-			branch_id, item_id := pair_branch_item.BranchId, pair_branch_item.ItemId
-
-			previous_item, err := Store.GetBranchItemInTx(tnx, branch_id, item_id)
-			if err != nil {
-				return nil, fmt.Errorf("error retriving branchItem:(%d,%d)", branch_id, item_id)
-			}
-
-			if posted_branch_item.SetFields[models.BRANCH_ITEM_JSON_QUANTITY] {
-				previous_item.Quantity = posted_branch_item.Quantity
-			}
-			if posted_branch_item.SetFields[models.BRANCH_ITEM_JSON_ITEM_LOCATION] {
-				previous_item.ItemLocation = posted_branch_item.ItemLocation
-			}
-
-			if _, err = Store.UpdateBranchItemInTx(tnx, previous_item); err != nil {
-				return nil, fmt.Errorf("error updating branchItem:(%d,%d) '%v'",
-					branch_id, item_id, err.Error())
-			}
-		}
-		// TODO: delete branch item not yet implemented
+	result, err = applyBranchItemOperations(tnx, posted_data, info, result)
+	if err != nil {
+		return nil, err
 	}
+
+	if info.Permission.PermissionType <= models.PERMISSION_TYPE_MANAGER {
+		result, err = applyMemberOperations(tnx, posted_data, info, result)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return result, nil
 }
 
-func fetchChangedItemsSinceRev(company_id, item_rev int64) (latest_rev int64,
+func applyItemOperations(tnx *sql.Tx, posted_data *EntitySyncData, info *IdentityInfo, result *EntityResult) (*EntityResult, error) {
+	// short-cut
+	if len(posted_data.ItemFields) == 0 {
+		return result, nil
+	}
+
+	// for the newly created items, get a globally after adding them to datastore
+	for old_item_id := range posted_data.ItemIds[ACTION_CREATE] {
+		item, ok := posted_data.ItemFields[old_item_id]
+		if !ok {
+			return nil, fmt.Errorf("item:%d doesn't have members defined", old_item_id)
+		}
+		prev_item, err := Store.GetItemByUUIDInTx(tnx, item.ClientUUID)
+		if err != nil {
+			return nil, fmt.Errorf("error getting item with uuid", err.Error())
+		} else if prev_item != nil {
+			result.OldId2New_Items[old_item_id] = prev_item.ItemId
+			result.NewlyCreatedItemIds[prev_item.ItemId] = true
+			break
+		}
+
+		created_item, err := Store.CreateItemInTx(tnx, &item.ShItem)
+		if err != nil {
+			return nil, fmt.Errorf("error creating item %s", err.Error())
+		}
+		result.OldId2New_Items[old_item_id] = created_item.ItemId
+		result.NewlyCreatedItemIds[created_item.ItemId] = true
+
+		rev := &models.ShEntityRevision{
+			CompanyId:        info.CompanyId,
+			EntityType:       models.REV_ENTITY_ITEM,
+			ActionType:       models.REV_ACTION_CREATE,
+			EntityAffectedId: created_item.ItemId,
+			AdditionalInfo:   -1,
+		}
+
+		_, err = Store.AddEntityRevisionInTx(tnx, rev)
+		if err != nil {
+			return nil, err
+		}
+	}
+	// for items being updated, see which members the user uploaded,
+	// and update those
+	for item_id := range posted_data.ItemIds[ACTION_UPDATE] {
+		item, ok := posted_data.ItemFields[item_id]
+		if !ok {
+			return nil, fmt.Errorf("item:%d doesn't have members defined", item_id)
+		}
+		previous_item, err := Store.GetItemByIdInTx(tnx, item_id)
+		if err != nil {
+			return nil, fmt.Errorf("error retriving item:%d '%s'", item_id, err.Error())
+		}
+
+		if item.SetFields[models.ITEM_JSON_MODEL_YEAR] {
+			previous_item.ModelYear = item.ModelYear
+		}
+		if item.SetFields[models.ITEM_JSON_PART_NUMBER] {
+			previous_item.PartNumber = item.PartNumber
+		}
+		if item.SetFields[models.ITEM_JSON_BAR_CODE] {
+			previous_item.BarCode = item.BarCode
+		}
+		if item.SetFields[models.ITEM_JSON_MANUAL_CODE] {
+			previous_item.ManualCode = item.ManualCode
+		}
+		if item.SetFields[models.ITEM_JSON_HAS_BAR_CODE] {
+			previous_item.HasBarCode = item.HasBarCode
+		}
+
+		if _, err = Store.UpdateItemInTx(tnx, previous_item); err != nil {
+			return nil, fmt.Errorf("error updating item:%d '%v'", item_id, err.Error())
+		}
+
+		rev := &models.ShEntityRevision{
+			CompanyId:        info.CompanyId,
+			EntityType:       models.REV_ENTITY_ITEM,
+			ActionType:       models.REV_ACTION_UPDATE,
+			EntityAffectedId: item_id,
+			AdditionalInfo:   -1,
+		}
+
+		_, err = Store.AddEntityRevisionInTx(tnx, rev)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// TODO: delete item not yet implemented
+
+	return result, nil
+}
+
+func applyBranchOperations(tnx *sql.Tx, posted_data *EntitySyncData, info *IdentityInfo, result *EntityResult) (*EntityResult, error) {
+	// short-cut
+	if len(posted_data.BranchFields) == 0 {
+		return result, nil
+	}
+
+	for old_branch_id := range posted_data.BranchIds[ACTION_CREATE] {
+		branch, ok := posted_data.BranchFields[old_branch_id]
+		if !ok {
+			return nil, fmt.Errorf("branch:%d doesn't have members defined")
+		}
+		prev_branch, err := Store.GetBranchByUUIDInTx(tnx, branch.ClientUUID)
+		if err != nil {
+			return nil, err
+		} else if prev_branch != nil {
+			result.OldId2New_Branches[old_branch_id] = prev_branch.BranchId
+			result.NewlyCreatedBranchIds[prev_branch.BranchId] = true
+			continue
+		}
+
+		created_branch, err := Store.CreateBranchInTx(tnx, &branch.ShBranch)
+		if err != nil {
+			return nil, fmt.Errorf("error creating branch %s", err.Error())
+		}
+		result.OldId2New_Branches[old_branch_id] = created_branch.BranchId
+		result.NewlyCreatedBranchIds[created_branch.BranchId] = true
+
+		rev := &models.ShEntityRevision{
+			CompanyId:        info.CompanyId,
+			EntityType:       models.REV_ENTITY_BRANCH,
+			ActionType:       models.REV_ACTION_CREATE,
+			EntityAffectedId: created_branch.BranchId,
+			AdditionalInfo:   -1,
+		}
+
+		_, err = Store.AddEntityRevisionInTx(tnx, rev)
+		if err != nil {
+			return nil, err
+		}
+	}
+	for branch_id := range posted_data.BranchIds[ACTION_UPDATE] {
+		branch, ok := posted_data.BranchFields[branch_id]
+		if !ok {
+			return nil, fmt.Errorf("branch:%d doesn't have members defined")
+		}
+		previous_branch, err := Store.GetBranchByIdInTx(tnx, branch_id)
+		if err != nil {
+			return nil, fmt.Errorf("error retriving branch:%d '%s'", branch_id, err.Error())
+		}
+
+		if branch.SetFields[models.BRANCH_JSON_NAME] {
+			previous_branch.Name = branch.Name
+		}
+		if branch.SetFields[models.BRANCH_JSON_LOCATION] {
+			previous_branch.Location = branch.Location
+		}
+
+		if _, err = Store.UpdateBranchInTx(tnx, previous_branch); err != nil {
+			return nil, fmt.Errorf("error updating branch:%d '%v'", branch_id, err.Error())
+		}
+
+		rev := &models.ShEntityRevision{
+			CompanyId:        info.CompanyId,
+			EntityType:       models.REV_ENTITY_BRANCH,
+			ActionType:       models.REV_ACTION_UPDATE,
+			EntityAffectedId: branch_id,
+			AdditionalInfo:   -1,
+		}
+
+		_, err = Store.AddEntityRevisionInTx(tnx, rev)
+		if err != nil {
+			return nil, err
+		}
+	}
+	// TODO: delete branch not yet implemented
+	return result, nil
+}
+
+func applyBranchItemOperations(tnx *sql.Tx, posted_data *EntitySyncData, info *IdentityInfo, result *EntityResult) (*EntityResult, error) {
+	// short-cut
+	if len(posted_data.Branch_ItemFields) == 0 {
+		return result, nil
+	}
+	for pair_branch_item := range posted_data.Branch_ItemIds[ACTION_CREATE] {
+		branch_item, ok := posted_data.Branch_ItemFields[pair_branch_item]
+		if !ok {
+			return nil, fmt.Errorf("branchItem:(%d,%d) doesn't have members defined",
+				pair_branch_item.BranchId, pair_branch_item.ItemId)
+		}
+		branch_id, item_id := pair_branch_item.BranchId, pair_branch_item.ItemId
+
+		// if the id's of the branch item were the locally user generated(yet to be replaced with
+		// server generated global ids), then use the server's
+		if new_branch_id, ok := result.OldId2New_Branches[branch_id]; ok {
+			branch_item.BranchId = new_branch_id
+		}
+		if new_item_id, ok := result.OldId2New_Items[item_id]; ok {
+			branch_item.ItemId = new_item_id
+		}
+
+		branch_item.Quantity = 0 // only transactions affect quantity, not directly
+		if _, err := Store.AddItemToBranchInTx(tnx, &branch_item.ShBranchItem); err != nil {
+			return nil, fmt.Errorf("error adding item:%d to branch:%d '%s'",
+				branch_item.ItemId, branch_item.BranchId, err.Error())
+		}
+
+		rev := &models.ShEntityRevision{
+			CompanyId:        info.CompanyId,
+			EntityType:       models.REV_ENTITY_BRANCH_ITEM,
+			ActionType:       models.REV_ACTION_CREATE,
+			EntityAffectedId: branch_id,
+			AdditionalInfo:   item_id,
+		}
+
+		_, err := Store.AddEntityRevisionInTx(tnx, rev)
+		if err != nil {
+			return nil, err
+		}
+	}
+	for pair_branch_item := range posted_data.Branch_ItemIds[ACTION_UPDATE] {
+		posted_branch_item, ok := posted_data.Branch_ItemFields[pair_branch_item]
+		if !ok {
+			return nil, fmt.Errorf("branchItem:(%d,%d) doesn't have members defined",
+				pair_branch_item.BranchId, pair_branch_item.ItemId)
+		}
+		branch_id, item_id := pair_branch_item.BranchId, pair_branch_item.ItemId
+
+		// if the id's of the branch item were the locally user generated(yet to be replaced with
+		// server generated global ids), then use the server's
+		if new_branch_id, ok := result.OldId2New_Branches[branch_id]; ok {
+			posted_branch_item.BranchId = new_branch_id
+		}
+		if new_item_id, ok := result.OldId2New_Items[item_id]; ok {
+			posted_branch_item.ItemId = new_item_id
+		}
+
+		previous_item, err := Store.GetBranchItemInTx(tnx, branch_id, item_id)
+		if err != nil {
+			return nil, fmt.Errorf("error retriving branchItem:(%d,%d) '%s'", branch_id, item_id, err.Error())
+		}
+
+		if posted_branch_item.SetFields[models.BRANCH_ITEM_JSON_ITEM_LOCATION] {
+			previous_item.ItemLocation = posted_branch_item.ItemLocation
+		}
+
+		if _, err = Store.UpdateBranchItemInTx(tnx, previous_item); err != nil {
+			return nil, fmt.Errorf("error updating branchItem:(%d,%d) '%v'",
+				branch_id, item_id, err.Error())
+		}
+
+		rev := &models.ShEntityRevision{
+			CompanyId:        info.CompanyId,
+			EntityType:       models.REV_ENTITY_BRANCH_ITEM,
+			ActionType:       models.REV_ACTION_UPDATE,
+			EntityAffectedId: branch_id,
+			AdditionalInfo:   item_id,
+		}
+
+		_, err = Store.AddEntityRevisionInTx(tnx, rev)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// TODO: delete branch item not yet implemented
+	return result, nil
+}
+
+func applyMemberOperations(tnx *sql.Tx, posted_data *EntitySyncData, info *IdentityInfo, result *EntityResult) (*EntityResult, error) {
+	// short-cut
+	if len(posted_data.MemberFields) == 0 {
+		return result, nil
+	}
+
+	// TODO: we don't implement create here since it is directly online
+	// and not on sync time
+	for member_id := range posted_data.MemberIds[ACTION_UPDATE] {
+		member, ok := posted_data.MemberFields[member_id]
+		if !ok {
+			return nil, fmt.Errorf("member:%d doesn't have fields defined", member_id)
+		}
+
+		p := &models.UserPermission{}
+		p.CompanyId = info.CompanyId
+		p.UserId = member.UserId
+		p.EncodedPermission = member.EncodedPermission
+
+		if _, err := Store.SetUserPermission(p); err != nil {
+			return nil, fmt.Errorf("error updating member:%d permission '%v'", member_id, err)
+		}
+
+		rev := &models.ShEntityRevision{
+			CompanyId:        info.CompanyId,
+			EntityType:       models.REV_ENTITY_MEMBERS,
+			ActionType:       models.REV_ACTION_UPDATE,
+			EntityAffectedId: member_id,
+			AdditionalInfo:   -1,
+		}
+
+		_, err := Store.AddEntityRevisionInTx(tnx, rev)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return result, nil
+}
+
+func fetchChangedItemsSinceRev(company_id, item_rev int64, newly_created_item_ids map[int64]bool) (latest_rev int64,
 	items_since []map[string]interface{}, err error) {
 
-	max_rev, new_item_revs, err := Store.GetRevisionsSince(
+	max_rev, changed_item_revs, err := Store.GetRevisionsSince(
 		&models.ShEntityRevision{
 			CompanyId:      company_id,
 			EntityType:     models.REV_ENTITY_ITEM,
@@ -767,19 +1067,24 @@ func fetchChangedItemsSinceRev(company_id, item_rev int64) (latest_rev int64,
 		return max_rev, nil, err
 	}
 
-	result := make([]map[string]interface{}, len(new_item_revs))
+	result := make([]map[string]interface{}, len(changed_item_revs))
 	i := 0
-	for _, item_rev := range new_item_revs {
+	for _, item_rev := range changed_item_revs {
 		item_id := item_rev.EntityAffectedId
+		if newly_created_item_ids[item_id] {
+			continue
+		}
 
 		item, err := Store.GetItemById(item_id)
 		if err != nil {
+			fmt.Printf("GetItemById error '%v'", err.Error())
 			continue
 		}
 
 		result[i] = map[string]interface{}{
 			models.ITEM_JSON_ITEM_ID:      item.ItemId,
-			models.ITEM_JSON_COMPANY_ID:   item.CompanyId,
+			models.ITEM_JSON_UUID:         item.ClientUUID,
+			models.ITEM_JSON_ITEM_NAME:    item.Name,
 			models.ITEM_JSON_MODEL_YEAR:   item.ModelYear,
 			models.ITEM_JSON_PART_NUMBER:  item.PartNumber,
 			models.ITEM_JSON_BAR_CODE:     item.BarCode,
@@ -791,10 +1096,10 @@ func fetchChangedItemsSinceRev(company_id, item_rev int64) (latest_rev int64,
 	return max_rev, result[:i], nil
 }
 
-func fetchChangedBranchesSinceRev(company_id, branch_rev int64) (latest_rev int64,
+func fetchChangedBranchesSinceRev(company_id, branch_rev int64, newly_created_branch_ids map[int64]bool) (latest_rev int64,
 	branches_since []map[string]interface{}, err error) {
 
-	max_rev, new_item_revs, err := Store.GetRevisionsSince(
+	max_rev, new_branch_revs, err := Store.GetRevisionsSince(
 		&models.ShEntityRevision{
 			CompanyId:      company_id,
 			EntityType:     models.REV_ENTITY_BRANCH,
@@ -803,27 +1108,73 @@ func fetchChangedBranchesSinceRev(company_id, branch_rev int64) (latest_rev int6
 	if err != nil {
 		return max_rev, nil, err
 	}
-	result := make([]map[string]interface{}, len(new_item_revs))
+	result := make([]map[string]interface{}, len(new_branch_revs))
 
 	i := 0
-	for _, item_rev := range new_item_revs {
+	for _, item_rev := range new_branch_revs {
 		branch_id := item_rev.EntityAffectedId
+		if newly_created_branch_ids[branch_id] {
+			continue
+		}
 
 		branch, err := Store.GetBranchById(branch_id)
 		if err != nil {
 			// if a branch has been deleted in future revisions, we won't see it
 			// so skip any error valued branches, and only return to the user those
 			// that are correctly fetched
+			fmt.Printf("GetBranchById Error '%v'", err.Error())
 			continue
 		}
 
 		result[i] = map[string]interface{}{
-			models.BRANCH_JSON_COMPANY_ID: branch.CompanyId,
-			models.BRANCH_JSON_BRANCH_ID:  branch.BranchId,
-			models.BRANCH_JSON_NAME:       branch.Name,
-			models.BRANCH_JSON_LOCATION:   branch.Location,
+			models.BRANCH_JSON_BRANCH_ID: branch.BranchId,
+			models.BRANCH_JSON_UUID:      branch.ClientUUID,
+			models.BRANCH_JSON_NAME:      branch.Name,
+			models.BRANCH_JSON_LOCATION:  branch.Location,
 		}
 		i++
 	}
+	return max_rev, result[:i], nil
+}
+
+func fetchChangedMemberSinceRev(company_id, member_rev int64) (latest_rev int64,
+	members_since []map[string]interface{}, err error) {
+
+	max_rev, changed_member_revs, err := Store.GetRevisionsSince(
+		&models.ShEntityRevision{
+			CompanyId: company_id,
+			EntityType: models.REV_ENTITY_MEMBERS,
+			RevisionNumber: member_rev,
+		})
+	if err != nil {
+		return max_rev, nil, err
+	}
+
+	result := make([]map[string]interface{}, len(changed_member_revs))
+	i := 0
+	for _, rev := range changed_member_revs {
+		member_id := rev.EntityAffectedId
+
+		user, err := Store.FindUserById(member_id)
+		if err != nil {
+			fmt.Printf("fetch changes FindUserById error '%v'", err)
+			continue
+		}
+
+		permission, err := Store.GetUserPermission(user, company_id)
+		if err != nil {
+			fmt.Printf("fetch changes GetUserPermission error '%v'", err)
+			continue
+		}
+
+		result[i] = map[string]interface{} {
+			models.PERMISSION_JSON_MEMBER_ID: member_id,
+			models.PERMISSION_JSON_MEMBER_PERMISSION: permission.EncodedPermission,
+			JSON_KEY_USERNAME: user.Username,
+		}
+
+		i++
+	}
+
 	return max_rev, result[:i], nil
 }

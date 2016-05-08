@@ -29,49 +29,59 @@ func (_m *MockTransactionStore) EXPECT() *_MockTransactionStoreRecorder {
 	return _m.recorder
 }
 
-func (_m *MockTransactionStore) CreateShTransaction(_param0 *sql.Tx, _param1 *ShTransaction) (*ShTransaction, error) {
-	ret := _m.ctrl.Call(_m, "CreateShTransaction", _param0, _param1)
+func (_m *MockTransactionStore) CreateShTransactionInTx(_param0 *sql.Tx, _param1 *ShTransaction) (*ShTransaction, error) {
+	ret := _m.ctrl.Call(_m, "CreateShTransactionInTx", _param0, _param1)
 	ret0, _ := ret[0].(*ShTransaction)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-func (_mr *_MockTransactionStoreRecorder) CreateShTransaction(arg0, arg1 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "CreateShTransaction", arg0, arg1)
+func (_mr *_MockTransactionStoreRecorder) CreateShTransactionInTx(arg0, arg1 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "CreateShTransactionInTx", arg0, arg1)
 }
 
-func (_m *MockTransactionStore) AddShTransactionItem(_param0 *sql.Tx, _param1 *ShTransaction, _param2 *ShTransactionItem) (*ShTransactionItem, error) {
-	ret := _m.ctrl.Call(_m, "AddShTransactionItem", _param0, _param1, _param2)
+func (_m *MockTransactionStore) AddShTransactionItemInTx(_param0 *sql.Tx, _param1 *ShTransaction, _param2 *ShTransactionItem) (*ShTransactionItem, error) {
+	ret := _m.ctrl.Call(_m, "AddShTransactionItemInTx", _param0, _param1, _param2)
 	ret0, _ := ret[0].(*ShTransactionItem)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-func (_mr *_MockTransactionStoreRecorder) AddShTransactionItem(arg0, arg1, arg2 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "AddShTransactionItem", arg0, arg1, arg2)
+func (_mr *_MockTransactionStoreRecorder) AddShTransactionItemInTx(arg0, arg1, arg2 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "AddShTransactionItemInTx", arg0, arg1, arg2)
 }
 
-func (_m *MockTransactionStore) GetShTransactionById(id int64, fetch_items bool) (*ShTransaction, error) {
-	ret := _m.ctrl.Call(_m, "GetShTransactionById", id, fetch_items)
+func (_m *MockTransactionStore) GetShTransactionById(company_id int64, trans_id int64, fetch_items bool) (*ShTransaction, error) {
+	ret := _m.ctrl.Call(_m, "GetShTransactionById", company_id, trans_id, fetch_items)
 	ret0, _ := ret[0].(*ShTransaction)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-func (_mr *_MockTransactionStoreRecorder) GetShTransactionById(arg0, arg1 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetShTransactionById", arg0, arg1)
+func (_mr *_MockTransactionStoreRecorder) GetShTransactionById(arg0, arg1, arg2 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetShTransactionById", arg0, arg1, arg2)
 }
 
-func (_m *MockTransactionStore) GetShTransactionSinceTransId(start_id int64) (int64, []*ShTransaction, error) {
-	ret := _m.ctrl.Call(_m, "GetShTransactionSinceTransId", start_id)
-	ret0, _ := ret[0].(int64)
-	ret1, _ := ret[1].([]*ShTransaction)
-	ret2, _ := ret[2].(error)
-	return ret0, ret1, ret2
+func (_m *MockTransactionStore) GetShTransactionByUUIDInTx(_param0 *sql.Tx, _param1 string) (*ShTransaction, error) {
+	ret := _m.ctrl.Call(_m, "GetShTransactionByUUIDInTx", _param0, _param1)
+	ret0, _ := ret[0].(*ShTransaction)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
-func (_mr *_MockTransactionStoreRecorder) GetShTransactionSinceTransId(arg0 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetShTransactionSinceTransId", arg0)
+func (_mr *_MockTransactionStoreRecorder) GetShTransactionByUUIDInTx(arg0, arg1 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetShTransactionByUUIDInTx", arg0, arg1)
+}
+
+func (_m *MockTransactionStore) GetShTransactionSinceTransId(company_id int64, start_id int64) ([]*ShTransaction, error) {
+	ret := _m.ctrl.Call(_m, "GetShTransactionSinceTransId", company_id, start_id)
+	ret0, _ := ret[0].([]*ShTransaction)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (_mr *_MockTransactionStoreRecorder) GetShTransactionSinceTransId(arg0, arg1 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetShTransactionSinceTransId", arg0, arg1)
 }
 
 // Mock of ItemStore interface
@@ -137,6 +147,17 @@ func (_m *MockItemStore) GetItemById(_param0 int64) (*ShItem, error) {
 
 func (_mr *_MockItemStoreRecorder) GetItemById(arg0 interface{}) *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetItemById", arg0)
+}
+
+func (_m *MockItemStore) GetItemByUUIDInTx(_param0 *sql.Tx, _param1 string) (*ShItem, error) {
+	ret := _m.ctrl.Call(_m, "GetItemByUUIDInTx", _param0, _param1)
+	ret0, _ := ret[0].(*ShItem)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (_mr *_MockItemStoreRecorder) GetItemByUUIDInTx(arg0, arg1 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetItemByUUIDInTx", arg0, arg1)
 }
 
 func (_m *MockItemStore) GetItemByIdInTx(_param0 *sql.Tx, _param1 int64) (*ShItem, error) {
@@ -213,6 +234,17 @@ func (_m *MockBranchStore) UpdateBranchInTx(_param0 *sql.Tx, _param1 *ShBranch) 
 
 func (_mr *_MockBranchStoreRecorder) UpdateBranchInTx(arg0, arg1 interface{}) *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "UpdateBranchInTx", arg0, arg1)
+}
+
+func (_m *MockBranchStore) GetBranchByUUIDInTx(_param0 *sql.Tx, _param1 string) (*ShBranch, error) {
+	ret := _m.ctrl.Call(_m, "GetBranchByUUIDInTx", _param0, _param1)
+	ret0, _ := ret[0].(*ShBranch)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (_mr *_MockBranchStoreRecorder) GetBranchByUUIDInTx(arg0, arg1 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetBranchByUUIDInTx", arg0, arg1)
 }
 
 func (_m *MockBranchStore) GetBranchById(_param0 int64) (*ShBranch, error) {
@@ -509,6 +541,28 @@ func (_mr *_MockUserStoreRecorder) GetUserPermission(arg0, arg1 interface{}) *go
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetUserPermission", arg0, arg1)
 }
 
+func (_m *MockUserStore) GetUserCompanyPermissions(u *User) ([]*Pair_Company_UserPermission, error) {
+	ret := _m.ctrl.Call(_m, "GetUserCompanyPermissions", u)
+	ret0, _ := ret[0].([]*Pair_Company_UserPermission)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (_mr *_MockUserStoreRecorder) GetUserCompanyPermissions(arg0 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetUserCompanyPermissions", arg0)
+}
+
+func (_m *MockUserStore) GetCompanyMembersPermissions(c *Company) ([]*Pair_User_UserPermission, error) {
+	ret := _m.ctrl.Call(_m, "GetCompanyMembersPermissions", c)
+	ret0, _ := ret[0].([]*Pair_User_UserPermission)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (_mr *_MockUserStoreRecorder) GetCompanyMembersPermissions(arg0 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetCompanyMembersPermissions", arg0)
+}
+
 // Mock of RevisionStore interface
 type MockRevisionStore struct {
 	ctrl     *gomock.Controller
@@ -616,49 +670,59 @@ func (_m *MockShStore) EXPECT() *_MockShStoreRecorder {
 	return _m.recorder
 }
 
-func (_m *MockShStore) CreateShTransaction(_param0 *sql.Tx, _param1 *ShTransaction) (*ShTransaction, error) {
-	ret := _m.ctrl.Call(_m, "CreateShTransaction", _param0, _param1)
+func (_m *MockShStore) CreateShTransactionInTx(_param0 *sql.Tx, _param1 *ShTransaction) (*ShTransaction, error) {
+	ret := _m.ctrl.Call(_m, "CreateShTransactionInTx", _param0, _param1)
 	ret0, _ := ret[0].(*ShTransaction)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-func (_mr *_MockShStoreRecorder) CreateShTransaction(arg0, arg1 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "CreateShTransaction", arg0, arg1)
+func (_mr *_MockShStoreRecorder) CreateShTransactionInTx(arg0, arg1 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "CreateShTransactionInTx", arg0, arg1)
 }
 
-func (_m *MockShStore) AddShTransactionItem(_param0 *sql.Tx, _param1 *ShTransaction, _param2 *ShTransactionItem) (*ShTransactionItem, error) {
-	ret := _m.ctrl.Call(_m, "AddShTransactionItem", _param0, _param1, _param2)
+func (_m *MockShStore) AddShTransactionItemInTx(_param0 *sql.Tx, _param1 *ShTransaction, _param2 *ShTransactionItem) (*ShTransactionItem, error) {
+	ret := _m.ctrl.Call(_m, "AddShTransactionItemInTx", _param0, _param1, _param2)
 	ret0, _ := ret[0].(*ShTransactionItem)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-func (_mr *_MockShStoreRecorder) AddShTransactionItem(arg0, arg1, arg2 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "AddShTransactionItem", arg0, arg1, arg2)
+func (_mr *_MockShStoreRecorder) AddShTransactionItemInTx(arg0, arg1, arg2 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "AddShTransactionItemInTx", arg0, arg1, arg2)
 }
 
-func (_m *MockShStore) GetShTransactionById(id int64, fetch_items bool) (*ShTransaction, error) {
-	ret := _m.ctrl.Call(_m, "GetShTransactionById", id, fetch_items)
+func (_m *MockShStore) GetShTransactionById(company_id int64, trans_id int64, fetch_items bool) (*ShTransaction, error) {
+	ret := _m.ctrl.Call(_m, "GetShTransactionById", company_id, trans_id, fetch_items)
 	ret0, _ := ret[0].(*ShTransaction)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-func (_mr *_MockShStoreRecorder) GetShTransactionById(arg0, arg1 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetShTransactionById", arg0, arg1)
+func (_mr *_MockShStoreRecorder) GetShTransactionById(arg0, arg1, arg2 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetShTransactionById", arg0, arg1, arg2)
 }
 
-func (_m *MockShStore) GetShTransactionSinceTransId(start_id int64) (int64, []*ShTransaction, error) {
-	ret := _m.ctrl.Call(_m, "GetShTransactionSinceTransId", start_id)
-	ret0, _ := ret[0].(int64)
-	ret1, _ := ret[1].([]*ShTransaction)
-	ret2, _ := ret[2].(error)
-	return ret0, ret1, ret2
+func (_m *MockShStore) GetShTransactionByUUIDInTx(_param0 *sql.Tx, _param1 string) (*ShTransaction, error) {
+	ret := _m.ctrl.Call(_m, "GetShTransactionByUUIDInTx", _param0, _param1)
+	ret0, _ := ret[0].(*ShTransaction)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
-func (_mr *_MockShStoreRecorder) GetShTransactionSinceTransId(arg0 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetShTransactionSinceTransId", arg0)
+func (_mr *_MockShStoreRecorder) GetShTransactionByUUIDInTx(arg0, arg1 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetShTransactionByUUIDInTx", arg0, arg1)
+}
+
+func (_m *MockShStore) GetShTransactionSinceTransId(company_id int64, start_id int64) ([]*ShTransaction, error) {
+	ret := _m.ctrl.Call(_m, "GetShTransactionSinceTransId", company_id, start_id)
+	ret0, _ := ret[0].([]*ShTransaction)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (_mr *_MockShStoreRecorder) GetShTransactionSinceTransId(arg0, arg1 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetShTransactionSinceTransId", arg0, arg1)
 }
 
 func (_m *MockShStore) CreateItem(_param0 *ShItem) (*ShItem, error) {
@@ -703,6 +767,17 @@ func (_m *MockShStore) GetItemById(_param0 int64) (*ShItem, error) {
 
 func (_mr *_MockShStoreRecorder) GetItemById(arg0 interface{}) *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetItemById", arg0)
+}
+
+func (_m *MockShStore) GetItemByUUIDInTx(_param0 *sql.Tx, _param1 string) (*ShItem, error) {
+	ret := _m.ctrl.Call(_m, "GetItemByUUIDInTx", _param0, _param1)
+	ret0, _ := ret[0].(*ShItem)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (_mr *_MockShStoreRecorder) GetItemByUUIDInTx(arg0, arg1 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetItemByUUIDInTx", arg0, arg1)
 }
 
 func (_m *MockShStore) GetItemByIdInTx(_param0 *sql.Tx, _param1 int64) (*ShItem, error) {
@@ -758,6 +833,17 @@ func (_m *MockShStore) UpdateBranchInTx(_param0 *sql.Tx, _param1 *ShBranch) (*Sh
 
 func (_mr *_MockShStoreRecorder) UpdateBranchInTx(arg0, arg1 interface{}) *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "UpdateBranchInTx", arg0, arg1)
+}
+
+func (_m *MockShStore) GetBranchByUUIDInTx(_param0 *sql.Tx, _param1 string) (*ShBranch, error) {
+	ret := _m.ctrl.Call(_m, "GetBranchByUUIDInTx", _param0, _param1)
+	ret0, _ := ret[0].(*ShBranch)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (_mr *_MockShStoreRecorder) GetBranchByUUIDInTx(arg0, arg1 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetBranchByUUIDInTx", arg0, arg1)
 }
 
 func (_m *MockShStore) GetBranchById(_param0 int64) (*ShBranch, error) {
@@ -989,6 +1075,28 @@ func (_m *MockShStore) GetUserPermission(u *User, company_id int64) (*UserPermis
 
 func (_mr *_MockShStoreRecorder) GetUserPermission(arg0, arg1 interface{}) *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetUserPermission", arg0, arg1)
+}
+
+func (_m *MockShStore) GetUserCompanyPermissions(u *User) ([]*Pair_Company_UserPermission, error) {
+	ret := _m.ctrl.Call(_m, "GetUserCompanyPermissions", u)
+	ret0, _ := ret[0].([]*Pair_Company_UserPermission)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (_mr *_MockShStoreRecorder) GetUserCompanyPermissions(arg0 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetUserCompanyPermissions", arg0)
+}
+
+func (_m *MockShStore) GetCompanyMembersPermissions(c *Company) ([]*Pair_User_UserPermission, error) {
+	ret := _m.ctrl.Call(_m, "GetCompanyMembersPermissions", c)
+	ret0, _ := ret[0].([]*Pair_User_UserPermission)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (_mr *_MockShStoreRecorder) GetCompanyMembersPermissions(arg0 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetCompanyMembersPermissions", arg0)
 }
 
 func (_m *MockShStore) AddEntityRevisionInTx(_param0 *sql.Tx, _param1 *ShEntityRevision) (*ShEntityRevision, error) {

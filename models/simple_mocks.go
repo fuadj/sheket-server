@@ -80,13 +80,13 @@ func NewSimpleTransactionStore() *SimpleTransactionStore {
 	return s
 }
 
-func (s *SimpleTransactionStore) CreateShTransaction(tnx *sql.Tx, trans *ShTransaction) (*ShTransaction, error) {
+func (s *SimpleTransactionStore) CreateShTransactionInTx(tnx *sql.Tx, trans *ShTransaction) (*ShTransaction, error) {
 	trans.TransactionId = int64(len(s.Transactions))
 	s.Transactions[trans.TransactionId] = trans
 	return trans, nil
 }
 
-func (s *SimpleTransactionStore) AddShTransactionItem(tnx *sql.Tx,
+func (s *SimpleTransactionStore) AddShTransactionItemInTx(tnx *sql.Tx,
 	trans *ShTransaction, trans_item *ShTransactionItem) (*ShTransactionItem, error) {
 	trans_item.TransactionId = trans.TransactionId
 	if !s.TransItems[trans_item.TransactionId][trans_item] {
@@ -95,7 +95,7 @@ func (s *SimpleTransactionStore) AddShTransactionItem(tnx *sql.Tx,
 	return trans_item, nil
 }
 
-func (s *SimpleTransactionStore) GetShTransactionById(id int64, fetch_items bool) (*ShTransaction, error) {
+func (s *SimpleTransactionStore) GetShTransactionById(company_id, id int64, fetch_items bool) (*ShTransaction, error) {
 	trans, ok := s.Transactions[id]
 	if !ok {
 		return nil, fmt.Errorf("no transaction: %d", id)
@@ -110,16 +110,12 @@ func (s *SimpleTransactionStore) GetShTransactionById(id int64, fetch_items bool
 	return trans, nil
 }
 
-func (s *SimpleTransactionStore) GetShTransactionSinceTransId(int64) (int64, []*ShTransaction, error) {
+func (s *SimpleTransactionStore) GetShTransactionSinceTransId(company_id, trans_id int64) ([]*ShTransaction, error) {
 	var trans []*ShTransaction
-	var max_id int64
 	for _, t := range s.Transactions {
 		trans = append(trans, t)
-		if t.TransactionId > max_id {
-			max_id = t.TransactionId
-		}
 	}
-	return max_id, trans, nil
+	return trans, nil
 }
 // End: SimpleTransactionStore
 

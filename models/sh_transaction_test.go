@@ -8,8 +8,7 @@ import (
 
 const (
 	transaction_id       = 100
-	local_transaction_id = 1909
-	trans_type           = TRANS_TYPE_SELL_OTHER_BRANCH_ITEM
+	trans_type           = TRANS_TYPE_ADD_TRANSFER_FROM_OTHER
 	other_branch         = 5
 	trans_quantity       = 4.0
 	num_trans_items      = 4
@@ -26,7 +25,6 @@ func _dummyShTransactionItem(i int64) *ShTransactionItem {
 
 func _dummyShTransaction() *ShTransaction {
 	trans := &ShTransaction{CompanyId: t_company_id,
-		LocalTransactionId: local_transaction_id,
 		UserId:             t_user_id, BranchId: t_branch_id, Date: t_date,
 		TransItems: make([]*ShTransactionItem, 0)}
 
@@ -51,13 +49,14 @@ func _transItemInsertExpectation(i int64, return_error bool) *sqlmock.ExpectedEx
 	return expect
 }
 
+/*
 func _transPrevExistExpectation(prev_exist bool, return_error bool) *sqlmock.ExpectedQuery {
 	rs := sqlmock.NewRows(_cols("transaction_id"))
 	if prev_exist {
 		rs.AddRow(transaction_id)
 	}
 	expect := mock.ExpectQuery(fmt.Sprintf("select (.+) from %s", TABLE_TRANSACTION)).
-		WithArgs(t_company_id, t_user_id, local_transaction_id)
+		WithArgs(t_company_id, t_user_id)
 	if return_error {
 		expect.WillReturnError(fmt.Errorf("select error"))
 	} else {
@@ -65,6 +64,7 @@ func _transPrevExistExpectation(prev_exist bool, return_error bool) *sqlmock.Exp
 	}
 	return expect
 }
+*/
 
 func _transMaxExpectation(return_error bool) *sqlmock.ExpectedQuery {
 	expect := mock.ExpectQuery(
@@ -82,7 +82,7 @@ func _transMaxExpectation(return_error bool) *sqlmock.ExpectedQuery {
 
 func _transInsertExpectation(return_error bool) *sqlmock.ExpectedExec {
 	expect := mock.ExpectExec(fmt.Sprintf("insert into %s", TABLE_TRANSACTION)).
-		WithArgs(transaction_id, t_company_id, t_user_id, local_transaction_id, t_branch_id, t_date)
+		WithArgs(transaction_id, t_company_id, t_user_id, t_branch_id, t_date)
 	if return_error {
 		expect.WillReturnError(fmt.Errorf("insert error"))
 	} else {
@@ -98,7 +98,6 @@ func TestCreateShTransactionNew(t *testing.T) {
 	trans := _dummyShTransaction()
 
 	mock.ExpectBegin()
-	_transPrevExistExpectation(false, false)
 	_transMaxExpectation(false)
 	_transInsertExpectation(false)
 	for i := 0; i < len(trans.TransItems); i++ {
@@ -107,7 +106,7 @@ func TestCreateShTransactionNew(t *testing.T) {
 
 	tnx, _ := db.Begin()
 
-	updated, err := store.CreateShTransaction(tnx, trans)
+	updated, err := store.CreateShTransactionInTx(tnx, trans)
 	if err != nil {
 		t.Errorf("CreateShTransaction error '%v'", err)
 	} else if updated.TransactionId != transaction_id {
@@ -122,11 +121,10 @@ func TestCreateShTransactionNewFail(t *testing.T) {
 	trans := _dummyShTransaction()
 
 	mock.ExpectBegin()
-	_transPrevExistExpectation(false, true)
 
 	tnx, _ := db.Begin()
 
-	_, err := store.CreateShTransaction(tnx, trans)
+	_, err := store.CreateShTransactionInTx(tnx, trans)
 	if err == nil {
 		t.Errorf("expected error")
 	}
@@ -137,12 +135,11 @@ func TestCreateShTransactionNewInsertTransFail(t *testing.T) {
 	defer mock_teardown()
 
 	mock.ExpectBegin()
-	_transPrevExistExpectation(false, false)
 	_transMaxExpectation(false)
 	_transInsertExpectation(true)
 	tnx, _ := db.Begin()
 
-	_, err := store.CreateShTransaction(tnx, _dummyShTransaction())
+	_, err := store.CreateShTransactionInTx(tnx, _dummyShTransaction())
 	if err == nil {
 		t.Errorf("expected insert error")
 	}
@@ -155,7 +152,6 @@ func TestCreateShTransactionNewInsertItemsFail(t *testing.T) {
 	trans := _dummyShTransaction()
 
 	mock.ExpectBegin()
-	_transPrevExistExpectation(false, false)
 	_transMaxExpectation(false)
 	_transInsertExpectation(false)
 	for i := 0; i < len(trans.TransItems); i++ {
@@ -167,7 +163,7 @@ func TestCreateShTransactionNewInsertItemsFail(t *testing.T) {
 	}
 	tnx, _ := db.Begin()
 
-	_, err := store.CreateShTransaction(tnx, trans)
+	_, err := store.CreateShTransactionInTx(tnx, trans)
 	if err == nil {
 		t.Errorf("expected insert error")
 	}
@@ -178,10 +174,9 @@ func TestCreateShTransactionExistError(t *testing.T) {
 	defer mock_teardown()
 
 	mock.ExpectBegin()
-	_transPrevExistExpectation(true, false)
 	tnx, _ := db.Begin()
 
-	_, err := store.CreateShTransaction(tnx, _dummyShTransaction())
+	_, err := store.CreateShTransactionInTx(tnx, _dummyShTransaction())
 	if err == nil {
 		t.Errorf("expected transaction already exist error")
 	}
@@ -208,9 +203,9 @@ func _transItemQueryExpectation(n int64, return_error bool) *sqlmock.ExpectedQue
 
 func _transQueryRows() sqlmock.Rows {
 	return sqlmock.NewRows(
-		_cols("transaction_id,company_id,local_transaction_id,"+
+		_cols("transaction_id,company_id,"+
 			"user_id, date")).
-		AddRow(transaction_id, t_company_id, local_transaction_id,
+		AddRow(transaction_id, t_company_id,
 		t_user_id, t_date)
 }
 
@@ -224,7 +219,7 @@ func TestGetShTransactionByIdFetchItems(t *testing.T) {
 		WillReturnRows(_transQueryRows())
 	_transItemQueryExpectation(num_trans_items, false)
 
-	transaction, err := store.GetShTransactionById(transaction_id, true)
+	transaction, err := store.GetShTransactionById(t_company_id, transaction_id, true)
 	if err != nil {
 		t.Errorf("GetShTransactionById error '%v'", err)
 	} else if len(transaction.TransItems) != num_trans_items {
@@ -242,9 +237,9 @@ func TestGetShTransactionByIdNoTransactionError(t *testing.T) {
 		WithArgs(transaction_id).
 		// make the query succeed, but return no rows on the cursor
 		WillReturnRows(sqlmock.NewRows(_cols("transaction_id,company_id," +
-		"local_transaction_id,user_id, date")))
+		"user_id, date")))
 
-	_, err := store.GetShTransactionById(transaction_id, true)
+	_, err := store.GetShTransactionById(t_company_id, transaction_id, true)
 	if err == nil {
 		t.Errorf("expected error")
 	}
@@ -259,7 +254,7 @@ func TestGetShTransactionByIdNoItemsFetch(t *testing.T) {
 		WithArgs(transaction_id).
 		WillReturnRows(_transQueryRows())
 
-	transaction, err := store.GetShTransactionById(transaction_id, false)
+	transaction, err := store.GetShTransactionById(t_company_id, transaction_id, false)
 	if err != nil {
 		t.Errorf("GetShTransactionById error '%v'", err)
 	} else if len(transaction.TransItems) != 0 {
@@ -277,7 +272,7 @@ func TestGetShTransactionByIdFail(t *testing.T) {
 		WithArgs(transaction_id).
 		WillReturnError(fmt.Errorf("select error"))
 
-	_, err := store.GetShTransactionById(transaction_id, true)
+	_, err := store.GetShTransactionById(t_company_id, transaction_id, true)
 	if err == nil {
 		t.Errorf("expected error")
 	}
@@ -293,7 +288,7 @@ func TestGetShTransactionByIdFetchItemsFail(t *testing.T) {
 		WillReturnRows(_transQueryRows())
 	_transItemQueryExpectation(0, true)
 
-	_, err := store.GetShTransactionById(transaction_id, true)
+	_, err := store.GetShTransactionById(t_company_id, transaction_id, true)
 	if err == nil {
 		t.Errorf("expected error")
 	}

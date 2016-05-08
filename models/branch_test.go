@@ -177,6 +177,7 @@ func TestAddBranchItemInsertRollback(t *testing.T) {
 		WithArgs(t_company_id, t_branch_id, t_item_id,
 		t_quantity, t_item_location).
 		WillReturnError(fmt.Errorf("Insert error"))
+	// TODO: check stuff
 	mock.ExpectRollback()
 
 	item := &ShBranchItem{t_company_id, t_branch_id,

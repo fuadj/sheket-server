@@ -11,23 +11,6 @@ type User struct {
 	HashedPassword string
 }
 
-const (
-	U_PERMISSION_CREATOR = iota + 1
-	U_PERMISSION_ADMIN
-	U_PERMISSION_MANAGER
-	U_PERMISSION_BRANCH_MANAGER
-	U_PERMISSION_EMPLOYEE_OTHER_BRANCH_ACCESS
-	U_PERMISSION_EMPLOYEE_BRANCH_TRANSACTION
-	U_PERMISSION_EMPLOYEE_BRANCH_ITEM_ACCESS
-)
-
-type UserPermission struct {
-	CompanyId      int64
-	UserId         int64
-	PermissionType int64
-	BranchId       int64
-}
-
 func (b *shStore) CreateUser(u *User) (*User, error) {
 	tnx, err := b.Begin()
 	if err != nil {
@@ -89,72 +72,6 @@ func (b *shStore) FindUserById(id int64) (*User, error) {
 	return user, nil
 }
 
-func (b *shStore) SetUserPermission(p *UserPermission) (*UserPermission, error) {
-	tnx, err := b.Begin()
-	if err != nil {
-		return nil, fmt.Errorf("Error setting permission '%v'", err)
-	}
-	defer func() {
-		if err != nil {
-			tnx.Rollback()
-		}
-	}()
-
-	permission, err := b.SetUserPermissionInTx(tnx, p)
-	if err != nil {
-		return nil, err
-	}
-	tnx.Commit()
-
-	return permission, nil
-}
-
-func (b *shStore) SetUserPermissionInTx(tnx *sql.Tx, p *UserPermission) (*UserPermission, error) {
-	rows, err := tnx.Query(
-		fmt.Sprintf("select permission_type from %s "+
-			"where company_id = $1 and user_id = $2", TABLE_U_PERMISSION),
-		p.CompanyId, p.UserId)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	if rows.Next() { // if the user already had relations with company, update permission
-		stmt := fmt.Sprintf("update %s set "+
-			"permission_type = $1, branch_id = $2 "+
-			"where company_id = $3 and user_id = $4", TABLE_U_PERMISSION)
-		_, err = tnx.Exec(stmt, p.PermissionType, p.BranchId, p.CompanyId, p.UserId)
-		if err != nil {
-			return nil, err
-		}
-	} else { // the user is new, add permission
-		_, err = tnx.Exec(
-			fmt.Sprintf("insert into %s "+
-				"(company_id, user_id, permission_type, branch_id) values "+
-				"($1, $2, $3, $4)", TABLE_U_PERMISSION),
-			p.CompanyId, p.UserId, p.PermissionType, p.BranchId)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return p, nil
-}
-
-func (b *shStore) GetUserPermission(u *User, company_id int64) (*UserPermission, error) {
-	msg := fmt.Sprintf("error fetching user:'%d' permission for company:'%d'",
-		u.UserId, company_id)
-	permission, err := _queryUserPermission(b, msg,
-		"where company_id = $1 and user_id = $2", company_id, u.UserId)
-	if err != nil {
-		return nil, err
-	}
-	if permission == nil {
-		return nil, fmt.Errorf("user %d, doesn't have permission in company %d",
-			u.UserId, company_id)
-	}
-	return permission, nil
-}
-
 func _queryUser(s *shStore, err_msg string, where_stmt string, args ...interface{}) (*User, error) {
 	u := new(User)
 	query := fmt.Sprintf("select user_id, username, hashpass from %s", TABLE_USER)
@@ -189,23 +106,4 @@ func _queryUserTnx(tnx *sql.Tx, err_msg string, where_stmt string, args ...inter
 	}
 
 	return u, nil
-}
-
-func _queryUserPermission(s *shStore, err_msg string, where_stmt string, args ...interface{}) (*UserPermission, error) {
-	p := new(UserPermission)
-	query := fmt.Sprintf(
-		"select company_id, user_id, permission_type, branch_id from %s", TABLE_U_PERMISSION)
-
-	var row *sql.Row
-	if len(where_stmt) > 0 {
-		row = s.QueryRow(query+" "+where_stmt, args...)
-	} else {
-		row = s.QueryRow(query)
-	}
-
-	if err := row.Scan(&p.CompanyId, &p.UserId, &p.PermissionType, &p.PermissionType); err != nil {
-		return nil, fmt.Errorf("%s %s", err_msg, err)
-	}
-
-	return p, nil
 }

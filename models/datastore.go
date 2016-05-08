@@ -11,7 +11,6 @@ const (
 	TABLE_USER             = "s_user_table"
 	TABLE_COMPANY          = "s_company"
 	TABLE_BRANCH           = "s_branch"
-	TABLE_CATEGORY         = "s_category"
 	TABLE_U_PERMISSION     = "s_user_permission_table"
 	TABLE_INVENTORY_ITEM   = "s_inventory_item"
 	TABLE_BRANCH_ITEM      = "s_branch_item"
@@ -53,7 +52,7 @@ func (d *dbStore) Begin() (*sql.Tx, error) {
 }
 
 func ConnectDbStore() (*dbStore, error) {
-	db, err := sql.Open("postgres", "user=postgres password=abcdabcd dbname=fastsale sslmode=disable")
+	db, err := sql.Open("postgres", "user=postgres password=abcdabcd dbname=sheket sslmode=disable")
 	if err != nil {
 		return nil, err
 	}
@@ -91,8 +90,16 @@ func ConnectDbStore() (*dbStore, error) {
 		"UNIQUE(company_name));", TABLE_COMPANY))
 
 	exec(t_name("CREATE TABLE IF NOT EXISTS %s ( "+
+		// user-permission-table
+		"company_id			INTEGER REFERENCES %s(company_id), "+
+		"user_id			INTEGER REFERENCES %s(user_id), "+
+		"permission			VARCHAR(1000) NOT NULL);",
+		TABLE_U_PERMISSION, TABLE_COMPANY, TABLE_USER))
+
+	exec(t_name("CREATE TABLE IF NOT EXISTS %s ( "+
 		// branch-table
 		"branch_id		SERIAL PRIMARY KEY, "+
+		"client_uuid	uuid, " +
 		"company_id		INTEGER REFERENCES %s(company_id), "+
 		"branch_name	VARCHAR(260) NOT NULL, "+
 		"location 		VARCHAR(200), "+
@@ -101,29 +108,10 @@ func ConnectDbStore() (*dbStore, error) {
 		TABLE_BRANCH, TABLE_COMPANY))
 
 	exec(t_name("CREATE TABLE IF NOT EXISTS %s ( "+
-		// category_table
-		"company_id		INTEGER REFERENCES %s(company_id), "+
-		"category_id	INTEGER NOT NULL, "+
-		"name			VARCHAR(200));",
-		TABLE_CATEGORY, TABLE_COMPANY))
-
-	exec(t_name("CREATE TABLE IF NOT EXISTS %s ( "+
-		// user-permission-table
-		"company_id			INTEGER REFERENCES %s(company_id), "+
-		"user_id			INTEGER REFERENCES %s(user_id), "+
-		"permission_type	INTEGER NOT NULL, "+
-
-		// This is optional, the user could be restricted
-		// to a particular branch or not.
-		// It all depends on the permission_type
-		"branch_id			INTEGER);",
-		TABLE_U_PERMISSION, TABLE_COMPANY, TABLE_USER))
-
-	exec(t_name("CREATE TABLE IF NOT EXISTS %s ( "+
 		// item table
 		"item_id		SERIAL PRIMARY KEY, "+
+		"client_uuid 	uuid, " +
 		"company_id		INTEGER REFERENCES %s(company_id), "+
-		"category_id	INTEGER NOT NULL, "+
 		"name			VARCHAR(200) NOT NULL, "+
 		"model_year		VARCHAR(10), "+
 		"part_number	VARCHAR(30), "+
@@ -143,33 +131,15 @@ func ConnectDbStore() (*dbStore, error) {
 		TABLE_BRANCH_ITEM, TABLE_COMPANY))
 
 	/**
-	 * A Transaction looks like
-	 * { transaction_id, local_transaction_id, company_id, branch_id, user_id, date }
-	 * {@column transaction_id} is a UNIQUE number across the transactions of a company,
-	 *					the reason it isn't autoincrement is because it ISN'T UNIQUE globally.
-	 // TODO: check why it can't be unique globally(if it is better to have a smoothly incrementing
-	 // value for a single company
-	 * {@column local_transaction_id is an id locally given at a user's end, it is used
-	 * 			to check if the transaction has already been 'posted' to avoid duplicate posting.
-	 *			i.e: a user in a company can't post a transaction with the same
-	 * 				{@column local_transaction_id} twice.
-	 *			it needs to be correctly managed, b/c it might prevent a user from posting
-	 *			just because their local id is fucked up. This might happen if the user
-	 *			losses their local counter and start over from 0, effectively blocking
-	 *			his/her posts until their local_id is greater than the one at the server.
-	 *			To PREVENT this, users will also sync this {@column local_transaction_id}
-	 *			EVERY-TIME.
-	 * {@column user_id} is the person who performed the transaction, globally unique
 	 */
 	exec(t_name("create table if not exists %s ( "+
 		// transaction-table
-		"transaction_id			INTEGER NOT NULL, "+
-		"local_transaction_id	integer not null, "+
+		"transaction_id			SERIAL PRIMARY KEY, "+
+		"client_uuid			uuid, " +
 		"company_id				integer references %s(company_id), "+
 		"branch_id				integer references %s(branch_id), "+
 		"user_id				integer references %s(user_id), "+
-		"date 					integer, "+
-		"unique(transaction_id));",
+		"t_date 					integer);",
 		TABLE_TRANSACTION, TABLE_COMPANY, TABLE_BRANCH, TABLE_USER))
 
 	/**
@@ -195,12 +165,13 @@ func ConnectDbStore() (*dbStore, error) {
 	 */
 	exec(t_name("CREATE TABLE IF NOT EXISTS %s ( "+
 		// transaction-items table
+		"company_id			integer references %s(company_id), " +
 		"transaction_id 	INTEGER REFERENCES %s(transaction_id), "+
 		"trans_type			INTEGER NOT NULL, "+
 		"item_id			INTEGER REFERENCES %s(item_id), "+
 		"other_branch_id 	INTEGER, "+
 		"quantity 			REAL NOT NULL);",
-		TABLE_TRANSACTION_ITEM, TABLE_TRANSACTION, TABLE_INVENTORY_ITEM))
+		TABLE_TRANSACTION_ITEM, TABLE_COMPANY, TABLE_TRANSACTION, TABLE_INVENTORY_ITEM))
 
 	exec(t_name("create table if not exists %s ( "+
 		"company_id			integer references %s(company_id), "+

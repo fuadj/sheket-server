@@ -22,11 +22,10 @@ const (
 	test_branch_item_rev = 121
 )
 
-func createTestTransaction(trans_id, local_id, branch_id,
-	date int64, num_items int64) map[string]interface{} {
+func createTestTransaction(trans_id, branch_id, date int64,
+	num_items int64) map[string]interface{} {
 	trans := make(map[string]interface{})
 	trans["trans_id"] = trans_id
-	trans["local_id"] = local_id
 	trans["branch_id"] = branch_id
 	trans["date"] = date
 
@@ -59,13 +58,12 @@ var transactionSyncFormat string = `
 
 var parseTransactionTests = []struct {
 	trans_id  int64
-	local_id  int64
 	branch_id int64
 	date      int64
 	num_items int64
 }{
-	{-5, 100, 2, 1002, 1},
-	{-6, 1027, 8, 201, 10},
+	{-5, 2, 1002, 1},
+	{-6, 8, 201, 10},
 }
 
 func TestParseTransactionPost(t *testing.T) {
@@ -75,7 +73,7 @@ func TestParseTransactionPost(t *testing.T) {
 	transactions := make([]interface{}, len(parseTransactionTests))
 	for i, test := range parseTransactionTests {
 		transactions[i] = createTestTransaction(test.trans_id,
-			test.local_id, test.branch_id, test.date, test.num_items)
+			test.branch_id, test.date, test.num_items)
 	}
 
 	trans_json, _ := json.MarshalIndent(transactions, "\t", "\t")
@@ -111,10 +109,6 @@ func TestParseTransactionPost(t *testing.T) {
 		if got.TransactionId != expected.trans_id {
 			t.Errorf("got:%d, expected_id wanted %d, expected %d",
 				i, expected.trans_id, got.TransactionId)
-		}
-		if got.LocalTransactionId != expected.local_id {
-			t.Errorf("got:%d, local_id wanted %d, expected %d",
-				i, expected.local_id, got.LocalTransactionId)
 		}
 		if got.BranchId != expected.branch_id {
 			t.Errorf("got:%d, branch_id wanted %d, expected %d",
@@ -169,7 +163,7 @@ func TestParseMissingTransId(t *testing.T) {
 	transactions := make([]interface{}, len(parseTransactionTests))
 	for i, test := range parseTransactionTests {
 		trans := createTestTransaction(test.trans_id,
-			test.local_id, test.branch_id, test.date, test.num_items)
+			test.branch_id, test.date, test.num_items)
 		delete(trans, "trans_id")
 		transactions[i] = trans
 	}
@@ -193,7 +187,7 @@ func TestParseInvalidItems(t *testing.T) {
 	transactions := make([]interface{}, len(parseTransactionTests))
 	for i, test := range parseTransactionTests {
 		trans := createTestTransaction(test.trans_id,
-			test.local_id, test.branch_id, test.date, test.num_items)
+			test.branch_id, test.date, test.num_items)
 		delete(trans, "items")
 
 		items := []interface{}{
@@ -247,6 +241,7 @@ var (
 	}{
 		// if not listed here, 0 is the default initial quantity
 		{t_branch_1, t_item_1, 30},
+		{t_branch_1, t_item_2, -60},
 		{t_branch_2, t_item_3, 20},
 	}
 
@@ -259,44 +254,45 @@ var (
 		{2, t_branch_1,
 			[]t_trans_items{
 				// the transaction items
-				t_trans_items{models.TRANS_TYPE_ADD_PURCHASED_ITEM, t_item_1, -1, 10, true},
-				t_trans_items{models.TRANS_TYPE_SELL_PURCHASED_ITEM_DIRECTLY, t_item_1, -1, 20, true},
+				t_trans_items{models.TRANS_TYPE_ADD_PURCHASED, t_item_1, -1, 10, true},
+				t_trans_items{models.TRANS_TYPE_SUB_DIRECT_SALE, t_item_1, -1, 20, true},
 
 				// sell item_2 from shop, qty_left 0 => -70
-				t_trans_items{models.TRANS_TYPE_SELL_CURRENT_BRANCH_ITEM, t_item_2, -1, 70, false},
+				t_trans_items{models.TRANS_TYPE_SUB_CURRENT_BRANCH_SALE, t_item_2, -1, 70, false},
 
 				// transfer item_1 to branch_1, branch_2 qty_left 0 => -100
-				t_trans_items{models.TRANS_TYPE_TRANSFER_OTHER_BRANCH_ITEM, t_item_1, t_branch_2, 100, false},
+				t_trans_items{models.TRANS_TYPE_ADD_TRANSFER_FROM_OTHER, t_item_1, t_branch_2, 100, false},
 
-				t_trans_items{models.TRANS_TYPE_SELL_CURRENT_BRANCH_ITEM, t_item_1, -1, 70, true},
+				t_trans_items{models.TRANS_TYPE_SUB_CURRENT_BRANCH_SALE, t_item_1, -1, 70, true},
+				t_trans_items{models.TRANS_TYPE_ADD_RETURN_ITEM, t_item_2, -1, 100, false},
 			},
 		},
 		{3, t_branch_2,
 			[]t_trans_items{
 				// the transaction items
-				t_trans_items{models.TRANS_TYPE_SELL_PURCHASED_ITEM_DIRECTLY, t_item_3, -1, 1000, true},
-				t_trans_items{models.TRANS_TYPE_TRANSFER_OTHER_BRANCH_ITEM, t_item_1, t_branch_3, 30, false},
+				t_trans_items{models.TRANS_TYPE_SUB_DIRECT_SALE, t_item_3, -1, 1000, true},
+				t_trans_items{models.TRANS_TYPE_SUB_TRANSFER_TO_OTHER, t_item_1, t_branch_3, 30, false},
 
 				// sell item_2 from shop, qty_left 0 => -70
-				t_trans_items{models.TRANS_TYPE_SELL_CURRENT_BRANCH_ITEM, t_item_3, -1, 70, true},
+				t_trans_items{models.TRANS_TYPE_SUB_CURRENT_BRANCH_SALE, t_item_3, -1, 70, true},
 
-				t_trans_items{models.TRANS_TYPE_ADD_PURCHASED_ITEM, t_item_1, -1, 700, true},
+				t_trans_items{models.TRANS_TYPE_ADD_PURCHASED, t_item_1, -1, 700, true},
 			},
 		},
 	}
 
 	branch_item_qty = []t_branch_item_qty{
 		t_branch_item_qty{t_branch_1, t_item_1, 70},
-		t_branch_item_qty{t_branch_1, t_item_2, -70},
+		t_branch_item_qty{t_branch_1, t_item_2, -30},
 
-		t_branch_item_qty{t_branch_2, t_item_1, 630},
+		t_branch_item_qty{t_branch_2, t_item_1, 570},
 		t_branch_item_qty{t_branch_2, t_item_3, -50},
 
-		t_branch_item_qty{t_branch_3, t_item_1, -30},
+		t_branch_item_qty{t_branch_3, t_item_1, 30},
 	}
 )
 
-func TestAddTransactionSimpleMock(t *testing.T) {
+func TestAddTransactionFinalQuantity(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -305,12 +301,12 @@ func TestAddTransactionSimpleMock(t *testing.T) {
 		Store = save_store
 	}()
 
-	mock := models.NewComposableShStoreMock(ctrl)
-	Store = mock
 	start_qty := make(map[models.BranchItemPair]float64, 10)
 	for _, item := range initialQty {
 		start_qty[models.BranchItemPair{item.branch_id, item.item_id}] = item.initial_qty
 	}
+	mock := models.NewComposableShStoreMock(ctrl)
+	Store = mock
 	mock.BranchItemStore = models.NewSimpleBranchItemStore(start_qty)
 	mock.TransactionStore = models.NewSimpleTransactionStore()
 
@@ -355,7 +351,9 @@ func TestAddTransactionSimpleMock(t *testing.T) {
 	}
 }
 
-func setUpTransactions(mock *models.MockShStore, tnx *sql.Tx) []*models.ShTransaction {
+/*
+ * This is just too complicated to be a unit-test
+func setUpTransactionExpectation(mock *models.MockShStore, tnx *sql.Tx) []*models.ShTransaction {
 	seenItems := make(map[Pair_BranchItem]bool, 10)
 
 	var transactions []*models.ShTransaction
@@ -401,8 +399,8 @@ func setUpTransactions(mock *models.MockShStore, tnx *sql.Tx) []*models.ShTransa
 			}
 
 			expect_get_item(trans.BranchId, item.item_id, item.existInBranch)
-			if item.trans_type == models.TRANS_TYPE_TRANSFER_OTHER_BRANCH_ITEM ||
-				item.trans_type == models.TRANS_TYPE_SELL_OTHER_BRANCH_ITEM {
+			if item.trans_type == models.TRANS_TYPE_ADD_TRANSFER_FROM_OTHER ||
+				item.trans_type == models.TRANS_TYPE_SUB_TRANSFER_TO_OTHER {
 
 				expect_get_item(item.other_branch_id, item.item_id, item.existInBranch)
 			}
@@ -412,7 +410,7 @@ func setUpTransactions(mock *models.MockShStore, tnx *sql.Tx) []*models.ShTransa
 
 		created := *trans
 		created.TransactionId = test.created_trans_id
-		mock.EXPECT().CreateShTransaction(tnx, trans).Return(&created, nil)
+		mock.EXPECT().CreateShTransactionInTx(tnx, trans).Return(&created, nil)
 	}
 	return transactions
 }
@@ -430,7 +428,7 @@ func TestAddTransactionFinalQuantity(t *testing.T) {
 	Store = mock
 
 	tnx := &sql.Tx{}
-	transactions := setUpTransactions(mock, tnx)
+	transactions := setUpTransactionExpectation(mock, tnx)
 
 	trans_result, err := addTransactionsToDataStore(tnx, transactions, t_company_id)
 	if err != nil {
@@ -458,6 +456,7 @@ func TestAddTransactionFinalQuantity(t *testing.T) {
 		}
 	}
 }
+*/
 
 const (
 	trans_rev       = int64(10)
@@ -481,25 +480,27 @@ func TestTransactionHandler(t *testing.T) {
 	for _, item := range initialQty {
 		start_qty[models.BranchItemPair{item.branch_id, item.item_id}] = item.initial_qty
 	}
-	mock.BranchItemStore = models.NewSimpleBranchItemStore(start_qty)
-	mock.TransactionStore = models.NewSimpleTransactionStore()
+	t_mock.BranchItemStore = models.NewSimpleBranchItemStore(start_qty)
+	t_mock.TransactionStore = models.NewSimpleTransactionStore()
 
-	source := models.NewMockSource(ctrl)
-	source.EXPECT().Begin().Return(tnx, nil)
-	mock.Source = source
+	source := models.NewMockSource(t_ctrl)
+	source.EXPECT().Begin().Return(t_tnx, nil)
+	t_mock.Source = source
 
-	user_store := models.NewMockUserStore(ctrl)
-	permission := &models.UserPermission{CompanyId: company_id,
-		UserId: user_id, PermissionType: models.U_PERMISSION_MANAGER, BranchId: -1}
-	user_store.EXPECT().GetUserPermission(user, company_id).Return(permission, nil)
-	mock.UserStore = user_store
+	user_store := models.NewMockUserStore(t_ctrl)
+	permission := &models.UserPermission{PermissionType:models.PERMISSION_TYPE_MANAGER}
+	permission.CompanyId = company_id
+	permission.UserId = user_id
+	permission.Encode()
+	user_store.EXPECT().GetUserPermission(t_user, company_id).Return(permission, nil)
+	t_mock.UserStore = user_store
 
-	mock.RevisionStore = models.NewSimpleRevisionStore(nil)
+	t_mock.RevisionStore = models.NewSimpleRevisionStore(nil)
 
 	transactions := make([]interface{}, len(parseTransactionTests))
 	for i, test := range parseTransactionTests {
 		transactions[i] = createTestTransaction(test.trans_id,
-			test.local_id, test.branch_id, test.date, test.num_items)
+			test.branch_id, test.date, test.num_items)
 	}
 
 	str, err := json.MarshalIndent(transactions, "\t", "\t")
@@ -512,7 +513,7 @@ func TestTransactionHandler(t *testing.T) {
 	if err != nil {
 		t.Fatalf("request error '%v'", err)
 	}
-	req.Header.Set(KEY_COMPANY_ID, fmt.Sprintf("%d", company_id))
+	req.Header.Set(JSON_KEY_COMPANY_ID, fmt.Sprintf("%d", company_id))
 
 	w := httptest.NewRecorder()
 	TransactionSyncHandler(w, req)
@@ -527,13 +528,12 @@ func TestTransactionHandler(t *testing.T) {
  */
 var parseTransactionBenchTests = []struct {
 	trans_id  int64
-	local_id  int64
 	branch_id int64
 	date      int64
 	num_items int64
-}{{-5, 100, 2, 1002, 300},
-	{-6, 1027, 8, 201, 0},
-	{-6, 1027, 8, 201, 100},
+}{{-5, 2, 1002, 300},
+	{-6, 8, 201, 0},
+	{-6, 8, 201, 100},
 }
 
 func BenchmarkParseTransactionPost(b *testing.B) {
@@ -543,7 +543,7 @@ func BenchmarkParseTransactionPost(b *testing.B) {
 	transactions := make([]interface{}, len(parseTransactionBenchTests))
 	for i, test := range parseTransactionBenchTests {
 		transactions[i] = createTestTransaction(test.trans_id,
-			test.local_id, test.branch_id, test.date, test.num_items)
+			test.branch_id, test.date, test.num_items)
 	}
 
 	trans_json, _ := json.MarshalIndent(transactions, "\t", "\t")

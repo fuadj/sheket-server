@@ -8,7 +8,8 @@ import (
 
 const (
 	INVALID_COMPANY_ID int64 = -1
-	KEY_COMPANY_ID           = "company_id"
+
+	JSON_KEY_COMPANY_ID = "company_id"
 
 	KEY_JSON_ID_OLD = "o"
 	KEY_JSON_ID_NEW = "n"
@@ -25,7 +26,7 @@ type Pair_BranchItem struct {
 }
 
 func GetCurrentCompanyId(r *http.Request) int64 {
-	id, err := strconv.ParseInt(r.Header.Get(KEY_COMPANY_ID), 10, 64)
+	id, err := strconv.ParseInt(r.Header.Get(JSON_KEY_COMPANY_ID), 10, 64)
 	if err != nil {
 		return INVALID_COMPANY_ID
 	}

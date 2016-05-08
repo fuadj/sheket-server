@@ -1,12 +1,12 @@
 package auth
 
 import (
-	"code.google.com/p/go.crypto/bcrypt"
 	"fmt"
 	"github.com/gorilla/securecookie"
 	"github.com/gorilla/sessions"
 	"net/http"
 	"sheket/server/models"
+	"golang.org/x/crypto/bcrypt"
 )
 
 const (
@@ -54,7 +54,12 @@ var (
 func RequireLogin(h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if !IsLoggedIn(r) {
-			// TODO: print user-not logged-in json
+			_, err := GetCurrentUser(r)
+			if err != nil {
+				fmt.Printf("Invalid login %v", err.Error())
+			}
+			w.WriteHeader(http.StatusNonAuthoritativeInfo)
+			w.Write([]byte(fmt.Sprintf("%s requires a logged-in user", r.URL.Path)))
 			return
 		}
 		h(w, r)

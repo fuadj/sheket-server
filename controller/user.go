@@ -2,24 +2,26 @@ package controller
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/bitly/go-simplejson"
 	"net/http"
 	"sheket/server/controller/auth"
 	"sheket/server/models"
 	"strings"
-	"fmt"
 )
 
 const (
-	key_username      = "username"
-	key_password      = "password"
-	key_new_user_id   = "new_user_id"
-	key_login_status  = "login_status"
-	key_login_message = "login_message"
+	JSON_KEY_USERNAME = "username"
+	JSON_KEY_PASSWORD = "password"
 
-	key_company_name    = "company_name"
-	key_company_contact = "company_contact"
-	key_new_company_id  = "new_company_id"
+	JSON_KEY_USER_ID       = "user_id"
+	JSON_KEY_MEMBER_ID     = "user_id"
+	JSON_KEY_LOGIN_STATUS  = "login_status"
+	JSON_KEY_LOGIN_MESSAGE = "login_message"
+
+	JSON_KEY_COMPANY_NAME    = "company_name"
+	JSON_KEY_COMPANY_CONTACT = "company_contact"
+	JSON_KEY_USER_PERMISSION = "user_permission"
 )
 
 func UserSignupHandler(w http.ResponseWriter, r *http.Request) {
@@ -33,13 +35,13 @@ func UserSignupHandler(w http.ResponseWriter, r *http.Request) {
 
 	invalid_user_name := "111_invalid"
 
-	username := data.Get(key_username).MustString(invalid_user_name)
+	username := data.Get(JSON_KEY_USERNAME).MustString(invalid_user_name)
 	if strings.Compare(invalid_user_name, username) == 0 {
 		writeErrorResponse(w, http.StatusBadRequest)
 		return
 	}
 
-	password := data.Get(key_password).MustString()
+	password := data.Get(JSON_KEY_PASSWORD).MustString()
 	if len(password) == 0 {
 		writeErrorResponse(w, http.StatusBadRequest)
 		return
@@ -65,8 +67,10 @@ func UserSignupHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result := make(map[string]interface{}, 10)
-	result[key_new_user_id] = created.UserId
+	result := map[string]interface{}{
+		JSON_KEY_USERNAME: username,
+		JSON_KEY_USER_ID:  created.UserId,
+	}
 	b, err := json.MarshalIndent(result, "", "    ")
 	if err != nil {
 		tnx.Rollback()
@@ -82,49 +86,6 @@ func UserSignupHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(b)
 }
 
-func CompanyCreateHandler(w http.ResponseWriter, r *http.Request) {
-	current_user, err := auth.GetCurrentUser(r)
-	if err != nil {
-		writeErrorResponse(w, http.StatusNonAuthoritativeInfo)
-		return
-	}
-
-	data, err := simplejson.NewFromReader(r.Body)
-	if err != nil {
-		writeErrorResponse(w, http.StatusBadRequest)
-		return
-	}
-
-	company_name := data.Get(key_company_name).MustString()
-	if len(company_name) == 0 {
-		writeErrorResponse(w, http.StatusBadRequest)
-		return
-	}
-	contact := data.Get(key_company_contact).MustString()
-
-	company := &models.Company{CompanyName: company_name, Contact: contact}
-	created, err := Store.CreateCompany(current_user, company)
-	if err != nil {
-		writeErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	result := make(map[string]interface{}, 10)
-
-	result[key_new_company_id] = created.CompanyId
-	result[key_company_name] = company_name
-	result[key_company_contact] = contact
-
-	b, err := json.MarshalIndent(result, "", "    ")
-	if err != nil {
-		writeErrorResponse(w, http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-	w.Write(b)
-}
-
 func UserLoginHandler(w http.ResponseWriter, r *http.Request) {
 	defer trace("UserLoginHandler")()
 
@@ -134,8 +95,8 @@ func UserLoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	username := data.Get(key_username).MustString()
-	password := data.Get(key_password).MustString()
+	username := data.Get(JSON_KEY_USERNAME).MustString()
+	password := data.Get(JSON_KEY_PASSWORD).MustString()
 	if len(username) == 0 ||
 		len(password) == 0 {
 		writeErrorResponse(w, http.StatusBadRequest)
@@ -143,19 +104,62 @@ func UserLoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user := &models.User{Username: username, HashedPassword: auth.HashPassword(password)}
-	logged_user, err := auth.AuthenticateUser(user, password)
-	result := make(map[string]interface{}, 10)
-	if err == nil {
-		auth.LoginUser(logged_user, w)
-		result[key_login_status] = true
-		result[key_login_message] = "login successful"
-	} else {
-		result[key_login_status] = false
-		result[key_login_message] = "Incorrect username password combination!"
+	auth_user, err := auth.AuthenticateUser(user, password)
+	if err != nil {
+		writeErrorResponse(w, http.StatusUnauthorized, "Incorrect username password combination!")
+		return
+	}
+	result := map[string]interface{}{
+		JSON_KEY_USER_ID: auth_user.UserId,
 	}
 	b, err := json.MarshalIndent(result, "", "    ")
 	if err != nil {
-		tnx.Rollback()
+		writeErrorResponse(w, http.StatusInternalServerError)
+		return
+	}
+
+	auth.LoginUser(auth_user, w)
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(b)
+}
+
+// lists the companies this user belongs in
+func UserCompanyListHandler(w http.ResponseWriter, r *http.Request) {
+	defer trace("UserCompanyListHandler")()
+
+	current_user, err := auth.GetCurrentUser(r)
+	if err != nil {
+		writeErrorResponse(w, http.StatusNonAuthoritativeInfo, "euser")
+		return
+	}
+
+	company_permissions, err := Store.GetUserCompanyPermissions(current_user)
+	if err != nil {
+		writeErrorResponse(w, http.StatusInternalServerError, err.Error()+"permission")
+		return
+	}
+
+	var companies []interface{}
+
+	for i := 0; i < len(company_permissions); i++ {
+		company := make(map[string]interface{}, 10)
+
+		company[JSON_KEY_COMPANY_ID] = company_permissions[i].
+			CompanyInfo.CompanyId
+		company[JSON_KEY_COMPANY_NAME] = company_permissions[i].
+			CompanyInfo.CompanyName
+		company[JSON_KEY_USER_PERMISSION] = company_permissions[i].
+			Permission.EncodedPermission
+
+		companies = append(companies, company)
+	}
+	result := map[string]interface{}{
+		"companies": companies,
+	}
+
+	b, err := json.MarshalIndent(result, "", "    ")
+	if err != nil {
 		writeErrorResponse(w, http.StatusInternalServerError)
 		return
 	}

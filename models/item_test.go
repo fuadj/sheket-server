@@ -17,9 +17,9 @@ const (
 
 func dummyTestItem() *ShItem {
 	i := &ShItem{CompanyId: t_company_id,
-		CategoryId: t_category_id, Name: item_name,
-		ModelYear: item_model, PartNumber: item_part_number,
-		BarCode: item_bar_code, HasBarCode: item_has_bar_code, ManualCode: item_manual_code}
+		Name: item_name, ModelYear: item_model,
+		PartNumber: item_part_number, BarCode: item_bar_code,
+		HasBarCode: item_has_bar_code, ManualCode: item_manual_code}
 	return i
 }
 
@@ -29,7 +29,7 @@ func TestCreateInventoryItem(t *testing.T) {
 
 	mock.ExpectBegin()
 	mock.ExpectQuery(fmt.Sprintf("insert into %s", TABLE_INVENTORY_ITEM)).
-		WithArgs(t_company_id, t_category_id, item_name, item_model,
+		WithArgs(t_company_id, item_name, item_model,
 		item_part_number, item_bar_code, item_has_bar_code, item_manual_code).
 		WillReturnRows(sqlmock.NewRows(_cols("item_id")).AddRow(t_item_id))
 
@@ -47,7 +47,7 @@ func TestCreateInventoryItemFail(t *testing.T) {
 
 	mock.ExpectBegin()
 	mock.ExpectQuery(fmt.Sprintf("insert into %s", TABLE_INVENTORY_ITEM)).
-		WithArgs(t_company_id, t_category_id, item_name, item_model,
+		WithArgs(t_company_id, item_name, item_model,
 		item_part_number, item_bar_code, item_has_bar_code, item_manual_code).
 		WillReturnError(fmt.Errorf("insert error"))
 
@@ -64,7 +64,7 @@ func TestUpdateInventoryItem(t *testing.T) {
 
 	mock.ExpectBegin()
 	mock.ExpectExec(fmt.Sprintf("update %s", TABLE_INVENTORY_ITEM)).
-		WithArgs(t_category_id, item_name, item_model,
+		WithArgs(item_name, item_model,
 		item_part_number, item_bar_code, item_has_bar_code, item_manual_code,
 		t_item_id).
 		WillReturnResult(sqlmock.NewResult(1, 1))
@@ -85,7 +85,7 @@ func TestUpdateInventoryItemFail(t *testing.T) {
 
 	mock.ExpectBegin()
 	mock.ExpectExec(fmt.Sprintf("update %s", TABLE_INVENTORY_ITEM)).
-	WithArgs(t_category_id, item_name, item_model,
+	WithArgs(item_name, item_model,
 		item_part_number, item_bar_code, item_has_bar_code, item_manual_code,
 		t_item_id).
 	WillReturnError(fmt.Errorf("update error"))
@@ -104,9 +104,9 @@ func _itemQueryExpectation() *sqlmock.ExpectedQuery {
 }
 
 func _itemQueryRows() sqlmock.Rows {
-	return sqlmock.NewRows(_cols("item_id,company_id, category_id, "+
+	return sqlmock.NewRows(_cols("item_id,company_id, "+
 		"name, model_year, part_number,bar_code,has_bar_code,manual_code")).
-		AddRow(t_item_id, t_company_id, t_category_id, item_name, item_model,
+		AddRow(t_item_id, t_company_id, item_name, item_model,
 		item_part_number, item_bar_code, item_has_bar_code, item_manual_code)
 }
 
