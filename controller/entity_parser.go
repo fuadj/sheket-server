@@ -1,13 +1,13 @@
 package controller
 
 import (
-	"sheket/server/models"
+	"encoding/json"
+	"fmt"
 	"github.com/bitly/go-simplejson"
 	"io"
-	"fmt"
-	"encoding/json"
-	"strings"
+	"sheket/server/models"
 	"strconv"
+	"strings"
 )
 
 type CRUD_ACTION int64
@@ -149,8 +149,6 @@ func parseEntityPost(r io.Reader, parsers map[string]EntityParser, info *Identit
 	entity_sync_data.RevisionBranch = data.Get(key_branch_revision).MustInt64(no_rev)
 	entity_sync_data.RevisionMember = data.Get(key_member_revision).MustInt64(no_rev)
 	entity_sync_data.RevisionCategory = data.Get(key_category_revision).MustInt64(no_rev)
-
-	// not used now, but might be needed in the future
 	entity_sync_data.RevisionBranch_Item = data.Get(key_branch_item_rev).MustInt64(no_rev)
 
 	for _, v := range data.Get(key_types).MustArray() {
@@ -231,6 +229,62 @@ func parseCRUDIntIds(entity_name string, root *simplejson.Json, entity_ids map[C
 	return nil
 }
 
+func get_string(key string, check_map map[string]interface{}, fields map[string]bool) (string, bool) {
+	if val, ok := check_map[key]; ok {
+		s, ok := val.(string)
+		if !ok {
+			return "", false
+		}
+		fields[key] = true
+		return s, true
+	}
+	return "", false
+}
+
+func get_bool(key string, check_map map[string]interface{}, fields map[string]bool) (bool, bool) {
+	if val, ok := check_map[key]; ok {
+		b, ok := val.(bool)
+		if !ok {
+			return false, false
+		}
+		fields[key] = true
+		return b, true
+	}
+	return false, false
+}
+
+func get_int64(key string, check_map map[string]interface{}, fields map[string]bool) (int64, bool) {
+	if val, ok := check_map[key]; ok {
+		number, ok := val.(json.Number)
+		if !ok {
+			return -1, false
+		}
+		int_val, err := number.Int64()
+		if err != nil {
+			return -1, false
+		}
+		fields[key] = true
+		return int_val, true
+	}
+	return -1, false
+}
+
+func get_float64(key string, check_map map[string]interface{}, fields map[string]bool) (float64, bool) {
+	if val, ok := check_map[key]; ok {
+		number, ok := val.(json.Number)
+		if !ok {
+			return -1, false
+		}
+		float_val, err := number.Float64()
+		if err != nil {
+			return -1, false
+		}
+		fields[key] = true
+		return float_val, true
+	}
+	return -1, false
+}
+
 func itemParser(sync_data *EntitySyncData, root *simplejson.Json, info *IdentityInfo) error {
 	if err := parseCRUDIntIds("item", root, sync_data.ItemIds); err != nil {
 		return err
@@ -238,71 +292,29 @@ func itemParser(sync_data *EntitySyncData, root *simplejson.Json, info *Identity
 
 	// an array of items
 	for _, v := range root.Get(key_fields).MustArray() {
-		members, ok := v.(map[string]interface{})
+		fields, ok := v.(map[string]interface{})
 		if !ok {
 			return fmt.Errorf("invalid item fields %v", v)
 		}
 
 		item := &SyncInventoryItem{}
+		item.CompanyId = info.CompanyId
 		item.SetFields = make(map[string]bool)
 
-		var err error
+		set_fields := item.SetFields
 
-		check_string_set := func(key string) (string, error) {
-			if val, ok := members[key]; ok {
-				s, ok := val.(string)
-				if !ok {
-					err = fmt.Errorf("invalid item.'%s' val %v", key, val)
-					return "", err
-				}
-				item.SetFields[key] = true
-				return s, nil
-			}
-			return "", nil
+		if item.ItemId, ok = get_int64(models.ITEM_JSON_ITEM_ID, fields, set_fields); !ok {
+			return fmt.Errorf("item_id invalid %v", v)
 		}
 
-		if val, ok := members[models.ITEM_JSON_ITEM_ID]; ok {
-			item_id, ok := val.(json.Number)
-			if !ok {
-				return fmt.Errorf("invalid 'item_id' '%v'", val)
-			}
-			item.SetFields[models.ITEM_JSON_ITEM_ID] = true
-			item.ItemId, err = item_id.Int64()
-			if err != nil {
-				return err
-			}
-		} else {
-			return fmt.Errorf("item_id missing %v", v)
-		}
-
-		item.CompanyId = info.CompanyId
-		if item.Name, err = check_string_set(models.ITEM_JSON_ITEM_NAME); err != nil {
-			return err
-		}
-		if item.ModelYear, err = check_string_set(models.ITEM_JSON_MODEL_YEAR); err != nil {
-			return err
-		}
-		if item.PartNumber, err = check_string_set(models.ITEM_JSON_PART_NUMBER); err != nil {
-			return err
-		}
-		if item.BarCode, err = check_string_set(models.ITEM_JSON_BAR_CODE); err != nil {
-			return err
-		}
-		if item.ManualCode, err = check_string_set(models.ITEM_JSON_MANUAL_CODE); err != nil {
-			return err
-		}
-		if item.ClientUUID, err = check_string_set(models.ITEM_JSON_UUID); err != nil {
-			return err
-		}
-
-		if val, ok := members[models.ITEM_JSON_HAS_BAR_CODE]; ok {
-			b, ok := val.(bool)
-			if !ok {
-				return fmt.Errorf("invalid 'has_bar_code' val %v", val)
-			}
-			item.SetFields[models.ITEM_JSON_HAS_BAR_CODE] = true
-			item.HasBarCode = b
-		}
+		item.Name, _ = get_string(models.ITEM_JSON_ITEM_NAME, fields, set_fields)
+		item.CategoryId, _ = get_int64(models.ITEM_JSON_CATEGORY_ID, fields, set_fields)
+		item.ModelYear, _ = get_string(models.ITEM_JSON_MODEL_YEAR, fields, set_fields)
+		item.PartNumber, _ = get_string(models.ITEM_JSON_PART_NUMBER, fields, set_fields)
+		item.BarCode, _ = get_string(models.ITEM_JSON_BAR_CODE, fields, set_fields)
+		item.ManualCode, _ = get_string(models.ITEM_JSON_MANUAL_CODE, fields, set_fields)
+		item.ClientUUID, _ = get_string(models.ITEM_JSON_UUID, fields, set_fields)
+		item.HasBarCode, _ = get_bool(models.ITEM_JSON_HAS_BAR_CODE, fields, set_fields)
 
 		item_id := item.ItemId
 		if sync_data.ItemIds[ACTION_CREATE][item_id] {
@@ -327,53 +339,24 @@ func branchParser(sync_data *EntitySyncData, root *simplejson.Json, info *Identi
 	}
 
 	for _, v := range root.Get(key_fields).MustArray() {
-		members, ok := v.(map[string]interface{})
+		fields, ok := v.(map[string]interface{})
 		if !ok {
 			return fmt.Errorf("invalid branch fields %v", v)
 		}
 
 		branch := &SyncBranch{}
+		branch.CompanyId = info.CompanyId
 		branch.SetFields = make(map[string]bool)
 
-		var err error
+		set_fields := branch.SetFields
 
-		check_string_set := func(key string) (string, error) {
-			if val, ok := members[key]; ok {
-				s, ok := val.(string)
-				if !ok {
-					return "", fmt.Errorf("invalid branch.'%s' val %v", key, val)
-				}
-				branch.SetFields[key] = true
-				return s, nil
-			}
-			return "", nil
+		if branch.BranchId, ok = get_int64(models.BRANCH_JSON_BRANCH_ID, fields, set_fields); !ok {
+			return fmt.Errorf("branch_id invalid %v", v)
 		}
 
-		if val, ok := members[models.BRANCH_JSON_BRANCH_ID]; ok {
-			branch_id, ok := val.(json.Number)
-			if !ok {
-				return fmt.Errorf("invalid 'branch_id' '%v'", val)
-			}
-			branch.SetFields[models.BRANCH_JSON_BRANCH_ID] = true
-			branch.BranchId, err = branch_id.Int64()
-			if err != nil {
-				return err
-			}
-		} else {
-			return fmt.Errorf("branch_id missing %v", v)
-		}
-
-		branch.CompanyId = info.CompanyId
-
-		if branch.Name, err = check_string_set(models.BRANCH_JSON_NAME); err != nil {
-			return err
-		}
-		if branch.Location, err = check_string_set(models.BRANCH_JSON_LOCATION); err != nil {
-			return err
-		}
-		if branch.ClientUUID, err = check_string_set(models.BRANCH_JSON_UUID); err != nil {
-			return err
-		}
+		branch.Name, _ = get_string(models.BRANCH_JSON_NAME, fields, set_fields)
+		branch.Location, _ = get_string(models.BRANCH_JSON_LOCATION, fields, set_fields)
+		branch.ClientUUID, _ = get_string(models.BRANCH_JSON_UUID, fields, set_fields)
 
 		if sync_data.BranchIds[ACTION_CREATE][branch.BranchId] {
 			branch.PostType = POST_TYPE_CREATE
@@ -455,54 +438,30 @@ func branchItemParser(sync_data *EntitySyncData, root *simplejson.Json, info *Id
 	}
 
 	for _, v := range root.Get(key_fields).MustArray() {
-		members, ok := v.(map[string]interface{})
+		fields, ok := v.(map[string]interface{})
 		if !ok {
 			return fmt.Errorf("invalid branch item fields %v", v)
 		}
 
 		branch_item := &SyncBranchItem{}
+		branch_item.CompanyId = info.CompanyId
 		branch_item.SetFields = make(map[string]bool)
 
-		var err error
+		set_fields := branch_item.SetFields
 
-		check_string_set := func(key string) (string, error) {
-			if val, ok := members[key]; ok {
-				s, ok := val.(string)
-				if !ok {
-					return "", fmt.Errorf("invalid branch_item.'%s' val %v", key, val)
-				}
-				branch_item.SetFields[key] = true
-				return s, nil
-			}
-			return "", nil
-		}
-
-		var s_branch_item_id string
-		if s_branch_item_id, err = check_string_set(models.BRANCH_ITEM_JSON_ID); err != nil {
-			return err
+		s_branch_item_id, ok := get_string(models.BRANCH_ITEM_JSON_ID, fields, set_fields)
+		if !ok {
+			return fmt.Errorf("invalid branch_item id %v", v)
 		}
 		pair_branch_item, err := toPair_BranchItem(s_branch_item_id)
 		if err != nil {
 			return err
 		}
-		branch_item.CompanyId = info.CompanyId
 		branch_item.BranchId = pair_branch_item.BranchId
 		branch_item.ItemId = pair_branch_item.ItemId
 
-		if branch_item.ItemLocation, err = check_string_set(models.BRANCH_ITEM_JSON_ITEM_LOCATION); err != nil {
-			return err
-		}
-		if val, ok := members[models.BRANCH_ITEM_JSON_QUANTITY]; ok {
-			q, ok := val.(json.Number)
-			if !ok {
-				return fmt.Errorf("invalid 'quantity' val %v", val)
-			}
-			branch_item.SetFields[models.BRANCH_ITEM_JSON_QUANTITY] = true
-			branch_item.Quantity, err = q.Float64()
-			if err != nil {
-				return err
-			}
-		}
+		branch_item.ItemLocation, _ = get_string(models.BRANCH_ITEM_JSON_ITEM_LOCATION, fields, set_fields)
+		branch_item.Quantity, _ = get_float64(models.BRANCH_ITEM_JSON_QUANTITY, fields, set_fields)
 
 		if sync_data.Branch_ItemIds[ACTION_CREATE][pair_branch_item] {
 			branch_item.PostType = POST_TYPE_CREATE
@@ -535,28 +494,13 @@ func memberParser(sync_data *EntitySyncData, root *simplejson.Json, info *Identi
 		member.CompanyId = info.CompanyId
 		member.SetFields = make(map[string]bool)
 
-		var err error
-		if val, ok := fields[models.PERMISSION_JSON_MEMBER_ID]; ok {
-			member_id, ok := val.(json.Number)
-			if !ok {
-				return fmt.Errorf("invalid 'member_id' '%v'", val)
-			}
-			member.SetFields[models.PERMISSION_JSON_MEMBER_ID] = true
-			if member.UserId, err = member_id.Int64(); err != nil {
-				return err
-			}
-		} else {
-			return fmt.Errorf("member_id missing %v", v)
+		set_fields := member.SetFields
+		if member.UserId, ok = get_int64(models.PERMISSION_JSON_MEMBER_ID, fields, set_fields); !ok {
+			return fmt.Errorf("invalid member_id %v", v)
 		}
 
-		if val, ok := fields[models.PERMISSION_JSON_MEMBER_PERMISSION]; ok {
-			member.EncodedPermission, ok = val.(string)
-			if !ok {
-				return fmt.Errorf("invalid 'member_permission' '%v'", val)
-			}
-			member.SetFields[models.PERMISSION_JSON_MEMBER_PERMISSION] = true
-		} else {
-			return fmt.Errorf("member_permission missing %v", v)
+		if member.EncodedPermission, ok = get_int64(models.PERMISSION_JSON_MEMBER_PERMISSION, fields, set_fields); !ok {
+			return fmt.Errorf("invalid member permission %v", v)
 		}
 
 		if sync_data.MemberIds[ACTION_CREATE][member.UserId] {
@@ -588,45 +532,17 @@ func categoryParser(sync_data *EntitySyncData, root *simplejson.Json, info *Iden
 		category.CompanyId = info.CompanyId
 		category.SetFields = make(map[string]bool)
 
-		var err error
+		set_fields := category.SetFields
 
-		check_must_int_set := func(key string) (int64, error) {
-			if val, ok := fields[key]; ok {
-				v, ok := val.(json.Number)
-				if !ok {
-					return -1, fmt.Errorf("invalid category.%s '%v'", key, val)
-				}
-				category.SetFields[key] = true
-				return v.Int64()
-			}
-			return -1, fmt.Errorf("category.%s not set", key)
+		if category.CategoryId, ok = get_int64(models.CATEGORY_JSON_CATEGORY_ID, fields, set_fields); !ok {
+			return fmt.Errorf("invalid category_id")
+		}
+		if category.ParentId, ok = get_int64(models.CATEGORY_JSON_PARENT_ID, fields, set_fields); !ok {
+			return fmt.Errorf("invalid parent category_id")
 		}
 
-		check_string_set := func(key string) (string, error) {
-			if val, ok := fields[key]; ok {
-				s, ok := val.(string)
-				if !ok {
-					return "", fmt.Errorf("invalid category.'%s' val %v", key, val)
-				}
-				category.SetFields[key] = true
-				return s, nil
-			}
-			return "", nil
-		}
-
-		if category.CategoryId, err = check_must_int_set(models.CATEGORY_JSON_CATEGORY_ID); err != nil {
-			return fmt.Errorf("category.category_id missing '%s'", err.Error())
-		}
-		if category.ParentId, err = check_must_int_set(models.CATEGORY_JSON_PARENT_ID); err != nil {
-			return fmt.Errorf("category.parent_id missing '%s'", err.Error())
-		}
-
-		if category.Name, err = check_string_set(models.CATEGORY_JSON_NAME); err != nil {
-			return err
-		}
-		if category.ClientUUID, err = check_string_set(models.CATEGORY_JSON_UUID); err != nil {
-			return err
-		}
+		category.Name, _ = get_string(models.CATEGORY_JSON_NAME, fields, set_fields)
+		category.ClientUUID, _ = get_string(models.CATEGORY_JSON_UUID, fields, set_fields)
 
 		if sync_data.CategoryIds[ACTION_CREATE][category.CategoryId] {
 			category.PostType = POST_TYPE_CREATE
