@@ -67,6 +67,7 @@ type EntitySyncData struct {
 	RevisionBranch      int64
 	RevisionBranch_Item int64
 	RevisionMember      int64
+    RevisionCategory    int64
 
 	// This holds the 'type' of items in the upload
 	Types map[string]bool
@@ -75,6 +76,9 @@ type EntitySyncData struct {
 	// Those ids are then linked to objects affected
 	ItemIds    map[CRUD_ACTION]map[int64]bool
 	ItemFields map[int64]*SyncInventoryItem
+
+    CategoryIds     map[CRUD_ACTION]map[int64]bool
+    CategoryFields  map[int64]*SyncCategory
 
 	BranchIds    map[CRUD_ACTION]map[int64]bool
 	BranchFields map[int64]*SyncBranch
@@ -101,6 +105,13 @@ type SyncInventoryItem struct {
 	PostType int64
 
 	SuppliedFields
+}
+
+type SyncCategory struct {
+    models.ShCategory
+    PostType    int64
+
+    SuppliedFields
 }
 
 type SyncBranch struct {
