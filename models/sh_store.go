@@ -106,12 +106,18 @@ type Source interface {
 }
 
 type CategoryStore interface {
-    CreateCategory(*ShCategory) (*ShCategory, error)
+	CreateCategoryInTx(*sql.Tx, *ShCategory) (*ShCategory, error)
+	GetCategoryById(int64) (*ShCategory, error)
+	GetCategoryByIdInTx(*sql.Tx, int64) (*ShCategory, error)
+	GetCategoryByUUIDInTx(*sql.Tx, string) (*ShCategory, error)
+
+	UpdateCategoryInTx(*sql.Tx, *ShCategory) (*ShCategory, error)
 }
 
 type ShStore interface {
 	TransactionStore
 	ItemStore
+	CategoryStore
 	BranchStore
 	BranchItemStore
 	CompanyStore

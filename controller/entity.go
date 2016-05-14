@@ -51,11 +51,13 @@ const (
 )
 
 type EntityResult struct {
-	OldId2New_Items    map[int64]int64
-	OldId2New_Branches map[int64]int64
+	OldId2New_Categories map[int64]int64
+	OldId2New_Items      map[int64]int64
+	OldId2New_Branches   map[int64]int64
 
-	NewlyCreatedItemIds   map[int64]bool
-	NewlyCreatedBranchIds map[int64]bool
+	NewlyCreatedCategoryIds map[int64]bool
+	NewlyCreatedItemIds     map[int64]bool
+	NewlyCreatedBranchIds   map[int64]bool
 }
 
 func EntitySyncHandler(w http.ResponseWriter, r *http.Request) {
@@ -169,13 +171,21 @@ func EntitySyncHandler(w http.ResponseWriter, r *http.Request) {
 
 func applyEntityOperations(tnx *sql.Tx, posted_data *EntitySyncData, info *IdentityInfo) (*EntityResult, error) {
 	result := &EntityResult{}
+
+	result.OldId2New_Categories = make(map[int64]int64)
 	result.OldId2New_Items = make(map[int64]int64)
 	result.OldId2New_Branches = make(map[int64]int64)
 
+	result.NewlyCreatedCategoryIds = make(map[int64]bool)
 	result.NewlyCreatedItemIds = make(map[int64]bool)
 	result.NewlyCreatedBranchIds = make(map[int64]bool)
 
 	var err error
+	result, err = applyCategoryOperations(tnx, posted_data, info, result)
+	if err != nil {
+		return nil, err
+	}
+
 	result, err = applyItemOperations(tnx, posted_data, info, result)
 	if err != nil {
 		return nil, err
@@ -201,6 +211,85 @@ func applyEntityOperations(tnx *sql.Tx, posted_data *EntitySyncData, info *Ident
 	return result, nil
 }
 
+func applyCategoryOperations(tnx *sql.Tx, posted_data *EntitySyncData, info *IdentityInfo, result *EntityResult) (*EntityResult, error) {
+	if len(posted_data.CategoryFields) == 0 {
+		return result, nil
+	}
+
+	for old_category_id := range posted_data.CategoryIds[ACTION_CREATE] {
+		category, ok := posted_data.CategoryFields[old_category_id]
+		if !ok {
+			return nil, fmt.Errorf("category:%d doesn't have members defined", old_category_id)
+		}
+		prev_category, err := Store.GetCategoryByUUIDInTx(tnx, category.ClientUUID)
+		if err != nil {
+			return nil, fmt.Errorf("error getting category with uuid %s", err.Error())
+		} else if prev_category != nil {
+			result.OldId2New_Categories[old_category_id] = prev_category.CategoryId
+			result.NewlyCreatedCategoryIds[prev_category.CategoryId] = true
+			break
+		}
+
+		created_category, err := Store.CreateCategoryInTx(tnx, &category.ShCategory)
+		if err != nil {
+			return nil, fmt.Errorf("error creating category %s", err.Error())
+		}
+
+		result.OldId2New_Categories[old_category_id] = created_category.CategoryId
+		result.NewlyCreatedCategoryIds[created_category.CategoryId] = true
+
+		rev := &models.ShEntityRevision{
+			CompanyId:        info.CompanyId,
+			EntityType:       models.REV_ENTITY_CATEGORY,
+			ActionType:       models.REV_ACTION_CREATE,
+			EntityAffectedId: created_category.CategoryId,
+			AdditionalInfo:   -1,
+		}
+
+		_, err = Store.AddEntityRevisionInTx(tnx, rev)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	for category_id := range posted_data.CategoryIds[ACTION_UPDATE] {
+		category, ok := posted_data.CategoryFields[category_id]
+		if !ok {
+			return nil, fmt.Errorf("category:%d doesn't have member fields defined", category_id)
+		}
+		prev_category, err := Store.GetCategoryByIdInTx(tnx, category_id)
+		if err != nil {
+			return nil, fmt.Errorf("error retriving category:%d '%s'", category_id, err.Error())
+		}
+
+		if category.SetFields[models.CATEGORY_JSON_NAME] {
+			prev_category.Name = category.Name
+		}
+		if category.SetFields[models.CATEGORY_JSON_PARENT_ID] {
+			prev_category.ParentId = category.ParentId
+		}
+
+		if _, err = Store.UpdateCategoryInTx(tnx, prev_category); err != nil {
+			return nil, fmt.Errorf("error updating category:%d '%s'", category_id, err.Error())
+		}
+		rev := &models.ShEntityRevision{
+			CompanyId:        info.CompanyId,
+			EntityType:       models.REV_ENTITY_CATEGORY,
+			ActionType:       models.REV_ACTION_UPDATE,
+			EntityAffectedId: category.CategoryId,
+			AdditionalInfo:   -1,
+		}
+
+		_, err = Store.AddEntityRevisionInTx(tnx, rev)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// TODO: implement deletion
+	return result, nil
+}
+
 func applyItemOperations(tnx *sql.Tx, posted_data *EntitySyncData, info *IdentityInfo, result *EntityResult) (*EntityResult, error) {
 	// short-cut
 	if len(posted_data.ItemFields) == 0 {
@@ -215,11 +304,15 @@ func applyItemOperations(tnx *sql.Tx, posted_data *EntitySyncData, info *Identit
 		}
 		prev_item, err := Store.GetItemByUUIDInTx(tnx, item.ClientUUID)
 		if err != nil {
-			return nil, fmt.Errorf("error getting item with uuid", err.Error())
+			return nil, fmt.Errorf("error getting item with uuid %s", err.Error())
 		} else if prev_item != nil {
 			result.OldId2New_Items[old_item_id] = prev_item.ItemId
 			result.NewlyCreatedItemIds[prev_item.ItemId] = true
 			break
+		}
+
+		if new_category_id, ok := result.OldId2New_Categories[item.CategoryId]; ok {
+			item.CategoryId = new_category_id
 		}
 
 		created_item, err := Store.CreateItemInTx(tnx, &item.ShItem)
@@ -249,6 +342,11 @@ func applyItemOperations(tnx *sql.Tx, posted_data *EntitySyncData, info *Identit
 		if !ok {
 			return nil, fmt.Errorf("item:%d doesn't have members defined", item_id)
 		}
+
+		if new_category_id, ok := result.OldId2New_Categories[item.CategoryId]; ok {
+			item.CategoryId = new_category_id
+		}
+
 		previous_item, err := Store.GetItemByIdInTx(tnx, item_id)
 		if err != nil {
 			return nil, fmt.Errorf("error retriving item:%d '%s'", item_id, err.Error())
@@ -262,6 +360,9 @@ func applyItemOperations(tnx *sql.Tx, posted_data *EntitySyncData, info *Identit
 		}
 		if item.SetFields[models.ITEM_JSON_BAR_CODE] {
 			previous_item.BarCode = item.BarCode
+		}
+		if item.SetFields[models.ITEM_JSON_CATEGORY_ID] {
+			previous_item.CategoryId = item.CategoryId
 		}
 		if item.SetFields[models.ITEM_JSON_MANUAL_CODE] {
 			previous_item.ManualCode = item.ManualCode

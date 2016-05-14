@@ -40,9 +40,9 @@ var entityJsonFormat string = `
 	}
 `
 
-type intIds []int64
+type intArr []int64
 
-func (arr intIds) String() string {
+func (arr intArr) String() string {
 	var result []string
 	for _, v := range arr {
 		result = append(result, strconv.Itoa(int(v)))
@@ -50,11 +50,11 @@ func (arr intIds) String() string {
 	return strings.Join(result, ", ")
 }
 
-var itemsParseTest = []struct {
-	entityType string
-	create_ids intIds
-	update_ids intIds
-	delete_ids intIds
+var entityParseTest = []struct {
+	entityType    string
+	create_ids    intArr
+	update_ids    intArr
+	delete_ids    intArr
 
 	existingItems []*models.ShItem
 	fields        []map[string]interface{}
@@ -64,11 +64,11 @@ var itemsParseTest = []struct {
 		type_items,
 
 		// create ids
-		intIds{-1, -2, -7},
+		intArr{-1, -2, -7},
 		// update ids
-		intIds{77},
+		intArr{77},
 		// delete ids
-		intIds{},
+		intArr{},
 		[]*models.ShItem{
 			&models.ShItem{ItemId: 77, CompanyId: t_company_id, ModelYear: "Old year"},
 		},
@@ -102,9 +102,9 @@ var itemsParseTest = []struct {
 	},
 	{
 		type_items,
-		intIds{-1, -7},
-		intIds{},
-		intIds{},
+		intArr{-1, -7},
+		intArr{},
+		intArr{},
 		[]*models.ShItem{},
 		[]map[string]interface{}{
 			{
@@ -124,9 +124,9 @@ var itemsParseTest = []struct {
 	},
 	{
 		"jibberish",
-		intIds{},
-		intIds{},
-		intIds{},
+		intArr{},
+		intArr{},
+		intArr{},
 		[]*models.ShItem{},
 		[]map[string]interface{}{},
 		http.StatusBadRequest,
@@ -134,13 +134,13 @@ var itemsParseTest = []struct {
 }
 
 func getItemJsonAtIndex(i int) string {
-	entity_type := itemsParseTest[i].entityType
-	create_ids := itemsParseTest[i].create_ids.String()
-	update_ids := itemsParseTest[i].update_ids.String()
-	delete_ids := itemsParseTest[i].delete_ids.String()
+	entity_type := entityParseTest[i].entityType
+	create_ids := entityParseTest[i].create_ids.String()
+	update_ids := entityParseTest[i].update_ids.String()
+	delete_ids := entityParseTest[i].delete_ids.String()
 
-	fields := make([]string, len(itemsParseTest[i].fields))
-	for j, field := range itemsParseTest[i].fields {
+	fields := make([]string, len(entityParseTest[i].fields))
+	for j, field := range entityParseTest[i].fields {
 		s, err := json.MarshalIndent(field, "", "   ")
 		if err != nil {
 			return ""
@@ -155,7 +155,7 @@ func getItemJsonAtIndex(i int) string {
 func wrapType(t string) string { return fmt.Sprintf(`"%s"`, t) }
 
 func TestEntityItemParser(t *testing.T) {
-	for i, test := range itemsParseTest {
+	for i, test := range entityParseTest {
 		s := fmt.Sprintf(syncJsonFormat,
 			t_item_rev, t_branch_rev, t_branch_item_rev,
 			wrapType(test.entityType),
@@ -192,7 +192,7 @@ func TestEntitySyncHandler(t *testing.T) {
 	t_mock.BranchItemStore = models.NewSimpleBranchItemStore(nil)
 	t_mock.RevisionStore = models.NewSimpleRevisionStore(nil)
 
-	for i, test := range itemsParseTest {
+	for i, test := range entityParseTest {
 		// this is called for each test
 		user_store.EXPECT().GetUserPermission(t_user, company_id).Return(permission, nil)
 		if test.wantResponse != http.StatusBadRequest {

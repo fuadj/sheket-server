@@ -9,6 +9,7 @@ type ShItem struct {
 	ItemId     int64
 	ClientUUID string
 	CompanyId  int64
+	CategoryId int64
 	Name       string
 	ModelYear  string
 	PartNumber string
@@ -21,6 +22,7 @@ const (
 	ITEM_JSON_ITEM_ID      = "item_id"
 	ITEM_JSON_UUID         = "client_uuid"
 	ITEM_JSON_COMPANY_ID   = "company_id"
+	ITEM_JSON_CATEGORY_ID  = "category_id"
 	ITEM_JSON_ITEM_NAME    = "item_name"
 	ITEM_JSON_MODEL_YEAR   = "model_year"
 	ITEM_JSON_PART_NUMBER  = "part_number"
@@ -51,10 +53,10 @@ func (s *shStore) CreateItemInTx(tnx *sql.Tx, item *ShItem) (*ShItem, error) {
 	err := tnx.QueryRow(
 		fmt.Sprintf("insert into %s "+
 			"(company_id, name, model_year, "+
-			"part_number, bar_code, has_bar_code, manual_code, client_uuid) values "+
-			"($1, $2, $3, $4, $5, $6, $7, $8) RETURNING item_id;", TABLE_INVENTORY_ITEM),
+			"part_number, bar_code, has_bar_code, manual_code, client_uuid, category_id) values "+
+			"($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING item_id;", TABLE_INVENTORY_ITEM),
 		item.CompanyId, item.Name, item.ModelYear,
-		item.PartNumber, item.BarCode, item.HasBarCode, item.ManualCode, item.ClientUUID).
+		item.PartNumber, item.BarCode, item.HasBarCode, item.ManualCode, item.ClientUUID, item.CategoryId).
 		Scan(&item.ItemId)
 	return item, err
 }
@@ -63,10 +65,10 @@ func (s *shStore) UpdateItemInTx(tnx *sql.Tx, item *ShItem) (*ShItem, error) {
 	_, err := tnx.Exec(
 		fmt.Sprintf("update %s set "+
 			"name = $1, model_year = $2, "+
-			"part_number = $3, bar_code = $4, has_bar_code = $5, manual_code = $6 "+
-			"where item_id = $8", TABLE_INVENTORY_ITEM),
+			" part_number = $3, bar_code = $4, has_bar_code = $5, manual_code = $6, category_id = $7 "+
+			" where item_id = $8", TABLE_INVENTORY_ITEM),
 		item.Name, item.ModelYear, item.PartNumber,
-		item.BarCode, item.HasBarCode, item.ManualCode,
+		item.BarCode, item.HasBarCode, item.ManualCode, item.CategoryId,
 		item.ItemId)
 	return item, err
 }
@@ -127,7 +129,7 @@ func (s *shStore) GetAllCompanyItems(company_id int64) ([]*ShItem, error) {
 func _queryInventoryItems(s *shStore, err_msg string, where_stmt string, args ...interface{}) ([]*ShItem, error) {
 	var result []*ShItem
 
-	query := fmt.Sprintf("select item_id, company_id, name, model_year, "+
+	query := fmt.Sprintf("select item_id, company_id, category_id, name, model_year, "+
 		"part_number, bar_code, has_bar_code, manual_code, client_uuid from %s", TABLE_INVENTORY_ITEM)
 	sort_by := " ORDER BY item_id desc"
 
@@ -147,6 +149,7 @@ func _queryInventoryItems(s *shStore, err_msg string, where_stmt string, args ..
 		err := rows.Scan(
 			&i.ItemId,
 			&i.CompanyId,
+			&i.CategoryId,
 			&i.Name,
 			&i.ModelYear,
 			&i.PartNumber,
@@ -167,7 +170,7 @@ func _queryInventoryItems(s *shStore, err_msg string, where_stmt string, args ..
 func _queryInventoryItemsInTx(tnx *sql.Tx, err_msg string, where_stmt string, args ...interface{}) ([]*ShItem, error) {
 	var result []*ShItem
 
-	query := fmt.Sprintf("select item_id, company_id, name, model_year, "+
+	query := fmt.Sprintf("select item_id, company_id, category_id, name, model_year, "+
 		"part_number, bar_code, has_bar_code, manual_code, client_uuid from %s", TABLE_INVENTORY_ITEM)
 	sort_by := " ORDER BY item_id desc"
 
@@ -187,6 +190,7 @@ func _queryInventoryItemsInTx(tnx *sql.Tx, err_msg string, where_stmt string, ar
 		err := rows.Scan(
 			&i.ItemId,
 			&i.CompanyId,
+			&i.CategoryId,
 			&i.Name,
 			&i.ModelYear,
 			&i.PartNumber,
