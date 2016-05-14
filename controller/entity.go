@@ -135,18 +135,16 @@ type SyncMember struct {
 	SuppliedFields
 }
 
-func CreateCRUDMaps(m map[CRUD_ACTION]map[int64]bool) {
-	m[ACTION_CREATE] = make(map[int64]bool)
-	m[ACTION_UPDATE] = make(map[int64]bool)
-	m[ACTION_DELETE] = make(map[int64]bool)
-}
-
 func NewEntitySyncData() *EntitySyncData {
 	s := &EntitySyncData{}
 
 	s.Types = make(map[string]bool)
+
 	s.ItemIds = make(map[CRUD_ACTION]map[int64]bool)
 	s.ItemFields = make(map[int64]*SyncInventoryItem)
+
+    s.CategoryIds = make(map[CRUD_ACTION]map[int64]bool)
+    s.CategoryFields = make(map[int64]*SyncInventoryItem)
 
 	s.BranchIds = make(map[CRUD_ACTION]map[int64]bool)
 	s.BranchFields = make(map[int64]*SyncBranch)
@@ -154,9 +152,16 @@ func NewEntitySyncData() *EntitySyncData {
 	s.MemberIds = make(map[CRUD_ACTION]map[int64]bool)
 	s.MemberFields = make(map[int64]*SyncMember)
 
-	CreateCRUDMaps(s.ItemIds)
-	CreateCRUDMaps(s.BranchIds)
-	CreateCRUDMaps(s.MemberIds)
+    initializeMap := func(m map[CRUD_ACTION]map[int64]bool) {
+        m[ACTION_CREATE] = make(map[int64]bool)
+        m[ACTION_UPDATE] = make(map[int64]bool)
+        m[ACTION_DELETE] = make(map[int64]bool)
+    }
+
+	initializeMap(s.ItemIds)
+    initializeMap(s.CategoryIds)
+	initializeMap(s.BranchIds)
+	initializeMap(s.MemberIds)
 
 	s.Branch_ItemIds = make(map[CRUD_ACTION]map[Pair_BranchItem]bool)
 	s.Branch_ItemIds[ACTION_CREATE] = make(map[Pair_BranchItem]bool)
