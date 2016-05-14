@@ -92,72 +92,20 @@ func EntitySyncHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	tnx.Commit()
 
-	sync_result := make(map[string]interface{})
-	sync_result[JSON_KEY_COMPANY_ID] = info.CompanyId
+	response := make(map[string]interface{})
+	response[JSON_KEY_COMPANY_ID] = info.CompanyId
 
-	// if there were newly added items, send to user updated ids
-	if len(result.OldId2New_Items) > 0 {
-		i := int64(0)
-		updated_ids := make([]map[string]int64, len(result.OldId2New_Items))
-		for old_id, new_id := range result.OldId2New_Items {
-			updated_ids[i] = map[string]int64{
-				KEY_JSON_ID_OLD: old_id,
-				KEY_JSON_ID_NEW: new_id,
-			}
-			i++
-		}
-
-		sync_result[key_updated_item_ids] = updated_ids
-	}
-	if len(result.OldId2New_Branches) > 0 {
-		i := int64(0)
-		updated_ids := make([]map[string]int64, len(result.OldId2New_Branches))
-		for old_id, new_id := range result.OldId2New_Branches {
-			updated_ids[i] = map[string]int64{
-				KEY_JSON_ID_OLD: old_id,
-				KEY_JSON_ID_NEW: new_id,
-			}
-			i++
-		}
-
-		sync_result[key_updated_branch_ids] = updated_ids
-	}
-
-	latest_item_rev, changed_items, err := fetchChangedItemsSinceRev(info.CompanyId,
-		posted_data.RevisionItem, result.NewlyCreatedItemIds)
-	if err != nil {
-		writeErrorResponse(w, http.StatusInternalServerError, err.Error()+"e2")
+	if err = syncNewEntities(response, result); err != nil {
+		writeErrorResponse(w, http.StatusInternalServerError, err.Error()+"e5")
 		return
 	}
-	sync_result[key_item_revision] = latest_item_rev
-	if len(changed_items) > 0 {
-		sync_result[key_sync_items] = changed_items
-	}
-	latest_branch_rev, changed_branches, err := fetchChangedBranchesSinceRev(info.CompanyId,
-		posted_data.RevisionBranch, result.NewlyCreatedBranchIds)
-	if err != nil {
-		writeErrorResponse(w, http.StatusInternalServerError, err.Error()+"e3")
+
+	if err = syncModifiedEntities(response, posted_data, result, info); err != nil {
+		writeErrorResponse(w, http.StatusInternalServerError, err.Error()+"e6")
 		return
 	}
-	sync_result[key_branch_revision] = latest_branch_rev
-	if len(changed_branches) > 0 {
-		sync_result[key_sync_branches] = changed_branches
-	}
 
-	if info.Permission.PermissionType <= models.PERMISSION_TYPE_BRANCH_MANAGER {
-		max_member_rev, members, err := fetchChangedMemberSinceRev(info.CompanyId,
-			posted_data.RevisionMember)
-		if err != nil {
-			writeErrorResponse(w, http.StatusInternalServerError)
-			return
-		}
-		if len(members) > 0 {
-			sync_result[key_sync_members] = members
-		}
-		sync_result[key_member_revision] = max_member_rev
-	}
-
-	b, err := json.MarshalIndent(sync_result, "", "    ")
+	b, err := json.MarshalIndent(response, "", "    ")
 	if err != nil {
 		writeErrorResponse(w, http.StatusInternalServerError, "e4")
 		return
@@ -168,6 +116,86 @@ func EntitySyncHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Printf("Entity Sync response size:(%d)bytes\n%s\n\n\n", len(s), s)
 }
 
+func syncNewEntities(sync_response map[string]interface{}, sync_result *EntityResult) error {
+	if len(sync_result.OldId2New_Categories) > 0 {
+		i := int64(0)
+		updated_ids := make([]map[string]int64, len(sync_result.OldId2New_Categories))
+		for old_id, new_id := range sync_result.OldId2New_Categories {
+			updated_ids[i] = map[string]int64{
+				KEY_JSON_ID_OLD: old_id,
+				KEY_JSON_ID_NEW: new_id,
+			}
+			i++
+		}
+
+		sync_response[key_updated_category_ids] = updated_ids
+	}
+
+	if len(sync_result.OldId2New_Items) > 0 {
+		i := int64(0)
+		updated_ids := make([]map[string]int64, len(sync_result.OldId2New_Items))
+		for old_id, new_id := range sync_result.OldId2New_Items {
+			updated_ids[i] = map[string]int64{
+				KEY_JSON_ID_OLD: old_id,
+				KEY_JSON_ID_NEW: new_id,
+			}
+			i++
+		}
+
+		sync_response[key_updated_item_ids] = updated_ids
+	}
+	if len(sync_result.OldId2New_Branches) > 0 {
+		i := int64(0)
+		updated_ids := make([]map[string]int64, len(sync_result.OldId2New_Branches))
+		for old_id, new_id := range sync_result.OldId2New_Branches {
+			updated_ids[i] = map[string]int64{
+				KEY_JSON_ID_OLD: old_id,
+				KEY_JSON_ID_NEW: new_id,
+			}
+			i++
+		}
+
+		sync_response[key_updated_branch_ids] = updated_ids
+	}
+	return nil
+}
+
+func syncModifiedEntities(sync_response map[string]interface{},
+	posted_data *EntitySyncData, sync_result *EntityResult,
+	info *IdentityInfo) error {
+
+	latest_item_rev, changed_items, err := fetchChangedItemsSinceRev(info.CompanyId,
+		posted_data.RevisionItem, sync_result.NewlyCreatedItemIds)
+	if err != nil {
+		return err
+	}
+	sync_response[key_item_revision] = latest_item_rev
+	if len(changed_items) > 0 {
+		sync_response[key_sync_items] = changed_items
+	}
+	latest_branch_rev, changed_branches, err := fetchChangedBranchesSinceRev(info.CompanyId,
+		posted_data.RevisionBranch, sync_result.NewlyCreatedBranchIds)
+	if err != nil {
+		return err
+	}
+	sync_response[key_branch_revision] = latest_branch_rev
+	if len(changed_branches) > 0 {
+		sync_response[key_sync_branches] = changed_branches
+	}
+
+	if info.Permission.PermissionType <= models.PERMISSION_TYPE_BRANCH_MANAGER {
+		max_member_rev, members, err := fetchChangedMemberSinceRev(info.CompanyId,
+			posted_data.RevisionMember)
+		if err != nil {
+			return err
+		}
+		if len(members) > 0 {
+			sync_response[key_sync_members] = members
+		}
+		sync_response[key_member_revision] = max_member_rev
+	}
+	return nil
+}
 
 func fetchChangedItemsSinceRev(company_id, item_rev int64, newly_created_item_ids map[int64]bool) (latest_rev int64,
 	items_since []map[string]interface{}, err error) {
