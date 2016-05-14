@@ -33,8 +33,8 @@ const (
 	type_branch_items = "branch_items"
 	type_members      = "members"
 
-    // used in the response to hold the newly updated category ids
-    key_updated_category_ids = "updated_category_ids"
+	// used in the response to hold the newly updated category ids
+	key_updated_category_ids = "updated_category_ids"
 
 	// used in the response json to hold the newly updated item ids
 	key_updated_item_ids = "updated_item_ids"
@@ -42,8 +42,8 @@ const (
 	// used in the response json to hold the newly updated branch ids
 	key_updated_branch_ids = "updated_branch_ids"
 
-    // key of json holding any updated categories since last sync
-    key_sync_categories = "sync_categories"
+	// key of json holding any updated categories since last sync
+	key_sync_categories = "sync_categories"
 
 	// key of json holding any updated items since last sync
 	key_sync_items = "sync_items"
@@ -67,7 +67,7 @@ type EntitySyncData struct {
 	RevisionBranch      int64
 	RevisionBranch_Item int64
 	RevisionMember      int64
-    RevisionCategory    int64
+	RevisionCategory    int64
 
 	// This holds the 'type' of items in the upload
 	Types map[string]bool
@@ -77,8 +77,8 @@ type EntitySyncData struct {
 	ItemIds    map[CRUD_ACTION]map[int64]bool
 	ItemFields map[int64]*SyncInventoryItem
 
-    CategoryIds     map[CRUD_ACTION]map[int64]bool
-    CategoryFields  map[int64]*SyncCategory
+	CategoryIds    map[CRUD_ACTION]map[int64]bool
+	CategoryFields map[int64]*SyncCategory
 
 	BranchIds    map[CRUD_ACTION]map[int64]bool
 	BranchFields map[int64]*SyncBranch
@@ -108,10 +108,10 @@ type SyncInventoryItem struct {
 }
 
 type SyncCategory struct {
-    models.ShCategory
-    PostType    int64
+	models.ShCategory
+	PostType int64
 
-    SuppliedFields
+	SuppliedFields
 }
 
 type SyncBranch struct {
@@ -143,8 +143,8 @@ func NewEntitySyncData() *EntitySyncData {
 	s.ItemIds = make(map[CRUD_ACTION]map[int64]bool)
 	s.ItemFields = make(map[int64]*SyncInventoryItem)
 
-    s.CategoryIds = make(map[CRUD_ACTION]map[int64]bool)
-    s.CategoryFields = make(map[int64]*SyncInventoryItem)
+	s.CategoryIds = make(map[CRUD_ACTION]map[int64]bool)
+	s.CategoryFields = make(map[int64]*SyncInventoryItem)
 
 	s.BranchIds = make(map[CRUD_ACTION]map[int64]bool)
 	s.BranchFields = make(map[int64]*SyncBranch)
@@ -152,14 +152,14 @@ func NewEntitySyncData() *EntitySyncData {
 	s.MemberIds = make(map[CRUD_ACTION]map[int64]bool)
 	s.MemberFields = make(map[int64]*SyncMember)
 
-    initializeMap := func(m map[CRUD_ACTION]map[int64]bool) {
-        m[ACTION_CREATE] = make(map[int64]bool)
-        m[ACTION_UPDATE] = make(map[int64]bool)
-        m[ACTION_DELETE] = make(map[int64]bool)
-    }
+	initializeMap := func(m map[CRUD_ACTION]map[int64]bool) {
+		m[ACTION_CREATE] = make(map[int64]bool)
+		m[ACTION_UPDATE] = make(map[int64]bool)
+		m[ACTION_DELETE] = make(map[int64]bool)
+	}
 
 	initializeMap(s.ItemIds)
-    initializeMap(s.CategoryIds)
+	initializeMap(s.CategoryIds)
 	initializeMap(s.BranchIds)
 	initializeMap(s.MemberIds)
 
@@ -227,6 +227,7 @@ var parsers = map[string]EntityParser{
 	type_branches:     branchParser,
 	type_branch_items: branchItemParser,
 	type_members:      memberParser,
+	type_categories:   categoryParser,
 }
 
 // checks if the json has { create & update & delete } keys
@@ -612,6 +613,10 @@ func memberParser(sync_data *EntitySyncData, root *simplejson.Json, info *Identi
 	}
 
 	return nil
+}
+
+func categoryParser(sync_data *EntitySyncData, root *simplejson.Json, info *IdentityInfo) error {
+    return nil
 }
 
 type EntityResult struct {
