@@ -7,10 +7,10 @@ import (
 	"github.com/bitly/go-simplejson"
 	"io"
 	"net/http"
+	"net/http/httputil"
 	"sheket/server/models"
 	"strconv"
 	"strings"
-	"net/http/httputil"
 )
 
 const (
@@ -698,7 +698,7 @@ func EntitySyncHandler(w http.ResponseWriter, r *http.Request) {
 
 	if permission.PermissionType <= models.PERMISSION_TYPE_BRANCH_MANAGER {
 		max_member_rev, members, err := fetchChangedMemberSinceRev(company_id,
-		posted_data.RevisionMember)
+			posted_data.RevisionMember)
 		if err != nil {
 			writeErrorResponse(w, http.StatusInternalServerError)
 			return
@@ -1142,8 +1142,8 @@ func fetchChangedMemberSinceRev(company_id, member_rev int64) (latest_rev int64,
 
 	max_rev, changed_member_revs, err := Store.GetRevisionsSince(
 		&models.ShEntityRevision{
-			CompanyId: company_id,
-			EntityType: models.REV_ENTITY_MEMBERS,
+			CompanyId:      company_id,
+			EntityType:     models.REV_ENTITY_MEMBERS,
 			RevisionNumber: member_rev,
 		})
 	if err != nil {
@@ -1167,10 +1167,10 @@ func fetchChangedMemberSinceRev(company_id, member_rev int64) (latest_rev int64,
 			continue
 		}
 
-		result[i] = map[string]interface{} {
-			models.PERMISSION_JSON_MEMBER_ID: member_id,
+		result[i] = map[string]interface{}{
+			models.PERMISSION_JSON_MEMBER_ID:         member_id,
 			models.PERMISSION_JSON_MEMBER_PERMISSION: permission.EncodedPermission,
-			JSON_KEY_USERNAME: user.Username,
+			JSON_KEY_USERNAME:                        user.Username,
 		}
 
 		i++

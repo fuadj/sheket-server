@@ -465,7 +465,6 @@ const (
 	user_id         = int64(12)
 )
 
-
 func TestTransactionHandler(t *testing.T) {
 	setup_store(t)
 	defer teardown_store()
@@ -488,7 +487,7 @@ func TestTransactionHandler(t *testing.T) {
 	t_mock.Source = source
 
 	user_store := models.NewMockUserStore(t_ctrl)
-	permission := &models.UserPermission{PermissionType:models.PERMISSION_TYPE_MANAGER}
+	permission := &models.UserPermission{PermissionType: models.PERMISSION_TYPE_MANAGER}
 	permission.CompanyId = company_id
 	permission.UserId = user_id
 	permission.Encode()

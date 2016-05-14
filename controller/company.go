@@ -2,12 +2,12 @@ package controller
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/bitly/go-simplejson"
 	"net/http"
 	"sheket/server/controller/auth"
 	"sheket/server/models"
 	"strings"
-	"fmt"
 )
 
 func AddCompanyMember(w http.ResponseWriter, r *http.Request) {
@@ -48,40 +48,40 @@ func AddCompanyMember(w http.ResponseWriter, r *http.Request) {
 
 	member, err := Store.FindUserById(member_id)
 	if err != nil {
-		writeErrorResponse(w, http.StatusInternalServerError, err.Error() + "e0")
+		writeErrorResponse(w, http.StatusInternalServerError, err.Error()+"e0")
 		return
 	}
 
 	tnx, err := Store.Begin()
 	if err != nil {
-		writeErrorResponse(w, http.StatusInternalServerError, err.Error() + "e1")
+		writeErrorResponse(w, http.StatusInternalServerError, err.Error()+"e1")
 		return
 	}
 
 	_, err = Store.SetUserPermissionInTx(tnx, p)
 	if err != nil {
-		writeErrorResponse(w, http.StatusInternalServerError, err.Error() + "e2")
+		writeErrorResponse(w, http.StatusInternalServerError, err.Error()+"e2")
 		return
 	}
 
 	rev := &models.ShEntityRevision{
-		CompanyId:company_id,
-		EntityType:models.REV_ENTITY_MEMBERS,
-		ActionType:models.REV_ACTION_CREATE,
-		EntityAffectedId:member_id,
-		AdditionalInfo:-1,
+		CompanyId:        company_id,
+		EntityType:       models.REV_ENTITY_MEMBERS,
+		ActionType:       models.REV_ACTION_CREATE,
+		EntityAffectedId: member_id,
+		AdditionalInfo:   -1,
 	}
 
 	_, err = Store.AddEntityRevisionInTx(tnx, rev)
 	if err != nil {
-		writeErrorResponse(w, http.StatusInternalServerError, err.Error() + "e3")
+		writeErrorResponse(w, http.StatusInternalServerError, err.Error()+"e3")
 		return
 	}
 	tnx.Commit()
 
 	result := map[string]interface{}{
 		JSON_KEY_MEMBER_ID: member_id,
-		JSON_KEY_USERNAME: member.Username,
+		JSON_KEY_USERNAME:  member.Username,
 	}
 	b, err := json.MarshalIndent(result, "", "    ")
 	if err != nil {
@@ -119,13 +119,13 @@ func CompanyCreateHandler(w http.ResponseWriter, r *http.Request) {
 
 	tnx, err := Store.GetDataStore().Begin()
 	if err != nil {
-		writeErrorResponse(w, http.StatusInternalServerError, err.Error() + "e4")
+		writeErrorResponse(w, http.StatusInternalServerError, err.Error()+"e4")
 		return
 	}
 	created, err := Store.CreateCompanyInTx(tnx, current_user, company)
 	if err != nil {
 		tnx.Rollback()
-		writeErrorResponse(w, http.StatusInternalServerError, err.Error() + "e5")
+		writeErrorResponse(w, http.StatusInternalServerError, err.Error()+"e5")
 		return
 	}
 
@@ -135,16 +135,16 @@ func CompanyCreateHandler(w http.ResponseWriter, r *http.Request) {
 	result[JSON_KEY_COMPANY_NAME] = company_name
 	result[JSON_KEY_COMPANY_CONTACT] = contact
 
-	p := &models.UserPermission{CompanyId:created.CompanyId,
-		UserId:current_user.UserId,
-		PermissionType:models.PERMISSION_TYPE_CREATOR}
+	p := &models.UserPermission{CompanyId: created.CompanyId,
+		UserId:         current_user.UserId,
+		PermissionType: models.PERMISSION_TYPE_CREATOR}
 	encoded := p.Encode()
 	result[JSON_KEY_USER_PERMISSION] = encoded
 
 	_, err = Store.SetUserPermissionInTx(tnx, p)
 	if err != nil {
 		tnx.Rollback()
-		writeErrorResponse(w, http.StatusInternalServerError, err.Error() + "e6")
+		writeErrorResponse(w, http.StatusInternalServerError, err.Error()+"e6")
 		return
 	}
 
@@ -160,4 +160,3 @@ func CompanyCreateHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(b)
 	fmt.Printf("%s", string(b))
 }
-

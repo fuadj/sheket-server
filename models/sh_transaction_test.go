@@ -7,11 +7,11 @@ import (
 )
 
 const (
-	transaction_id       = 100
-	trans_type           = TRANS_TYPE_ADD_TRANSFER_FROM_OTHER
-	other_branch         = 5
-	trans_quantity       = 4.0
-	num_trans_items      = 4
+	transaction_id  = 100
+	trans_type      = TRANS_TYPE_ADD_TRANSFER_FROM_OTHER
+	other_branch    = 5
+	trans_quantity  = 4.0
+	num_trans_items = 4
 )
 
 func _dummyShTransactionItem(i int64) *ShTransactionItem {
@@ -25,7 +25,7 @@ func _dummyShTransactionItem(i int64) *ShTransactionItem {
 
 func _dummyShTransaction() *ShTransaction {
 	trans := &ShTransaction{CompanyId: t_company_id,
-		UserId:             t_user_id, BranchId: t_branch_id, Date: t_date,
+		UserId: t_user_id, BranchId: t_branch_id, Date: t_date,
 		TransItems: make([]*ShTransactionItem, 0)}
 
 	trans.TransItems = make([]*ShTransactionItem, num_trans_items)
@@ -39,8 +39,8 @@ func _dummyShTransaction() *ShTransaction {
 func _transItemInsertExpectation(i int64, return_error bool) *sqlmock.ExpectedExec {
 	expect := mock.ExpectExec(
 		fmt.Sprintf("insert into %s", TABLE_TRANSACTION_ITEM)).
-		WithArgs(transaction_id, trans_type, t_item_id +i,
-		other_branch, trans_quantity)
+		WithArgs(transaction_id, trans_type, t_item_id+i,
+			other_branch, trans_quantity)
 	if return_error {
 		expect.WillReturnError(fmt.Errorf("insert error"))
 	} else {
@@ -193,7 +193,7 @@ func _transItemQueryExpectation(n int64, return_error bool) *sqlmock.ExpectedQue
 			_cols("transaction_id, trans_type, item_id, " +
 				"other_branch_id,quantity"))
 		for i := int64(0); i < n; i++ {
-			rows.AddRow(transaction_id, trans_type, t_item_id +i,
+			rows.AddRow(transaction_id, trans_type, t_item_id+i,
 				other_branch, trans_quantity)
 		}
 		expect.WillReturnRows(rows)
@@ -206,7 +206,7 @@ func _transQueryRows() sqlmock.Rows {
 		_cols("transaction_id,company_id,"+
 			"user_id, date")).
 		AddRow(transaction_id, t_company_id,
-		t_user_id, t_date)
+			t_user_id, t_date)
 }
 
 func TestGetShTransactionByIdFetchItems(t *testing.T) {
@@ -237,7 +237,7 @@ func TestGetShTransactionByIdNoTransactionError(t *testing.T) {
 		WithArgs(transaction_id).
 		// make the query succeed, but return no rows on the cursor
 		WillReturnRows(sqlmock.NewRows(_cols("transaction_id,company_id," +
-		"user_id, date")))
+			"user_id, date")))
 
 	_, err := store.GetShTransactionById(t_company_id, transaction_id, true)
 	if err == nil {

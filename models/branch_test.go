@@ -128,7 +128,7 @@ func TestAddBranchItemInsert(t *testing.T) {
 		WillReturnRows(sqlmock.NewRows(_cols("item_id")))
 	mock.ExpectExec(fmt.Sprintf("insert into %s", TABLE_BRANCH_ITEM)).
 		WithArgs(t_company_id, t_branch_id, t_item_id,
-		t_quantity, t_item_location).
+			t_quantity, t_item_location).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 	mock.ExpectCommit()
 
@@ -149,7 +149,7 @@ func TestAddBranchItemUpdate(t *testing.T) {
 	mock.ExpectQuery(fmt.Sprintf("select (.+) from %s", TABLE_BRANCH_ITEM)).
 		WithArgs(t_branch_id, t_item_id).
 		WillReturnRows(
-		sqlmock.NewRows(_cols("item_id")).AddRow(t_item_id))
+			sqlmock.NewRows(_cols("item_id")).AddRow(t_item_id))
 
 	mock.ExpectExec(fmt.Sprintf("update %s", TABLE_BRANCH_ITEM)).
 		WithArgs(t_quantity, t_item_location, t_branch_id, t_item_id).
@@ -175,7 +175,7 @@ func TestAddBranchItemInsertRollback(t *testing.T) {
 		WillReturnRows(sqlmock.NewRows(_cols("item_id")))
 	mock.ExpectExec(fmt.Sprintf("insert into %s", TABLE_BRANCH_ITEM)).
 		WithArgs(t_company_id, t_branch_id, t_item_id,
-		t_quantity, t_item_location).
+			t_quantity, t_item_location).
 		WillReturnError(fmt.Errorf("Insert error"))
 	// TODO: check stuff
 	mock.ExpectRollback()
@@ -197,7 +197,7 @@ func TestAddBranchItemUpdateRollback(t *testing.T) {
 	mock.ExpectQuery(fmt.Sprintf("select (.+) from %s", TABLE_BRANCH_ITEM)).
 		WithArgs(t_branch_id, t_item_id).
 		WillReturnRows(sqlmock.NewRows(_cols("item_id")).
-		AddRow(t_item_id))
+			AddRow(t_item_id))
 	mock.ExpectExec(fmt.Sprintf("update %s", TABLE_BRANCH_ITEM)).
 		WithArgs(t_quantity, t_item_location, t_branch_id, t_item_id).
 		WillReturnError(fmt.Errorf("update error"))

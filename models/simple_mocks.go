@@ -65,6 +65,7 @@ func (m *SimpleBranchItemStore) GetItemsInBranch(int64) ([]*ShBranchItem, error)
 func (m *SimpleBranchItemStore) GetItemsInAllCompanyBranches(int64) ([]*ShBranchItem, error) {
 	return nil, nil
 }
+
 // Begin: SimpleBranchItemStore
 
 // End: SimpleTransactionStore
@@ -117,6 +118,7 @@ func (s *SimpleTransactionStore) GetShTransactionSinceTransId(company_id, trans_
 	}
 	return trans, nil
 }
+
 // End: SimpleTransactionStore
 
 // Begin: SimpleRevisionStore
@@ -145,6 +147,7 @@ func (s *SimpleRevisionStore) GetRevisionsSince(start_from *ShEntityRevision) (l
 	}
 	return max_rev, s.Revisions, nil
 }
+
 // End: SimpleRevisionStore
 
 // Begin: SimpleItemStore
@@ -195,6 +198,7 @@ func (s *SimpleItemStore) GetItemByIdInTx(tnx *sql.Tx, id int64) (*ShItem, error
 func (s *SimpleItemStore) GetAllCompanyItems(int64) ([]*ShItem, error) {
 	return nil, fmt.Errorf("GetAllCompanyItems, Not yet implemented ")
 }
+
 // End: SimpleItemStore
 
 // Begin: SimpleBranchStore
@@ -242,4 +246,3 @@ func (s *SimpleBranchStore) GetBranchByIdInTx(tnx *sql.Tx, id int64) (*ShBranch,
 func (s *SimpleBranchStore) ListCompanyBranches(int64) ([]*ShBranch, error) {
 	return nil, fmt.Errorf("ListCompanyBranches, Not yet implemented ")
 }
-

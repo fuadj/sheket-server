@@ -30,7 +30,7 @@ func TestCreateInventoryItem(t *testing.T) {
 	mock.ExpectBegin()
 	mock.ExpectQuery(fmt.Sprintf("insert into %s", TABLE_INVENTORY_ITEM)).
 		WithArgs(t_company_id, item_name, item_model,
-		item_part_number, item_bar_code, item_has_bar_code, item_manual_code).
+			item_part_number, item_bar_code, item_has_bar_code, item_manual_code).
 		WillReturnRows(sqlmock.NewRows(_cols("item_id")).AddRow(t_item_id))
 
 	item, err := store.CreateItem(dummyTestItem())
@@ -48,7 +48,7 @@ func TestCreateInventoryItemFail(t *testing.T) {
 	mock.ExpectBegin()
 	mock.ExpectQuery(fmt.Sprintf("insert into %s", TABLE_INVENTORY_ITEM)).
 		WithArgs(t_company_id, item_name, item_model,
-		item_part_number, item_bar_code, item_has_bar_code, item_manual_code).
+			item_part_number, item_bar_code, item_has_bar_code, item_manual_code).
 		WillReturnError(fmt.Errorf("insert error"))
 
 	_, err := store.CreateItem(dummyTestItem())
@@ -65,8 +65,8 @@ func TestUpdateInventoryItem(t *testing.T) {
 	mock.ExpectBegin()
 	mock.ExpectExec(fmt.Sprintf("update %s", TABLE_INVENTORY_ITEM)).
 		WithArgs(item_name, item_model,
-		item_part_number, item_bar_code, item_has_bar_code, item_manual_code,
-		t_item_id).
+			item_part_number, item_bar_code, item_has_bar_code, item_manual_code,
+			t_item_id).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
 	tnx, _ := db.Begin()
@@ -85,10 +85,10 @@ func TestUpdateInventoryItemFail(t *testing.T) {
 
 	mock.ExpectBegin()
 	mock.ExpectExec(fmt.Sprintf("update %s", TABLE_INVENTORY_ITEM)).
-	WithArgs(item_name, item_model,
-		item_part_number, item_bar_code, item_has_bar_code, item_manual_code,
-		t_item_id).
-	WillReturnError(fmt.Errorf("update error"))
+		WithArgs(item_name, item_model,
+			item_part_number, item_bar_code, item_has_bar_code, item_manual_code,
+			t_item_id).
+		WillReturnError(fmt.Errorf("update error"))
 
 	tnx, _ := db.Begin()
 	item := dummyTestItem()
@@ -107,7 +107,7 @@ func _itemQueryRows() sqlmock.Rows {
 	return sqlmock.NewRows(_cols("item_id,company_id, "+
 		"name, model_year, part_number,bar_code,has_bar_code,manual_code")).
 		AddRow(t_item_id, t_company_id, item_name, item_model,
-		item_part_number, item_bar_code, item_has_bar_code, item_manual_code)
+			item_part_number, item_bar_code, item_has_bar_code, item_manual_code)
 }
 
 func TestGetItemById(t *testing.T) {

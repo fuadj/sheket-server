@@ -1,14 +1,15 @@
 package models
+
 import (
-	"fmt"
 	"database/sql"
-"errors"
+	"errors"
+	"fmt"
 )
 
 type Company struct {
-	CompanyId 		int64
-	CompanyName		string
-	Contact 		string
+	CompanyId   int64
+	CompanyName string
+	Contact     string
 }
 
 func (b *shStore) CreateCompany(u *User, c *Company) (*Company, error) {
@@ -34,9 +35,9 @@ func (b *shStore) CreateCompany(u *User, c *Company) (*Company, error) {
 
 func (b *shStore) CreateCompanyInTx(tnx *sql.Tx, u *User, c *Company) (*Company, error) {
 	err := tnx.QueryRow(
-		fmt.Sprintf("insert into %s " +
-		"(company_name, contact) values " +
-		"($1, $2) returning company_id;", TABLE_COMPANY),
+		fmt.Sprintf("insert into %s "+
+			"(company_name, contact) values "+
+			"($1, $2) returning company_id;", TABLE_COMPANY),
 		c.CompanyName, c.Contact).Scan(&c.CompanyId)
 	if err != nil {
 		return nil, err

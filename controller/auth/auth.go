@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"github.com/gorilla/securecookie"
 	"github.com/gorilla/sessions"
+	"golang.org/x/crypto/bcrypt"
 	"net/http"
 	"sheket/server/models"
-	"golang.org/x/crypto/bcrypt"
 )
 
 const (
@@ -89,7 +89,6 @@ func IsLoggedIn(r *http.Request) bool {
 	_, err := GetCurrentUser(r)
 	return err == nil
 }
-
 
 // Checks if the user has required credentials
 // Returns err if invalid

@@ -7,17 +7,17 @@ import (
 )
 
 type ShBranch struct {
-	CompanyId int64
-	BranchId  int64
+	CompanyId  int64
+	BranchId   int64
 	ClientUUID string
-	Name      string
-	Location  string
+	Name       string
+	Location   string
 }
 
 const (
 	BRANCH_JSON_COMPANY_ID = "company_id"
 	BRANCH_JSON_BRANCH_ID  = "branch_id"
-	BRANCH_JSON_UUID = "client_uuid"
+	BRANCH_JSON_UUID       = "client_uuid"
 	BRANCH_JSON_NAME       = "name"
 	BRANCH_JSON_LOCATION   = "location"
 )
@@ -32,7 +32,7 @@ type ShBranchItem struct {
 
 const (
 	// the val of this should be string of "branch_id:item_id"
-	BRANCH_ITEM_JSON_ID            = "branch_item_id"
+	BRANCH_ITEM_JSON_ID = "branch_item_id"
 
 	BRANCH_ITEM_JSON_COMPANY_ID    = "company_id"
 	BRANCH_ITEM_JSON_BRANCH_ID     = "branch_id"
@@ -71,7 +71,7 @@ func (s *shStore) CreateBranchInTx(tnx *sql.Tx, b *ShBranch) (*ShBranch, error) 
 func (s *shStore) UpdateBranchInTx(tnx *sql.Tx, b *ShBranch) (*ShBranch, error) {
 	_, err := tnx.Exec(
 		fmt.Sprintf("update %s set "+
-			" branch_name = $1, location = $2 " +
+			" branch_name = $1, location = $2 "+
 			" where branch_id = $3 ", TABLE_BRANCH),
 		b.Name, b.Location, b.BranchId)
 	return b, err

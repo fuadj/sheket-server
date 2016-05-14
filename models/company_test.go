@@ -81,7 +81,7 @@ func TestFindCompanyById(t *testing.T) {
 	mock.ExpectQuery(fmt.Sprintf("select (.+) from %s", TABLE_COMPANY)).
 		WithArgs(t_company_id).
 		WillReturnRows(sqlmock.NewRows(_cols("company_id,company_name,contact")).
-		AddRow(t_company_id, t_company_name, t_company_contact))
+			AddRow(t_company_id, t_company_name, t_company_contact))
 
 	company, err := store.GetCompanyById(t_company_id)
 	if err != nil {

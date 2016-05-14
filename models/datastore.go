@@ -12,6 +12,7 @@ const (
 	TABLE_COMPANY          = "s_company"
 	TABLE_BRANCH           = "s_branch"
 	TABLE_U_PERMISSION     = "s_user_permission_table"
+	TABLE_CATEGORY         = "s_category"
 	TABLE_INVENTORY_ITEM   = "s_inventory_item"
 	TABLE_BRANCH_ITEM      = "s_branch_item"
 	TABLE_TRANSACTION      = "s_business_transaction"
@@ -99,7 +100,7 @@ func ConnectDbStore() (*dbStore, error) {
 	exec(t_name("CREATE TABLE IF NOT EXISTS %s ( "+
 		// branch-table
 		"branch_id		SERIAL PRIMARY KEY, "+
-		"client_uuid	uuid, " +
+		"client_uuid	uuid, "+
 		"company_id		INTEGER REFERENCES %s(company_id), "+
 		"branch_name	VARCHAR(260) NOT NULL, "+
 		"location 		VARCHAR(200), "+
@@ -110,7 +111,7 @@ func ConnectDbStore() (*dbStore, error) {
 	exec(t_name("CREATE TABLE IF NOT EXISTS %s ( "+
 		// item table
 		"item_id		SERIAL PRIMARY KEY, "+
-		"client_uuid 	uuid, " +
+		"client_uuid 	uuid, "+
 		"company_id		INTEGER REFERENCES %s(company_id), "+
 		"name			VARCHAR(200) NOT NULL, "+
 		"model_year		VARCHAR(10), "+
@@ -135,7 +136,7 @@ func ConnectDbStore() (*dbStore, error) {
 	exec(t_name("create table if not exists %s ( "+
 		// transaction-table
 		"transaction_id			SERIAL PRIMARY KEY, "+
-		"client_uuid			uuid, " +
+		"client_uuid			uuid, "+
 		"company_id				integer references %s(company_id), "+
 		"branch_id				integer references %s(branch_id), "+
 		"user_id				integer references %s(user_id), "+
@@ -165,7 +166,7 @@ func ConnectDbStore() (*dbStore, error) {
 	 */
 	exec(t_name("CREATE TABLE IF NOT EXISTS %s ( "+
 		// transaction-items table
-		"company_id			integer references %s(company_id), " +
+		"company_id			integer references %s(company_id), "+
 		"transaction_id 	INTEGER REFERENCES %s(transaction_id), "+
 		"trans_type			INTEGER NOT NULL, "+
 		"item_id			INTEGER REFERENCES %s(item_id), "+

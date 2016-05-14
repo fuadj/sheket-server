@@ -154,12 +154,12 @@ func searchBranchItemInCache(tnx *sql.Tx, seenItems map[Pair_BranchItem]*CachedB
 		cached_branch_item = &CachedBranchItem{
 			ShBranchItem:       search_item,
 			itemExistsInBranch: false,
-			itemVisited: false}
+			itemVisited:        false}
 	} else {
 		cached_branch_item = &CachedBranchItem{
 			ShBranchItem:       branch_item,
 			itemExistsInBranch: true,
-			itemVisited: false}
+			itemVisited:        false}
 	}
 
 	cached_branch_item.itemVisited = false

@@ -32,7 +32,7 @@ type BranchStore interface {
 
 	GetBranchByUUIDInTx(*sql.Tx, string) (*ShBranch, error)
 	GetBranchById(int64) (*ShBranch, error)
-	GetBranchByIdInTx(*sql.Tx,int64) (*ShBranch, error)
+	GetBranchByIdInTx(*sql.Tx, int64) (*ShBranch, error)
 	ListCompanyBranches(int64) ([]*ShBranch, error)
 }
 
@@ -103,6 +103,10 @@ type Source interface {
 	// used to start transactions
 	// queries the DataStore
 	Begin() (*sql.Tx, error)
+}
+
+type CategoryStore interface {
+    CreateCategory(*ShCategory) (*ShCategory, error)
 }
 
 type ShStore interface {

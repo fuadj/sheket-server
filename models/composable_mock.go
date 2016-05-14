@@ -32,4 +32,3 @@ func NewComposableShStoreMock(ctrl *gomock.Controller) *ComposableShStoreMock {
 
 	return c
 }
-

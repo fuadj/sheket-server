@@ -4,11 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"sheket/server/models"
 	"strconv"
 	"strings"
 	"testing"
-	"net/http/httptest"
 )
 
 const (
@@ -57,8 +57,8 @@ var itemsParseTest = []struct {
 	delete_ids intIds
 
 	existingItems []*models.ShItem
-	fields       []map[string]interface{}
-	wantResponse int
+	fields        []map[string]interface{}
+	wantResponse  int
 }{
 	{
 		type_items,
@@ -70,7 +70,7 @@ var itemsParseTest = []struct {
 		// delete ids
 		intIds{},
 		[]*models.ShItem{
-			&models.ShItem{ItemId:77, CompanyId:t_company_id, ModelYear:"Old year"},
+			&models.ShItem{ItemId: 77, CompanyId: t_company_id, ModelYear: "Old year"},
 		},
 		// fields
 		[]map[string]interface{}{
@@ -184,7 +184,7 @@ func TestEntitySyncHandler(t *testing.T) {
 	t_mock.Source = source
 
 	user_store := models.NewMockUserStore(t_ctrl)
-	permission := &models.UserPermission{PermissionType:models.PERMISSION_TYPE_CREATOR}
+	permission := &models.UserPermission{PermissionType: models.PERMISSION_TYPE_CREATOR}
 	permission.Encode()
 	t_mock.UserStore = user_store
 
@@ -215,7 +215,7 @@ func TestEntitySyncHandler(t *testing.T) {
 		w := httptest.NewRecorder()
 		EntitySyncHandler(w, req)
 		if w.Code != test.wantResponse {
-			t.Errorf("Test:%d, Handler exited non expected code\n" +
+			t.Errorf("Test:%d, Handler exited non expected code\n"+
 				"wanted %s, got %s", i, http.StatusText(test.wantResponse),
 				http.StatusText(w.Code))
 			t.Errorf("Body :%s", w.Body.String())

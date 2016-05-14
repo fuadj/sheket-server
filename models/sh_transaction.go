@@ -19,7 +19,7 @@ type ShTransaction struct {
 const (
 	TRANS_JSON_TRANS_ID  = "trans_id"
 	TRANS_JSON_UUID      = "client_uuid"
-	TRANS_JSON_USER_ID      = "user_id"
+	TRANS_JSON_USER_ID   = "user_id"
 	TRANS_JSON_BRANCH_ID = "branch_id"
 	TRANS_JSON_DATE      = "date"
 	TRANS_JSON_ITEMS     = "items"
@@ -165,7 +165,7 @@ func _queryShTransactionsInTx(tnx *sql.Tx, err_msg string, where_stmt string, ar
 	var result []*ShTransaction
 
 	query := fmt.Sprintf("select transaction_id, company_id, "+
-	"branch_id, user_id, t_date, client_uuid from %s", TABLE_TRANSACTION)
+		"branch_id, user_id, t_date, client_uuid from %s", TABLE_TRANSACTION)
 	sort_by := " ORDER BY transaction_id asc"
 
 	var rows *sql.Rows
