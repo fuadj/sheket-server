@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"sheket/server/models"
 	"strconv"
+	"fmt"
 )
 
 const (
@@ -31,4 +32,24 @@ func GetCurrentCompanyId(r *http.Request) int64 {
 		return INVALID_COMPANY_ID
 	}
 	return id
+}
+
+func GetIdentityInfo(r *http.Request) (*IdentityInfo, error) {
+	company_id := GetCurrentCompanyId(r)
+	if company_id == INVALID_COMPANY_ID {
+		return nil, fmt.Errorf("Invalid company id")
+	}
+
+	user, err := currentUserGetter(r)
+	if err != nil {
+		return nil, fmt.Errorf("Invalid user cookie '%s'", err.Error())
+	}
+
+	permission, err := Store.GetUserPermission(user, company_id)
+	if err != nil { // the user doesn't have permission to post
+		return nil, fmt.Errorf("User doesn't have permission, %s", err.Error())
+	}
+
+	info := &IdentityInfo{CompanyId: company_id, User: user, Permission: permission}
+	return info, nil
 }
