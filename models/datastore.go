@@ -109,6 +109,15 @@ func ConnectDbStore() (*dbStore, error) {
 		TABLE_BRANCH, TABLE_COMPANY))
 
 	exec(t_name("CREATE TABLE IF NOT EXISTS %s ( "+
+		// category table
+		"category_id	SERIAL PRIMARY KEY, "+
+		"client_uuid	uuid, "+
+		"company_id		INTEGER REFERENCES %s(company_id), "+
+		"name			VARCHAR(100) NOT NULL, "+
+		"parent_id		INTEGER NOT NULL);",
+		TABLE_CATEGORY, TABLE_COMPANY))
+
+	exec(t_name("CREATE TABLE IF NOT EXISTS %s ( "+
 		// item table
 		"item_id		SERIAL PRIMARY KEY, "+
 		"client_uuid 	uuid, "+
