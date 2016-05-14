@@ -14,9 +14,10 @@ import (
 )
 
 const (
-	key_item_revision   = "item_rev"
-	key_branch_revision = "branch_rev"
-	key_member_revision = "member_rev"
+	key_item_revision     = "item_rev"
+	key_branch_revision   = "branch_rev"
+	key_member_revision   = "member_rev"
+	key_category_revision = "category_rev"
 
 	key_types = "types"
 
@@ -26,16 +27,23 @@ const (
 
 	key_fields = "fields"
 
+	type_categories   = "categories"
 	type_items        = "items"
 	type_branches     = "branches"
 	type_branch_items = "branch_items"
 	type_members      = "members"
+
+    // used in the response to hold the newly updated category ids
+    key_updated_category_ids = "updated_category_ids"
 
 	// used in the response json to hold the newly updated item ids
 	key_updated_item_ids = "updated_item_ids"
 
 	// used in the response json to hold the newly updated branch ids
 	key_updated_branch_ids = "updated_branch_ids"
+
+    // key of json holding any updated categories since last sync
+    key_sync_categories = "sync_categories"
 
 	// key of json holding any updated items since last sync
 	key_sync_items = "sync_items"
