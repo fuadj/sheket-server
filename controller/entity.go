@@ -164,6 +164,16 @@ func syncModifiedEntities(sync_response map[string]interface{},
 	posted_data *EntitySyncData, sync_result *EntityResult,
 	info *IdentityInfo) error {
 
+	latest_category_rev, changed_categories, err := fetchChangedCategoriesSinceRev(info.CompanyId,
+		posted_data.RevisionCategory, sync_result.NewlyCreatedCategoryIds)
+	if err != nil {
+		return err
+	}
+	sync_response[key_category_revision] = latest_category_rev
+	if len(changed_categories) > 0 {
+		sync_response[key_sync_categories] = changed_categories
+	}
+
 	latest_item_rev, changed_items, err := fetchChangedItemsSinceRev(info.CompanyId,
 		posted_data.RevisionItem, sync_result.NewlyCreatedItemIds)
 	if err != nil {
@@ -173,6 +183,7 @@ func syncModifiedEntities(sync_response map[string]interface{},
 	if len(changed_items) > 0 {
 		sync_response[key_sync_items] = changed_items
 	}
+
 	latest_branch_rev, changed_branches, err := fetchChangedBranchesSinceRev(info.CompanyId,
 		posted_data.RevisionBranch, sync_result.NewlyCreatedBranchIds)
 	if err != nil {
@@ -195,6 +206,44 @@ func syncModifiedEntities(sync_response map[string]interface{},
 		sync_response[key_member_revision] = max_member_rev
 	}
 	return nil
+}
+
+func fetchChangedCategoriesSinceRev(company_id, last_category_rev int64, newly_created_category_ids map[int64]bool) (latest_rev int64,
+	categories_since []map[string]interface{}, err error) {
+	max_rev, changed_category_revs, err := Store.GetRevisionsSince(
+		&models.ShEntityRevision{
+			CompanyId:      company_id,
+			EntityType:     models.REV_ENTITY_CATEGORY,
+			RevisionNumber: last_category_rev,
+		})
+	if err != nil {
+		return max_rev, nil, err
+	}
+
+	result := make([]map[string]interface{}, len(changed_category_revs))
+	i := 0
+	for _, category_rev := range changed_category_revs {
+		category_id := category_rev.EntityAffectedId
+		// the category was created in this sync "round", we already have it
+		if newly_created_category_ids[category_id] {
+			continue
+		}
+		category, err := Store.GetCategoryById(category_id)
+		if err != nil {
+			// TODO: differentiate deleted from error
+			fmt.Printf("GetCategoryById error '%v'", err.Error())
+			continue
+		}
+
+		result[i] = map[string]interface{}{
+			models.CATEGORY_JSON_CATEGORY_ID: category.CategoryId,
+			models.CATEGORY_JSON_NAME:        category.Name,
+			models.CATEGORY_JSON_PARENT_ID:   category.ParentId,
+			models.CATEGORY_JSON_UUID:        category.ClientUUID,
+		}
+		i++
+	}
+	return max_rev, result[:i], nil
 }
 
 func fetchChangedItemsSinceRev(company_id, item_rev int64, newly_created_item_ids map[int64]bool) (latest_rev int64,
