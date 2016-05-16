@@ -235,6 +235,11 @@ func fetchChangedCategoriesSinceRev(company_id, last_category_rev int64, newly_c
 			continue
 		}
 
+		// convert back to client root category id
+		if category.ParentId == models.ROOT_CATEGORY_ID {
+			category.ParentId = CLIENT_ROOT_CATEGORY_ID
+		}
+
 		result[i] = map[string]interface{}{
 			models.CATEGORY_JSON_CATEGORY_ID: category.CategoryId,
 			models.CATEGORY_JSON_NAME:        category.Name,

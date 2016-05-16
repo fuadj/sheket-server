@@ -18,6 +18,10 @@ const (
 	ACTION_DELETE
 )
 
+const (
+	CLIENT_ROOT_CATEGORY_ID int64 = -1
+)
+
 type EntitySyncData struct {
 	RevisionItem        int64
 	RevisionBranch      int64
@@ -100,7 +104,7 @@ func NewEntitySyncData() *EntitySyncData {
 	s.ItemFields = make(map[int64]*SyncInventoryItem)
 
 	s.CategoryIds = make(map[CRUD_ACTION]map[int64]bool)
-	s.CategoryFields = make(map[int64]*SyncInventoryItem)
+	s.CategoryFields = make(map[int64]*SyncCategory)
 
 	s.BranchIds = make(map[CRUD_ACTION]map[int64]bool)
 	s.BranchFields = make(map[int64]*SyncBranch)
@@ -499,7 +503,7 @@ func memberParser(sync_data *EntitySyncData, root *simplejson.Json, info *Identi
 			return fmt.Errorf("invalid member_id %v", v)
 		}
 
-		if member.EncodedPermission, ok = get_int64(models.PERMISSION_JSON_MEMBER_PERMISSION, fields, set_fields); !ok {
+		if member.EncodedPermission, ok = get_string(models.PERMISSION_JSON_MEMBER_PERMISSION, fields, set_fields); !ok {
 			return fmt.Errorf("invalid member permission %v", v)
 		}
 
@@ -541,6 +545,10 @@ func categoryParser(sync_data *EntitySyncData, root *simplejson.Json, info *Iden
 			return fmt.Errorf("invalid parent category_id")
 		}
 
+		if category.ParentId == CLIENT_ROOT_CATEGORY_ID {
+			category.ParentId = models.ROOT_CATEGORY_ID
+		}
+
 		category.Name, _ = get_string(models.CATEGORY_JSON_NAME, fields, set_fields)
 		category.ClientUUID, _ = get_string(models.CATEGORY_JSON_UUID, fields, set_fields)
 
@@ -549,7 +557,7 @@ func categoryParser(sync_data *EntitySyncData, root *simplejson.Json, info *Iden
 		} else if sync_data.CategoryIds[ACTION_UPDATE][category.CategoryId] {
 			category.PostType = POST_TYPE_UPDATE
 		} else if sync_data.CategoryIds[ACTION_DELETE][category.CategoryId] {
-			category.PostType = ACTION_DELETE
+			category.PostType = POST_TYPE_DELETE
 		}
 
 		sync_data.CategoryFields[category.CategoryId] = category
