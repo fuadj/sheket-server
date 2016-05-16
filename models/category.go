@@ -21,7 +21,12 @@ const (
 	CATEGORY_JSON_NAME        = "name"
 )
 
-func (s *shStore) CreateCategory(category *ShCategory) (*ShCategory, error) {
+const (
+	ROOT_CATEGORY_ID   = 1
+	ROOT_CATEGORY_NAME = "__root category__"
+)
+
+func runInTransaction(s *shStore, f func(*sql.Tx) (*ShCategory, error)) (*ShCategory, error) {
 	tnx, err := s.Begin()
 	if err != nil {
 		return nil, err
@@ -31,12 +36,19 @@ func (s *shStore) CreateCategory(category *ShCategory) (*ShCategory, error) {
 			tnx.Rollback()
 		}
 	}()
-	created, err := s.CreateCategoryInTx(tnx, category)
+	result, err := f(tnx)
 	if err != nil {
 		return nil, err
 	}
 	tnx.Commit()
-	return created, nil
+	return result, nil
+}
+
+func (s *shStore) CreateCategory(category *ShCategory) (*ShCategory, error) {
+	return runInTransaction(s,
+		func(tnx *sql.Tx) (*ShCategory, error) {
+			return s.CreateCategoryInTx(tnx, category)
+		})
 }
 
 func (s *shStore) CreateCategoryInTx(tnx *sql.Tx, category *ShCategory) (*ShCategory, error) {
@@ -62,12 +74,24 @@ func (s *shStore) UpdateCategoryInTx(tnx *sql.Tx, category *ShCategory) (*ShCate
 func (s *shStore) GetCategoryByUUIDInTx(tnx *sql.Tx, uid string) (*ShCategory, error) {
 	msg := fmt.Sprintf("no category with that uuid:%s", uid)
 	category, err := _queryCategoryInTx(tnx, msg, "where client_uuid = $1", uid)
-	if err != nil {
+	if err != nil || len(category) == 0 {
 		return nil, err
 	}
+	return category[0], nil
+}
 
-	if len(category) == 0 {
-		return nil, nil
+func (s *shStore) GetCategoryById(id int64) (*ShCategory, error) {
+	return runInTransaction(s,
+		func(tnx *sql.Tx) (*ShCategory, error) {
+			return s.GetCategoryByIdInTx(tnx, id)
+		})
+}
+
+func (s *shStore) GetCategoryByIdInTx(tnx *sql.Tx, id int64) (*ShCategory, error) {
+	msg := fmt.Sprintf("no category with that id:%d", id)
+	category, err := _queryCategoryInTx(tnx, msg, "where category_id = $1", id)
+	if err != nil || len(category) == 0 {
+		return nil, err
 	}
 	return category[0], nil
 }

@@ -66,11 +66,16 @@ func ConnectDbStore() (*dbStore, error) {
 	}()
 
 	exec := func(q string, args ...interface{}) {
+		// fall-through when error occurs, to catch it at the each
 		if err != nil {
-			fmt.Printf("stmt before %s", q)
 			return
 		}
+
 		_, err = db.Exec(q, args...)
+		if err != nil {
+			fmt.Printf("'%s' '%s'", q, err.Error())
+			return
+		}
 	}
 
 	// TODO: make this more robust
@@ -114,21 +119,31 @@ func ConnectDbStore() (*dbStore, error) {
 		"client_uuid	uuid, "+
 		"company_id		INTEGER REFERENCES %s(company_id), "+
 		"name			VARCHAR(100) NOT NULL, "+
-		"parent_id		INTEGER NOT NULL);",
-		TABLE_CATEGORY, TABLE_COMPANY))
+		"parent_id		INTEGER REFERENCES %s(category_id));",
+		TABLE_CATEGORY, TABLE_COMPANY, TABLE_CATEGORY))
+	if err = checkRootCategoryCreated(db); err != nil {
+		return nil, err
+	}
 
 	exec(t_name("CREATE TABLE IF NOT EXISTS %s ( "+
 		// item table
 		"item_id		SERIAL PRIMARY KEY, "+
 		"client_uuid 	uuid, "+
 		"company_id		INTEGER REFERENCES %s(company_id), "+
+		"category_id	INTEGER REFERENCES %s(category_id) ON DELETE SET DEFAULT, "+
 		"name			VARCHAR(200) NOT NULL, "+
 		"model_year		VARCHAR(10), "+
 		"part_number	VARCHAR(30), "+
 		"bar_code		VARCHAR(30), "+
 		"has_bar_code	BOOL, "+
 		"manual_code	VARCHAR(30));",
-		TABLE_INVENTORY_ITEM, TABLE_COMPANY))
+		TABLE_INVENTORY_ITEM, TABLE_COMPANY, TABLE_CATEGORY))
+	// set the "root category" as default to be used "on delete clause"
+	if _, err := db.Exec(
+		fmt.Sprintf("ALTER TABLE %s ALTER COLUMN category_id set default %d",
+			TABLE_INVENTORY_ITEM, ROOT_CATEGORY_ID)); err != nil {
+		return nil, err
+	}
 
 	exec(t_name("CREATE TABLE IF NOT EXISTS %s ( "+
 		// branch-item table
@@ -197,4 +212,35 @@ func ConnectDbStore() (*dbStore, error) {
 	}
 
 	return &dbStore{db}, nil
+}
+
+func checkRootCategoryCreated(db *sql.DB) error {
+	rows, err := db.Query(
+		fmt.Sprintf("select category_id from %s where category_id = $1", TABLE_CATEGORY),
+		ROOT_CATEGORY_ID)
+	if err != nil {
+		return err
+	}
+	if !rows.Next() {
+		rows.Close()
+		if _, err = db.Exec(
+			fmt.Sprintf("insert into %s (name) values ($1);", TABLE_CATEGORY),
+			ROOT_CATEGORY_NAME); err != nil {
+			return err
+		}
+		rows, err = db.Query(
+			fmt.Sprintf("select category_id from %s where category_id = $1", TABLE_CATEGORY),
+			ROOT_CATEGORY_ID)
+		if err != nil {
+			return err
+		}
+		if !rows.Next() {
+			return fmt.Errorf("root category creation failed")
+		}
+		rows.Close()
+	} else {
+		rows.Close()
+	}
+
+	return nil
 }
