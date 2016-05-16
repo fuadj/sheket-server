@@ -9,6 +9,7 @@ import (
 // 'module', mock out the rest with a 'dummy' auto generate mock
 type ComposableShStoreMock struct {
 	TransactionStore
+	CategoryStore
 	ItemStore
 	BranchStore
 	BranchItemStore
@@ -22,6 +23,7 @@ type ComposableShStoreMock struct {
 func NewComposableShStoreMock(ctrl *gomock.Controller) *ComposableShStoreMock {
 	c := &ComposableShStoreMock{}
 	c.TransactionStore = NewMockTransactionStore(ctrl)
+	c.CategoryStore = NewMockCategoryStore(ctrl)
 	c.ItemStore = NewMockItemStore(ctrl)
 	c.BranchStore = NewMockBranchStore(ctrl)
 	c.BranchItemStore = NewMockBranchItemStore(ctrl)
