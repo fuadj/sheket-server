@@ -130,20 +130,22 @@ func ConnectDbStore() (*dbStore, error) {
 		"item_id		SERIAL PRIMARY KEY, "+
 		"client_uuid 	uuid, "+
 		"company_id		INTEGER REFERENCES %s(company_id), "+
-		"category_id	INTEGER REFERENCES %s(category_id) ON DELETE SET DEFAULT, "+
+		"category_id	INTEGER DEFAULT %d REFERENCES %s(category_id) ON DELETE SET DEFAULT, "+
 		"name			VARCHAR(200) NOT NULL, "+
 		"model_year		VARCHAR(10), "+
 		"part_number	VARCHAR(30), "+
 		"bar_code		VARCHAR(30), "+
 		"has_bar_code	BOOL, "+
 		"manual_code	VARCHAR(30));",
-		TABLE_INVENTORY_ITEM, TABLE_COMPANY, TABLE_CATEGORY))
+		TABLE_INVENTORY_ITEM, TABLE_COMPANY, ROOT_CATEGORY_ID, TABLE_CATEGORY))
+	/*
 	// set the "root category" as default to be used "on delete clause"
 	if _, err := db.Exec(
 		fmt.Sprintf("ALTER TABLE %s ALTER COLUMN category_id set default %d",
 			TABLE_INVENTORY_ITEM, ROOT_CATEGORY_ID)); err != nil {
 		return nil, err
 	}
+	*/
 
 	exec(t_name("CREATE TABLE IF NOT EXISTS %s ( "+
 		// branch-item table
