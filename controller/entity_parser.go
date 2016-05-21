@@ -311,13 +311,29 @@ func itemParser(sync_data *EntitySyncData, root *simplejson.Json, info *Identity
 			return fmt.Errorf("item_id invalid %v", v)
 		}
 
+		item.ClientUUID, _ = get_string(models.ITEM_JSON_UUID, fields, set_fields)
 		item.Name, _ = get_string(models.ITEM_JSON_ITEM_NAME, fields, set_fields)
-		item.CategoryId, _ = get_int64(models.ITEM_JSON_CATEGORY_ID, fields, set_fields)
+		if category_id, ok := get_int64(models.ITEM_JSON_CATEGORY_ID, fields, set_fields); ok {
+			if category_id == CLIENT_ROOT_CATEGORY_ID {
+				category_id = models.ROOT_CATEGORY_ID
+			}
+			item.CategoryId = category_id
+		} else {
+			item.CategoryId = models.ROOT_CATEGORY_ID
+		}
+
+		item.UnitOfMeasurement, _ = get_int64(models.ITEM_JSON_UNIT_OF_MEASUREMENT, fields, set_fields)
+		if item.HasDerivedUnit, ok = get_bool(models.ITEM_JSON_HAS_DERIVED_UNIT, fields, set_fields); !ok {
+			return fmt.Errorf("has_derived_unit invalid %v", v)
+		}
+		item.DerivedName, _ = get_string(models.ITEM_JSON_DERIVED_NAME, fields, set_fields)
+		item.DerivedFactor, _ = get_float64(models.ITEM_JSON_DERIVED_FACTOR, fields, set_fields)
+		item.ReorderLevel, _ = get_float64(models.ITEM_JSON_REORDER_LEVEL, fields, set_fields)
+
 		item.ModelYear, _ = get_string(models.ITEM_JSON_MODEL_YEAR, fields, set_fields)
 		item.PartNumber, _ = get_string(models.ITEM_JSON_PART_NUMBER, fields, set_fields)
 		item.BarCode, _ = get_string(models.ITEM_JSON_BAR_CODE, fields, set_fields)
 		item.ManualCode, _ = get_string(models.ITEM_JSON_MANUAL_CODE, fields, set_fields)
-		item.ClientUUID, _ = get_string(models.ITEM_JSON_UUID, fields, set_fields)
 		item.HasBarCode, _ = get_bool(models.ITEM_JSON_HAS_BAR_CODE, fields, set_fields)
 
 		item_id := item.ItemId
