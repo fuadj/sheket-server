@@ -138,14 +138,6 @@ func ConnectDbStore() (*dbStore, error) {
 		"has_bar_code	BOOL, "+
 		"manual_code	VARCHAR(30));",
 		TABLE_INVENTORY_ITEM, TABLE_COMPANY, ROOT_CATEGORY_ID, TABLE_CATEGORY))
-	/*
-	// set the "root category" as default to be used "on delete clause"
-	if _, err := db.Exec(
-		fmt.Sprintf("ALTER TABLE %s ALTER COLUMN category_id set default %d",
-			TABLE_INVENTORY_ITEM, ROOT_CATEGORY_ID)); err != nil {
-		return nil, err
-	}
-	*/
 
 	exec(t_name("CREATE TABLE IF NOT EXISTS %s ( "+
 		// branch-item table
