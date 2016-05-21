@@ -78,31 +78,28 @@ func ConnectDbStore() (*dbStore, error) {
 		}
 	}
 
-	// TODO: make this more robust
-	t_name := fmt.Sprintf
-
-	exec(t_name("CREATE TABLE IF NOT EXISTS %s ( "+
+	exec(fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s ( "+
 		// user-table
 		"user_id		SERIAL PRIMARY KEY, "+
 		"username		VARCHAR(100) NOT NULL, "+
 		"hashpass 		VARCHAR(260) NOT NULL, "+
 		"UNIQUE(username));", TABLE_USER))
 
-	exec(t_name("CREATE TABLE IF NOT EXISTS %s ( "+
+	exec(fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s ( "+
 		// company-table
 		"company_id		SERIAL PRIMARY KEY, "+
 		"company_name	VARCHAR(100) NOT NULL, "+
 		"contact		VARCHAR(260) NOT NULL, "+
 		"UNIQUE(company_name));", TABLE_COMPANY))
 
-	exec(t_name("CREATE TABLE IF NOT EXISTS %s ( "+
+	exec(fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s ( "+
 		// user-permission-table
 		"company_id			INTEGER REFERENCES %s(company_id), "+
 		"user_id			INTEGER REFERENCES %s(user_id), "+
 		"permission			VARCHAR(1000) NOT NULL);",
 		TABLE_U_PERMISSION, TABLE_COMPANY, TABLE_USER))
 
-	exec(t_name("CREATE TABLE IF NOT EXISTS %s ( "+
+	exec(fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s ( "+
 		// branch-table
 		"branch_id		SERIAL PRIMARY KEY, "+
 		"client_uuid	uuid, "+
@@ -113,7 +110,7 @@ func ConnectDbStore() (*dbStore, error) {
 		"UNIQUE(company_id, branch_name));",
 		TABLE_BRANCH, TABLE_COMPANY))
 
-	exec(t_name("CREATE TABLE IF NOT EXISTS %s ( "+
+	exec(fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s ( "+
 		// category table
 		"category_id	SERIAL PRIMARY KEY, "+
 		"client_uuid	uuid, "+
@@ -125,21 +122,27 @@ func ConnectDbStore() (*dbStore, error) {
 		return nil, err
 	}
 
-	exec(t_name("CREATE TABLE IF NOT EXISTS %s ( "+
-		// item table
-		"item_id		SERIAL PRIMARY KEY, "+
-		"client_uuid 	uuid, "+
-		"company_id		INTEGER REFERENCES %s(company_id), "+
-		"category_id	INTEGER DEFAULT %d REFERENCES %s(category_id) ON DELETE SET DEFAULT, "+
-		"name			VARCHAR(200) NOT NULL, "+
-		"model_year		VARCHAR(10), "+
-		"part_number	VARCHAR(30), "+
-		"bar_code		VARCHAR(30), "+
-		"has_bar_code	BOOL, "+
-		"manual_code	VARCHAR(30));",
+	exec(fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s ( "+
+		_db_item_id+" serial primary key, "+
+		_db_item_client_uuid+" uuid, "+
+		_db_item_company_id+" INTEGER REFERENCES %s(company_id), "+
+		_db_item_category_id+" INTEGER DEFAULT %d REFERENCES %s(category_id) ON DELETE SET DEFAULT, "+
+		_db_item_name+" varchar(200) not null, "+
+
+		_db_item_units+" integer not null, "+
+		_db_item_has_derived_unit+" bool not null, "+
+		_db_item_derived_name+" varchar(20), "+
+		_db_item_derived_factor+" real, "+
+		_db_item_reorder_level+" real, "+
+
+		_db_item_model_year+" varchar(10), "+
+		_db_item_part_number+" varchar(30), "+
+		_db_item_bar_code+" varchar(30), "+
+		_db_item_has_bar_code+" bool, "+
+		_db_item_manual_code+" varchar(30));",
 		TABLE_INVENTORY_ITEM, TABLE_COMPANY, ROOT_CATEGORY_ID, TABLE_CATEGORY))
 
-	exec(t_name("CREATE TABLE IF NOT EXISTS %s ( "+
+	exec(fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s ( "+
 		// branch-item table
 		"company_id		INTEGER REFERENCES %s(company_id), "+
 		"branch_id		INTEGER NOT NULL, "+
@@ -151,7 +154,7 @@ func ConnectDbStore() (*dbStore, error) {
 
 	/**
 	 */
-	exec(t_name("create table if not exists %s ( "+
+	exec(fmt.Sprintf("create table if not exists %s ( "+
 		// transaction-table
 		"transaction_id			SERIAL PRIMARY KEY, "+
 		"client_uuid			uuid, "+
@@ -182,7 +185,7 @@ func ConnectDbStore() (*dbStore, error) {
 	 * 						other branches, (e.g: if it mentions warehouse inventory this will be the warehouse id}
 	 * {@column quantity} is the number of {@column item_id} in the transaction
 	 */
-	exec(t_name("CREATE TABLE IF NOT EXISTS %s ( "+
+	exec(fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s ( "+
 		// transaction-items table
 		"company_id			integer references %s(company_id), "+
 		"transaction_id 	INTEGER REFERENCES %s(transaction_id), "+
@@ -192,7 +195,7 @@ func ConnectDbStore() (*dbStore, error) {
 		"quantity 			REAL NOT NULL);",
 		TABLE_TRANSACTION_ITEM, TABLE_COMPANY, TABLE_TRANSACTION, TABLE_INVENTORY_ITEM))
 
-	exec(t_name("create table if not exists %s ( "+
+	exec(fmt.Sprintf("create table if not exists %s ( "+
 		"company_id			integer references %s(company_id), "+
 		"revision_number 	integer not null, "+
 		"entity_type 		integer not null, "+
