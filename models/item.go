@@ -13,7 +13,7 @@ type ShItem struct {
 	CategoryId int64
 	Name       string
 
-	UnitOfMeasurement int
+	UnitOfMeasurement int64
 	HasDerivedUnit    bool
 	DerivedName       string
 	DerivedFactor     float64

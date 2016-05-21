@@ -279,9 +279,16 @@ func fetchChangedItemsSinceRev(company_id, item_rev int64, newly_created_item_id
 		}
 
 		result[i] = map[string]interface{}{
-			models.ITEM_JSON_ITEM_ID:      item.ItemId,
-			models.ITEM_JSON_UUID:         item.ClientUUID,
-			models.ITEM_JSON_ITEM_NAME:    item.Name,
+			models.ITEM_JSON_ITEM_ID:   item.ItemId,
+			models.ITEM_JSON_UUID:      item.ClientUUID,
+			models.ITEM_JSON_ITEM_NAME: item.Name,
+
+			models.ITEM_JSON_UNIT_OF_MEASUREMENT: item.UnitOfMeasurement,
+			models.ITEM_JSON_HAS_DERIVED_UNIT:    item.HasDerivedUnit,
+			models.ITEM_JSON_DERIVED_NAME:        item.DerivedName,
+			models.ITEM_JSON_DERIVED_FACTOR:      item.DerivedFactor,
+			models.ITEM_JSON_REORDER_LEVEL:       item.ReorderLevel,
+
 			models.ITEM_JSON_MODEL_YEAR:   item.ModelYear,
 			models.ITEM_JSON_PART_NUMBER:  item.PartNumber,
 			models.ITEM_JSON_BAR_CODE:     item.BarCode,
