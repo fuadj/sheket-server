@@ -53,39 +53,83 @@ func applyCategoryOperations(tnx *sql.Tx, posted_data *EntitySyncData, info *Ide
 		return result, nil
 	}
 
-	for old_category_id := range posted_data.CategoryIds[ACTION_CREATE] {
-		category, ok := posted_data.CategoryFields[old_category_id]
-		if !ok {
-			return nil, fmt.Errorf("category:%d doesn't have members defined", old_category_id)
+	// visit every category first, to see which ones are available
+	if len(posted_data.CategoryIds[ACTION_CREATE]) > 0 {
+		i := 0
+		category_ids := make([]int64, len(posted_data.CategoryIds[ACTION_CREATE]))
+		for id := range posted_data.CategoryIds[ACTION_CREATE] {
+			category_ids[i] = id
+			i++
 		}
-		prev_category, err := Store.GetCategoryByUUIDInTx(tnx, category.ClientUUID)
-		if err != nil {
-			return nil, fmt.Errorf("error getting category with uuid %s", err.Error())
-		} else if prev_category != nil {
-			result.OldId2New_Categories[old_category_id] = prev_category.CategoryId
-			result.NewlyCreatedCategoryIds[prev_category.CategoryId] = true
-			break
-		}
+		// reset it to the last position
+		i--
 
-		created_category, err := Store.CreateCategoryInTx(tnx, &category.ShCategory)
-		if err != nil {
-			return nil, fmt.Errorf("error creating category %s", err.Error())
-		}
+		/**
+		 * Since some categories have their parent categories which still have not been created,
+		 * it creates a dependency tree where a category can't be created until its parent
+		 * is created.
+		 *
+		 * So, we do that by creating a stack of category ids to perform operations in. We pop
+		 * an id and see if its dependency has been fulfilled. It it has, we go ahead and create
+		 * the category, otherwise we return the category back to the stack and add its
+		 * dependency(in this case its parent) to the stack to do its operation in the next round.
+		 */
 
-		result.OldId2New_Categories[old_category_id] = created_category.CategoryId
-		result.NewlyCreatedCategoryIds[created_category.CategoryId] = true
+		for i >= 0 {
+			id := category_ids[i]
+			category, ok := posted_data.CategoryFields[id]
+			if !ok {
+				return nil, fmt.Errorf("category:%d doesn't have members defined", id)
+			}
+			// Check if the category has already been created in another sync round
+			prev_category, err := Store.GetCategoryByUUIDInTx(tnx, category.ClientUUID)
+			if err != nil {
+				return nil, fmt.Errorf("error getting category with uuid %s", err.Error())
+			} else if prev_category != nil {
+				result.OldId2New_Categories[id] = prev_category.CategoryId
+				result.NewlyCreatedCategoryIds[prev_category.CategoryId] = true
+				// pop-off the stack for the next round
+				i--
+				continue
+			}
 
-		rev := &models.ShEntityRevision{
-			CompanyId:        info.CompanyId,
-			EntityType:       models.REV_ENTITY_CATEGORY,
-			ActionType:       models.REV_ACTION_CREATE,
-			EntityAffectedId: created_category.CategoryId,
-			AdditionalInfo:   -1,
-		}
+			// if the parent has been added to the DataStore, update the id with the new id
+			if new_parent_id, ok := result.OldId2New_Categories[category.ParentId]; ok {
+				category.ParentId = new_parent_id
+			} else if (category.ParentId != models.ROOT_CATEGORY_ID) &&
+				category.ParentId < 0 {	// if we didn't add it and it is not root, add the parent first
 
-		_, err = Store.AddEntityRevisionInTx(tnx, rev)
-		if err != nil {
-			return nil, err
+				// TODO: figure out a better way to extend an array size, this is just a hack
+				// it is a hack b/c we append an elem to make sure it has enough capacity, we then
+				// add the parent_id to the to the "stack" to be used in the next round
+				category_ids = append(category_ids, category.ParentId)
+				category_ids[i+1] = category.ParentId
+				// push the element to the stack
+				i++
+				continue
+			}
+
+			i--		// pop off the stack for the next round
+			created_category, err := Store.CreateCategoryInTx(tnx, &category.ShCategory)
+			if err != nil {
+				return nil, fmt.Errorf("error creating category %s", err.Error())
+			}
+
+			result.OldId2New_Categories[id] = created_category.CategoryId
+			result.NewlyCreatedCategoryIds[created_category.CategoryId] = true
+
+			rev := &models.ShEntityRevision{
+				CompanyId:        info.CompanyId,
+				EntityType:       models.REV_ENTITY_CATEGORY,
+				ActionType:       models.REV_ACTION_CREATE,
+				EntityAffectedId: created_category.CategoryId,
+				AdditionalInfo:   -1,
+			}
+
+			_, err = Store.AddEntityRevisionInTx(tnx, rev)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
