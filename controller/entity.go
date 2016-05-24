@@ -22,11 +22,11 @@ const (
 
 	key_fields = "fields"
 
-	type_categories   = "categories"
-	type_items        = "items"
-	type_branches     = "branches"
-	type_branch_items = "branch_items"
-	type_members      = "members"
+	type_categories   = "category"
+	type_items        = "item"
+	type_branches     = "branch"
+	type_branch_items = "branch_item"
+	type_members      = "member"
 
 	// used in the response to hold the newly updated category ids
 	key_updated_category_ids = "updated_category_ids"
@@ -278,10 +278,15 @@ func fetchChangedItemsSinceRev(company_id, item_rev int64, newly_created_item_id
 			continue
 		}
 
+		if item.CategoryId == models.ROOT_CATEGORY_ID {
+			item.CategoryId = CLIENT_ROOT_CATEGORY_ID
+		}
+
 		result[i] = map[string]interface{}{
 			models.ITEM_JSON_ITEM_ID:   item.ItemId,
 			models.ITEM_JSON_UUID:      item.ClientUUID,
 			models.ITEM_JSON_ITEM_NAME: item.Name,
+			models.ITEM_JSON_CATEGORY_ID: item.CategoryId,
 
 			models.ITEM_JSON_UNIT_OF_MEASUREMENT: item.UnitOfMeasurement,
 			models.ITEM_JSON_HAS_DERIVED_UNIT:    item.HasDerivedUnit,
