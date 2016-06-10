@@ -19,7 +19,7 @@ func dummyTestItem() *ShItem {
 	i := &ShItem{CompanyId: t_company_id,
 		Name: item_name, ModelYear: item_model,
 		PartNumber: item_part_number, BarCode: item_bar_code,
-		HasBarCode: item_has_bar_code, ManualCode: item_manual_code}
+		HasBarCode: item_has_bar_code, ItemCode: item_manual_code}
 	return i
 }
 

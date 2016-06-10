@@ -127,7 +127,8 @@ func ConnectDbStore() (*dbStore, error) {
 		_db_item_client_uuid+" uuid, "+
 		_db_item_company_id+" INTEGER REFERENCES %s(company_id), "+
 		_db_item_category_id+" INTEGER DEFAULT %d REFERENCES %s(category_id) ON DELETE SET DEFAULT, "+
-		_db_item_name+" varchar(200) not null, "+
+		_db_item_code + " varchar(200) not null, "+
+		_db_item_name + " varchar(200), "+
 
 		_db_item_units+" integer not null, "+
 		_db_item_has_derived_unit+" bool not null, "+
@@ -138,19 +139,18 @@ func ConnectDbStore() (*dbStore, error) {
 		_db_item_model_year+" varchar(10), "+
 		_db_item_part_number+" varchar(30), "+
 		_db_item_bar_code+" varchar(30), "+
-		_db_item_has_bar_code+" bool, "+
-		_db_item_manual_code+" varchar(30));",
+		_db_item_has_bar_code+" bool); ",
 		TABLE_INVENTORY_ITEM, TABLE_COMPANY, ROOT_CATEGORY_ID, TABLE_CATEGORY))
 
 	exec(fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s ( "+
 		// branch-item table
 		"company_id		INTEGER REFERENCES %s(company_id), "+
 		"branch_id		INTEGER NOT NULL, "+
-		"item_id		INTEGER NOT NULL, "+
+		"item_id		INTEGER references %s(" + _db_item_id + "), "+
 		"quantity		REAL NOT NULL, "+
 		"item_location		VARCHAR(20), "+
 		"unique(branch_id, item_id));",
-		TABLE_BRANCH_ITEM, TABLE_COMPANY))
+		TABLE_BRANCH_ITEM, TABLE_COMPANY, TABLE_INVENTORY_ITEM))
 
 	/**
 	 */

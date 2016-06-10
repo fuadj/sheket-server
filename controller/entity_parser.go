@@ -313,6 +313,8 @@ func itemParser(sync_data *EntitySyncData, root *simplejson.Json, info *Identity
 
 		item.ClientUUID, _ = get_string(models.ITEM_JSON_UUID, fields, set_fields)
 		item.Name, _ = get_string(models.ITEM_JSON_ITEM_NAME, fields, set_fields)
+		item.ItemCode, _ = get_string(models.ITEM_JSON_ITEM_CODE, fields, set_fields)
+
 		if category_id, ok := get_int64(models.ITEM_JSON_CATEGORY_ID, fields, set_fields); ok {
 			if category_id == CLIENT_ROOT_CATEGORY_ID {
 				category_id = models.ROOT_CATEGORY_ID
@@ -333,7 +335,6 @@ func itemParser(sync_data *EntitySyncData, root *simplejson.Json, info *Identity
 		item.ModelYear, _ = get_string(models.ITEM_JSON_MODEL_YEAR, fields, set_fields)
 		item.PartNumber, _ = get_string(models.ITEM_JSON_PART_NUMBER, fields, set_fields)
 		item.BarCode, _ = get_string(models.ITEM_JSON_BAR_CODE, fields, set_fields)
-		item.ManualCode, _ = get_string(models.ITEM_JSON_MANUAL_CODE, fields, set_fields)
 		item.HasBarCode, _ = get_bool(models.ITEM_JSON_HAS_BAR_CODE, fields, set_fields)
 
 		item_id := item.ItemId

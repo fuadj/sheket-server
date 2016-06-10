@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/http/httputil"
+	_ "net/http/httputil"
 	"sheket/server/models"
 )
 
@@ -61,10 +61,12 @@ type EntityResult struct {
 
 func EntitySyncHandler(w http.ResponseWriter, r *http.Request) {
 	defer trace("EntitySyncHandler")()
+	/*
 	d, err := httputil.DumpRequest(r, true)
 	if err == nil {
 		fmt.Printf("Request %s\n", string(d))
 	}
+	*/
 
 	info, err := GetIdentityInfo(r)
 	if err != nil {
@@ -283,9 +285,10 @@ func fetchChangedItemsSinceRev(company_id, item_rev int64, newly_created_item_id
 		}
 
 		result[i] = map[string]interface{}{
-			models.ITEM_JSON_ITEM_ID:   item.ItemId,
-			models.ITEM_JSON_UUID:      item.ClientUUID,
-			models.ITEM_JSON_ITEM_NAME: item.Name,
+			models.ITEM_JSON_ITEM_ID:     item.ItemId,
+			models.ITEM_JSON_UUID:        item.ClientUUID,
+			models.ITEM_JSON_ITEM_NAME:   item.Name,
+			models.ITEM_JSON_ITEM_CODE:   item.ItemCode,
 			models.ITEM_JSON_CATEGORY_ID: item.CategoryId,
 
 			models.ITEM_JSON_UNIT_OF_MEASUREMENT: item.UnitOfMeasurement,
@@ -297,7 +300,6 @@ func fetchChangedItemsSinceRev(company_id, item_rev int64, newly_created_item_id
 			models.ITEM_JSON_MODEL_YEAR:   item.ModelYear,
 			models.ITEM_JSON_PART_NUMBER:  item.PartNumber,
 			models.ITEM_JSON_BAR_CODE:     item.BarCode,
-			models.ITEM_JSON_MANUAL_CODE:  item.ManualCode,
 			models.ITEM_JSON_HAS_BAR_CODE: item.HasBarCode,
 		}
 		i++

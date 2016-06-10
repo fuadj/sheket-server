@@ -245,8 +245,8 @@ func applyItemOperations(tnx *sql.Tx, posted_data *EntitySyncData, info *Identit
 		if item.SetFields[models.ITEM_JSON_CATEGORY_ID] {
 			previous_item.CategoryId = item.CategoryId
 		}
-		if item.SetFields[models.ITEM_JSON_MANUAL_CODE] {
-			previous_item.ManualCode = item.ManualCode
+		if item.SetFields[models.ITEM_JSON_ITEM_CODE] {
+			previous_item.ItemCode = item.ItemCode
 		}
 		if item.SetFields[models.ITEM_JSON_HAS_BAR_CODE] {
 			previous_item.HasBarCode = item.HasBarCode

@@ -84,13 +84,13 @@ var entityParseTest = []struct {
 				models.ITEM_JSON_ITEM_ID:     -2,
 				models.ITEM_JSON_COMPANY_ID:  t_company_id,
 				models.ITEM_JSON_MODEL_YEAR:  "1992",
-				models.ITEM_JSON_MANUAL_CODE: "A-1028",
+				models.ITEM_JSON_ITEM_CODE: "A-1028",
 			},
 			{
 				models.ITEM_JSON_ITEM_ID:     77,
 				models.ITEM_JSON_COMPANY_ID:  t_company_id,
 				models.ITEM_JSON_MODEL_YEAR:  "new year",
-				models.ITEM_JSON_MANUAL_CODE: "updated model",
+				models.ITEM_JSON_ITEM_CODE: "updated model",
 			},
 			{
 				models.ITEM_JSON_ITEM_ID:     -7,
@@ -112,7 +112,7 @@ var entityParseTest = []struct {
 				models.ITEM_JSON_ITEM_ID:     -4,
 				models.ITEM_JSON_COMPANY_ID:  t_company_id,
 				models.ITEM_JSON_MODEL_YEAR:  "1992",
-				models.ITEM_JSON_MANUAL_CODE: "A-1028",
+				models.ITEM_JSON_ITEM_CODE: "A-1028",
 			},
 			{
 				models.ITEM_JSON_ITEM_ID:     -7,
