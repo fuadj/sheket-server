@@ -1,9 +1,9 @@
 package controller
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/bitly/go-simplejson"
+	"github.com/gin-gonic/gin"
 	"net/http"
 	"sheket/server/controller/auth"
 	"sheket/server/models"
@@ -24,12 +24,12 @@ const (
 	JSON_KEY_USER_PERMISSION = "user_permission"
 )
 
-func UserSignupHandler(w http.ResponseWriter, r *http.Request) {
+func UserSignupHandler(c *gin.Context) {
 	defer trace("UserSignupHandler")()
 
-	data, err := simplejson.NewFromReader(r.Body)
+	data, err := simplejson.NewFromReader(c.Request.Body)
 	if err != nil {
-		writeErrorResponse(w, http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, gin.H{ERROR_MSG: err.Error()})
 		return
 	}
 
@@ -37,25 +37,25 @@ func UserSignupHandler(w http.ResponseWriter, r *http.Request) {
 
 	username := data.Get(JSON_KEY_USERNAME).MustString(invalid_user_name)
 	if strings.Compare(invalid_user_name, username) == 0 {
-		writeErrorResponse(w, http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, gin.H{ERROR_MSG: err.Error()})
 		return
 	}
 
 	password := data.Get(JSON_KEY_PASSWORD).MustString()
 	if len(password) == 0 {
-		writeErrorResponse(w, http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, gin.H{ERROR_MSG: err.Error()})
 		return
 	}
 
 	tnx, err := Store.GetDataStore().Begin()
 	if err != nil {
-		writeErrorResponse(w, http.StatusInternalServerError, err.Error())
+		c.JSON(http.StatusBadRequest, gin.H{ERROR_MSG: err.Error()})
 		return
 	}
 
 	prev_user, err := Store.FindUserByNameInTx(tnx, username)
 	if prev_user != nil {
-		writeErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("%s already exists", username))
+		c.JSON(http.StatusBadRequest, gin.H{ERROR_MSG: fmt.Sprintf("%s already exists", username)})
 		return
 	}
 	user := &models.User{Username: username,
@@ -63,35 +63,26 @@ func UserSignupHandler(w http.ResponseWriter, r *http.Request) {
 	created, err := Store.CreateUserInTx(tnx, user)
 	if err != nil {
 		tnx.Rollback()
-		writeErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	result := map[string]interface{}{
-		JSON_KEY_USERNAME: username,
-		JSON_KEY_USER_ID:  created.UserId,
-	}
-	b, err := json.MarshalIndent(result, "", "    ")
-	if err != nil {
-		tnx.Rollback()
-		writeErrorResponse(w, http.StatusInternalServerError)
+		c.JSON(http.StatusBadRequest, gin.H{ERROR_MSG: err.Error()})
 		return
 	}
 	tnx.Commit()
 
 	// log-in the user for subsequent requests
-	auth.LoginUser(created, w)
+	auth.LoginUser(created, c.Writer)
 
-	w.WriteHeader(http.StatusOK)
-	w.Write(b)
+	c.JSON(http.StatusOK, map[string]interface{}{
+		JSON_KEY_USERNAME: username,
+		JSON_KEY_USER_ID:  created.UserId,
+	})
 }
 
-func UserLoginHandler(w http.ResponseWriter, r *http.Request) {
+func UserLoginHandler(c *gin.Context) {
 	defer trace("UserLoginHandler")()
 
-	data, err := simplejson.NewFromReader(r.Body)
+	data, err := simplejson.NewFromReader(c.Request.Body)
 	if err != nil {
-		writeErrorResponse(w, http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, gin.H{ERROR_MSG: err.Error()})
 		return
 	}
 
@@ -99,44 +90,35 @@ func UserLoginHandler(w http.ResponseWriter, r *http.Request) {
 	password := data.Get(JSON_KEY_PASSWORD).MustString()
 	if len(username) == 0 ||
 		len(password) == 0 {
-		writeErrorResponse(w, http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, gin.H{ERROR_MSG: err.Error()})
 		return
 	}
 
 	user := &models.User{Username: username, HashedPassword: auth.HashPassword(password)}
 	auth_user, err := auth.AuthenticateUser(user, password)
 	if err != nil {
-		writeErrorResponse(w, http.StatusUnauthorized, "Incorrect username password combination!")
+		c.JSON(http.StatusBadRequest, gin.H{ERROR_MSG: "Incorrect username password combination!"})
 		return
 	}
-	result := map[string]interface{}{
+	auth.LoginUser(auth_user, c.Writer)
+	c.JSON(http.StatusOK, map[string]interface{}{
 		JSON_KEY_USER_ID: auth_user.UserId,
-	}
-	b, err := json.MarshalIndent(result, "", "    ")
-	if err != nil {
-		writeErrorResponse(w, http.StatusInternalServerError)
-		return
-	}
-
-	auth.LoginUser(auth_user, w)
-
-	w.WriteHeader(http.StatusOK)
-	w.Write(b)
+	})
 }
 
 // lists the companies this user belongs in
-func UserCompanyListHandler(w http.ResponseWriter, r *http.Request) {
+func UserCompanyListHandler(c *gin.Context) {
 	defer trace("UserCompanyListHandler")()
 
-	current_user, err := auth.GetCurrentUser(r)
+	current_user, err := auth.GetCurrentUser(c.Request)
 	if err != nil {
-		writeErrorResponse(w, http.StatusNonAuthoritativeInfo, "euser")
+		c.JSON(http.StatusNonAuthoritativeInfo, gin.H{ERROR_MSG: err.Error()})
 		return
 	}
 
 	company_permissions, err := Store.GetUserCompanyPermissions(current_user)
 	if err != nil {
-		writeErrorResponse(w, http.StatusInternalServerError, err.Error()+"permission")
+		c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG: err.Error()})
 		return
 	}
 
@@ -154,16 +136,8 @@ func UserCompanyListHandler(w http.ResponseWriter, r *http.Request) {
 
 		companies = append(companies, company)
 	}
-	result := map[string]interface{}{
+
+	c.JSON(http.StatusOK, map[string]interface{}{
 		"companies": companies,
-	}
-
-	b, err := json.MarshalIndent(result, "", "    ")
-	if err != nil {
-		writeErrorResponse(w, http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-	w.Write(b)
+	})
 }

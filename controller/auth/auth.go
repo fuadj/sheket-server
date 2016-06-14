@@ -7,6 +7,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"net/http"
 	"sheket/server/models"
+	"github.com/gin-gonic/gin"
 )
 
 const (
@@ -51,18 +52,18 @@ var (
 	}
 )
 
-func RequireLogin(h http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if !IsLoggedIn(r) {
-			_, err := GetCurrentUser(r)
+func RequireLogin(h gin.HandlerFunc) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if !IsLoggedIn(c.Request) {
+			_, err := GetCurrentUser(c.Request)
 			if err != nil {
 				fmt.Printf("Invalid login %v", err.Error())
 			}
-			w.WriteHeader(http.StatusNonAuthoritativeInfo)
-			w.Write([]byte(fmt.Sprintf("%s requires a logged-in user", r.URL.Path)))
+			c.String(http.StatusNonAuthoritativeInfo,
+				fmt.Sprintf("%s requires a logged-in user", c.Request.URL.Path))
 			return
 		}
-		h(w, r)
+		h(c)
 	}
 }
 

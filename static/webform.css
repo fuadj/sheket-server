@@ -1,0 +1,132 @@
+/*----------------------------- CORE WEBFORM -----------------------------*/
+div[data-editable="webform"] {
+    position: absolute;
+}
+
+div[data-editable="webform"] label,
+div[data-editable="webform"] input[type="text"],
+div[data-editable="webform"] textarea,
+div[data-editable="webform"] button,
+div[data-editable="webform"] select {
+    margin: 0;
+    display: inline;
+    -webkit-box-sizing: border-box;
+       -moz-box-sizing: border-box;
+            box-sizing: border-box;
+}
+
+div[data-editable="webform"] input[type="text"],
+div[data-editable="webform"] button, 
+div[data-editable="webform"] textarea,
+div[data-editable="webform"] select {
+    outline: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+    border-radius: 0;
+}
+
+div[data-editable="webform"] input[type="text"] {
+    padding: 0 5px;
+}
+
+div[data-editable="webform"] textarea {
+    resize: none;
+}
+
+div[data-editable="webform"] select {
+    -webkit-appearance: none;
+       -moz-appearance: none;
+        -ms-appearance: none;
+}
+div[data-editable="webform"] div.select-one::after {
+    content: " ";
+    position: absolute;
+    top: 50%;
+    top: -webkit-calc(50% - 2px);
+    top: calc(50% - 2px);
+    right: 10px;
+    display: inline-block;
+    border-color: #696969 transparent transparent transparent;
+    border-style: solid;
+    border-width: 6px;
+}
+
+div[data-editable="webform"] form,
+div[data-editable="webform"] .wf-wrap {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+div[data-editable="webform"] .wf-item {
+    position: relative;
+    width: 100%;
+}
+
+div[data-editable="webform"] .wf-item .wf-item-pos {
+    position: absolute;
+    left: 0;
+
+    min-width: 25px;
+}
+
+div[data-editable="webform"] .wf-item .wf-item-pos > div {
+    position: relative;
+    width: 100%;
+}
+
+div[data-editable="webform"] .wf-item.type-inline .wf-item-pos > div {
+    float: left;
+    width: auto;
+}
+
+div[data-editable="webform"] .wf-item.type-placeholder .wf-item-pos div.label {
+    position: absolute;
+    z-index: 10;
+    color: #ccc;
+}
+
+div[data-editable="webform"] .wf-item .wf-item-pos > div label {
+    display: block;
+    max-width: 100%;
+    text-align: left;
+    word-wrap: normal;
+}
+
+div[data-editable="webform"] .wf-item.type-placeholder .wf-item-pos > div label {
+    /*padding-top: 0 !important;
+    padding-bottom: 0 !important;*/
+    text-align: left;
+    line-height: 1 !important;
+    width: 100% !important;
+    white-space: nowrap;
+}
+
+div.field-text-edit-on [data-type="text"] input {
+    outline: 1px solid #c00;
+};
+
+div.label-text-edit-on [data-type="text"] label {
+    outline: 1px solid #c00;
+};
+
+div.field-text-edit-on [data-type="text"] div.edit-on input,
+div.label-text-edit-on [data-type="text"] div.edit-on label {
+    outline: none !important;
+}
+
+
+/*----------------------------- 
+    FROM SCRATCH TMPL 
+-----------------------------*/
+
+div[data-editable="webform"] button {
+    border-radius: 40px;
+    background-color: rgba(130, 210, 79, 1);
+    font-family: Helvetica, Arial, sans-serif;
+    font-size: 36px;
+    color: #fff;
+    cursor:pointer;
+}
+

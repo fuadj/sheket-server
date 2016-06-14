@@ -1,10 +1,10 @@
 package controller
 
 import (
+	"fmt"
 	"net/http"
 	"sheket/server/models"
 	"strconv"
-	"fmt"
 )
 
 const (
@@ -14,6 +14,8 @@ const (
 
 	KEY_JSON_ID_OLD = "o"
 	KEY_JSON_ID_NEW = "n"
+
+	ERROR_MSG  = "error_message"
 )
 
 var Store models.ShStore

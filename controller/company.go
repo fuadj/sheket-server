@@ -1,32 +1,31 @@
 package controller
 
 import (
-	"encoding/json"
-	"fmt"
 	"github.com/bitly/go-simplejson"
 	"net/http"
 	"sheket/server/controller/auth"
 	"sheket/server/models"
 	"strings"
+	"github.com/gin-gonic/gin"
 )
 
-func AddCompanyMember(w http.ResponseWriter, r *http.Request) {
+func AddCompanyMember(c *gin.Context) {
 	defer trace("AddCompanyMember")()
 
-	company_id := GetCurrentCompanyId(r)
+	company_id := GetCurrentCompanyId(c.Request)
 	if company_id == INVALID_COMPANY_ID {
-		writeErrorResponse(w, http.StatusNonAuthoritativeInfo)
+		c.String(http.StatusNonAuthoritativeInfo, "")
 		return
 	}
 
-	if _, err := currentUserGetter(r); err != nil {
-		writeErrorResponse(w, http.StatusNonAuthoritativeInfo, err.Error())
+	if _, err := currentUserGetter(c.Request); err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{ERROR_MSG:err.Error()})
 		return
 	}
 
-	data, err := simplejson.NewFromReader(r.Body)
+	data, err := simplejson.NewFromReader(c.Request.Body)
 	if err != nil {
-		writeErrorResponse(w, http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, gin.H{ERROR_MSG:err.Error()})
 		return
 	}
 
@@ -36,7 +35,7 @@ func AddCompanyMember(w http.ResponseWriter, r *http.Request) {
 
 	if member_id == invalid_id ||
 		len(encoded_permission) == 0 {
-		writeErrorResponse(w, http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, gin.H{ERROR_MSG:""})
 		return
 	}
 
@@ -48,19 +47,19 @@ func AddCompanyMember(w http.ResponseWriter, r *http.Request) {
 
 	member, err := Store.FindUserById(member_id)
 	if err != nil {
-		writeErrorResponse(w, http.StatusInternalServerError, err.Error()+"e0")
+		c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG:""})
 		return
 	}
 
 	tnx, err := Store.Begin()
 	if err != nil {
-		writeErrorResponse(w, http.StatusInternalServerError, err.Error()+"e1")
+		c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG:""})
 		return
 	}
 
 	_, err = Store.SetUserPermissionInTx(tnx, p)
 	if err != nil {
-		writeErrorResponse(w, http.StatusInternalServerError, err.Error()+"e2")
+		c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG:""})
 		return
 	}
 
@@ -74,43 +73,35 @@ func AddCompanyMember(w http.ResponseWriter, r *http.Request) {
 
 	_, err = Store.AddEntityRevisionInTx(tnx, rev)
 	if err != nil {
-		writeErrorResponse(w, http.StatusInternalServerError, err.Error()+"e3")
+		c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG:""})
 		return
 	}
 	tnx.Commit()
 
-	result := map[string]interface{}{
+	c.JSON(http.StatusOK, map[string]interface{}{
 		JSON_KEY_MEMBER_ID: member_id,
 		JSON_KEY_USERNAME:  member.Username,
-	}
-	b, err := json.MarshalIndent(result, "", "    ")
-	if err != nil {
-		writeErrorResponse(w, http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-	w.Write(b)
+	})
 }
 
-func CompanyCreateHandler(w http.ResponseWriter, r *http.Request) {
+func CompanyCreateHandler(c *gin.Context) {
 	defer trace("CompanyCreateHandler")()
 
-	current_user, err := auth.GetCurrentUser(r)
+	current_user, err := auth.GetCurrentUser(c.Request)
 	if err != nil {
-		writeErrorResponse(w, http.StatusNonAuthoritativeInfo, "e1")
+		c.JSON(http.StatusNonAuthoritativeInfo, gin.H{ERROR_MSG:""})
 		return
 	}
 
-	data, err := simplejson.NewFromReader(r.Body)
+	data, err := simplejson.NewFromReader(c.Request.Body)
 	if err != nil {
-		writeErrorResponse(w, http.StatusBadRequest, "e2")
+		c.JSON(http.StatusBadRequest, gin.H{ERROR_MSG:err.Error()})
 		return
 	}
 
 	company_name := data.Get(JSON_KEY_COMPANY_NAME).MustString()
 	if len(company_name) == 0 {
-		writeErrorResponse(w, http.StatusBadRequest, "e3")
+		c.JSON(http.StatusBadRequest, gin.H{ERROR_MSG:"Empty company name"})
 		return
 	}
 	contact := data.Get(JSON_KEY_COMPANY_CONTACT).MustString()
@@ -119,13 +110,13 @@ func CompanyCreateHandler(w http.ResponseWriter, r *http.Request) {
 
 	tnx, err := Store.GetDataStore().Begin()
 	if err != nil {
-		writeErrorResponse(w, http.StatusInternalServerError, err.Error()+"e4")
+		c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG:err.Error()})
 		return
 	}
 	created, err := Store.CreateCompanyInTx(tnx, current_user, company)
 	if err != nil {
 		tnx.Rollback()
-		writeErrorResponse(w, http.StatusInternalServerError, err.Error()+"e5")
+		c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG:err.Error()})
 		return
 	}
 
@@ -144,19 +135,9 @@ func CompanyCreateHandler(w http.ResponseWriter, r *http.Request) {
 	_, err = Store.SetUserPermissionInTx(tnx, p)
 	if err != nil {
 		tnx.Rollback()
-		writeErrorResponse(w, http.StatusInternalServerError, err.Error()+"e6")
+		c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG:err.Error()})
 		return
 	}
 
-	b, err := json.MarshalIndent(result, "", "    ")
-	if err != nil {
-		tnx.Rollback()
-		writeErrorResponse(w, http.StatusInternalServerError, "e7")
-		return
-	}
-	tnx.Commit()
-
-	w.WriteHeader(http.StatusOK)
-	w.Write(b)
-	fmt.Printf("%s", string(b))
+	c.JSON(http.StatusOK, result)
 }

@@ -1,11 +1,11 @@
 package controller
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	_ "net/http/httputil"
 	"sheket/server/models"
+	"github.com/gin-gonic/gin"
 )
 
 const (
@@ -59,37 +59,31 @@ type EntityResult struct {
 	NewlyCreatedBranchIds   map[int64]bool
 }
 
-func EntitySyncHandler(w http.ResponseWriter, r *http.Request) {
+func EntitySyncHandler(c *gin.Context) {
 	defer trace("EntitySyncHandler")()
-	/*
-	d, err := httputil.DumpRequest(r, true)
-	if err == nil {
-		fmt.Printf("Request %s\n", string(d))
-	}
-	*/
 
-	info, err := GetIdentityInfo(r)
+	info, err := GetIdentityInfo(c.Request)
 	if err != nil {
-		writeErrorResponse(w, http.StatusUnauthorized, err.Error())
+		c.JSON(http.StatusUnauthorized, gin.H{ERROR_MSG:err.Error()})
 		return
 	}
 
-	posted_data, err := parseEntityPost(r.Body, parsers, info)
+	posted_data, err := parseEntityPost(c.Request.Body, parsers, info)
 	if err != nil {
-		writeErrorResponse(w, http.StatusBadRequest, err.Error())
+		c.JSON(http.StatusBadRequest, gin.H{ERROR_MSG:err.Error()})
 		return
 	}
 
 	tnx, err := Store.Begin()
 	if err != nil {
-		writeErrorResponse(w, http.StatusInternalServerError, "e0")
+		c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG:err.Error()})
 		return
 	}
 
 	result, err := applyEntityOperations(tnx, posted_data, info)
 	if err != nil {
 		tnx.Rollback()
-		writeErrorResponse(w, http.StatusInternalServerError, err.Error()+"e1")
+		c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG:err.Error()})
 		return
 	}
 	tnx.Commit()
@@ -98,24 +92,16 @@ func EntitySyncHandler(w http.ResponseWriter, r *http.Request) {
 	response[JSON_KEY_COMPANY_ID] = info.CompanyId
 
 	if err = syncNewEntities(response, result); err != nil {
-		writeErrorResponse(w, http.StatusInternalServerError, err.Error()+"e5")
+		c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG:err.Error()})
 		return
 	}
 
 	if err = syncModifiedEntities(response, posted_data, result, info); err != nil {
-		writeErrorResponse(w, http.StatusInternalServerError, err.Error()+"e6")
+		c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG:err.Error()})
 		return
 	}
 
-	b, err := json.MarshalIndent(response, "", "    ")
-	if err != nil {
-		writeErrorResponse(w, http.StatusInternalServerError, "e4")
-		return
-	}
-	w.WriteHeader(http.StatusOK)
-	w.Write(b)
-	s := string(b)
-	fmt.Printf("Entity Sync response size:(%d)bytes\n%s\n\n\n", len(s), s)
+	c.JSON(http.StatusOK, response)
 }
 
 func syncNewEntities(sync_response map[string]interface{}, sync_result *EntityResult) error {

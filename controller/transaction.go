@@ -2,14 +2,13 @@ package controller
 
 import (
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"github.com/bitly/go-simplejson"
 	"io"
 	"net/http"
 	"sheket/server/controller/auth"
 	"sheket/server/models"
-	//"net/http/httputil"
+	"github.com/gin-gonic/gin"
 )
 
 const (
@@ -307,37 +306,30 @@ func updateBranchItems(tnx *sql.Tx, cached_branch_items map[Pair_BranchItem]*Cac
 // used in testing
 var currentUserGetter = auth.GetCurrentUser
 
-func TransactionSyncHandler(w http.ResponseWriter, r *http.Request) {
+func TransactionSyncHandler(c *gin.Context) {
 	defer trace("TransactionSyncHandler")()
-	/*
-		d, err := httputil.DumpRequest(r, true)
-		if err == nil {
-			fmt.Printf("Request %s\n", string(d))
-		}
-	*/
-
-	company_id := GetCurrentCompanyId(r)
+	company_id := GetCurrentCompanyId(c.Request)
 	if company_id == INVALID_COMPANY_ID {
-		writeErrorResponse(w, http.StatusNonAuthoritativeInfo)
+		c.JSON(http.StatusNonAuthoritativeInfo, gin.H{ERROR_MSG:""})
 		return
 	}
 
-	user, err := currentUserGetter(r)
+	user, err := currentUserGetter(c.Request)
 	if err != nil {
-		writeErrorResponse(w, http.StatusNonAuthoritativeInfo, err.Error())
+		c.JSON(http.StatusNonAuthoritativeInfo, gin.H{ERROR_MSG:err.Error()})
 		return
 	}
 
 	permission, err := Store.GetUserPermission(user, company_id)
 	if err != nil { // the user doesn't have permission to post
-		writeErrorResponse(w, http.StatusUnauthorized, err.Error())
+		c.JSON(http.StatusUnauthorized, gin.H{ERROR_MSG:err.Error()})
 		return
 	}
 
 	info := &IdentityInfo{CompanyId: company_id, User: user, Permission: permission}
-	posted_data, err := parseTransactionPost(r.Body, info)
+	posted_data, err := parseTransactionPost(c.Request.Body, info)
 	if err != nil {
-		writeErrorResponse(w, http.StatusBadRequest, err.Error())
+		c.JSON(http.StatusBadRequest, gin.H{ERROR_MSG:err.Error()})
 		return
 	}
 
@@ -352,13 +344,13 @@ func TransactionSyncHandler(w http.ResponseWriter, r *http.Request) {
 	if len(posted_data.NewTrans) > 0 {
 		tnx, err := Store.Begin()
 		if err != nil {
-			writeErrorResponse(w, http.StatusInternalServerError)
+			c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG:err.Error()})
 			return
 		}
 		add_trans_result, err := addTransactionsToDataStore(tnx, posted_data.NewTrans, company_id)
 		if err != nil {
 			tnx.Rollback()
-			writeErrorResponse(w, http.StatusInternalServerError, err.Error())
+			c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG:err.Error()})
 			return
 		}
 		newly_created_trans_ids = add_trans_result.NewlyCreatedIds
@@ -366,7 +358,7 @@ func TransactionSyncHandler(w http.ResponseWriter, r *http.Request) {
 		// update items affected by the transactions
 		if err = updateBranchItems(tnx, add_trans_result.AffectedBranchItems, company_id); err != nil {
 			tnx.Rollback()
-			writeErrorResponse(w, http.StatusInternalServerError, err.Error())
+			c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG:err.Error()})
 			return
 		}
 
@@ -390,7 +382,7 @@ func TransactionSyncHandler(w http.ResponseWriter, r *http.Request) {
 		max_trans_id, trans_history, err := fetchTransactionsSince(company_id,
 			posted_data.UserTransRev, newly_created_trans_ids)
 		if err != nil {
-			writeErrorResponse(w, http.StatusInternalServerError)
+			c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG:err.Error()})
 			return
 		}
 		if len(trans_history) > 0 {
@@ -402,7 +394,7 @@ func TransactionSyncHandler(w http.ResponseWriter, r *http.Request) {
 	latest_rev, changed_branch_items, err := fetchChangedBranchItemsSinceRev(company_id,
 		posted_data.UserBranchItemRev)
 	if err != nil {
-		writeErrorResponse(w, http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG:err.Error()})
 		return
 	}
 
@@ -412,15 +404,7 @@ func TransactionSyncHandler(w http.ResponseWriter, r *http.Request) {
 		sync_result[key_branch_item_sync] = changed_branch_items
 	}
 
-	b, err := json.MarshalIndent(sync_result, "", "    ")
-	if err != nil {
-		writeErrorResponse(w, http.StatusInternalServerError)
-		return
-	}
-	w.WriteHeader(http.StatusOK)
-	w.Write(b)
-	s := string(b)
-	fmt.Printf("Transaction Sync response size:(%d)bytes\n%s\n\n\n", len(s), s)
+	c.JSON(http.StatusOK, sync_result)
 }
 
 func fetchTransactionsSince(company_id, trans_rev int64, newly_created_ids map[int64]bool) (store_max_rev int64,

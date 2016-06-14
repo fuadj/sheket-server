@@ -1,0 +1,44 @@
+/*----------------------------- 
+    TEMPLATES GLOBAL
+-----------------------------*/
+
+a {
+    color: #fff;
+    text-decoration: underline;
+}
+
+a:hover {
+    color: #97ecf1;
+    text-decoration: underline;
+}
+
+/* [ Button container ] */
+div[data-editable="button"],
+div[data-editable="webinarButton"],
+div[data-editable="webform"] button {
+    background-color: #053e57;
+}
+
+/* [ Button text ] */
+div[data-editable="button"] button,
+div[data-editable="webinarButton"] button,
+div[data-editable="webform"] button {
+    font-family: Helvetica, sans-serif;
+    font-size: 28px;
+    font-weight: 400;
+    color: #13ccd6;
+}
+
+/* [ Button :hover ] */ 
+div[data-editable="button"]:hover,
+div[data-editable="webinarButton"]:hover,
+div[data-editable="webform"] button:hover {
+    background-color: #fff;
+}
+
+div[data-editable="button"]:hover button,
+div[data-editable="webinarButton"]:hover button,
+div[data-editable="webform"] button:hover,
+div[data-editable="button"] button.btn-hover {
+    color: #13ccd6;
+}
