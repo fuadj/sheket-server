@@ -27,7 +27,7 @@ func main() {
 
 	router.POST("/api/v1/company/create", auth.RequireLogin(c.CompanyCreateHandler))
 	// lists companies a user belongs in
-	router.GET("/api/v1/company/list", auth.RequireLogin(c.UserCompanyListHandler))
+	router.POST("/api/v1/company/list", auth.RequireLogin(c.UserCompanyListHandler))
 
 	router.POST("/api/v1/member/add", auth.RequireLogin(c.AddCompanyMember))
 
