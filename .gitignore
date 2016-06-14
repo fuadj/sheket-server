@@ -77,3 +77,8 @@ _testmain.go
 *.prof
 
 # Created by .ignore support plugin (hsz.mobi)
+#
+
+
+# ignore local environment variables to run on "heroku local"
+.env
