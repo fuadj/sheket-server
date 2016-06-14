@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	_ "github.com/lib/pq"
+	"os"
 )
 
 // table names
@@ -53,7 +54,9 @@ func (d *dbStore) Begin() (*sql.Tx, error) {
 }
 
 func ConnectDbStore() (*dbStore, error) {
-	db, err := sql.Open("postgres", "user=postgres password=abcdabcd dbname=sheket sslmode=disable")
+	DB_URL := os.Getenv("DATABASE_URL")
+
+	db, err := sql.Open("postgres", DB_URL)
 	if err != nil {
 		return nil, err
 	}
