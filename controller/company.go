@@ -138,6 +138,7 @@ func CompanyCreateHandler(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG:err.Error()})
 		return
 	}
+	tnx.Commit()
 
 	c.JSON(http.StatusOK, result)
 }
