@@ -16,8 +16,6 @@ const (
 
 	JSON_KEY_USER_ID       = "user_id"
 	JSON_KEY_MEMBER_ID     = "user_id"
-	JSON_KEY_LOGIN_STATUS  = "login_status"
-	JSON_KEY_LOGIN_MESSAGE = "login_message"
 
 	JSON_KEY_COMPANY_NAME    = "company_name"
 	JSON_KEY_COMPANY_CONTACT = "company_contact"
@@ -112,7 +110,7 @@ func UserCompanyListHandler(c *gin.Context) {
 
 	current_user, err := auth.GetCurrentUser(c.Request)
 	if err != nil {
-		c.JSON(http.StatusNonAuthoritativeInfo, gin.H{ERROR_MSG: err.Error()})
+		c.JSON(http.StatusUnauthorized, gin.H{ERROR_MSG: err.Error()})
 		return
 	}
 

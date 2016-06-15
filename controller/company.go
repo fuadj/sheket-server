@@ -14,7 +14,7 @@ func AddCompanyMember(c *gin.Context) {
 
 	company_id := GetCurrentCompanyId(c.Request)
 	if company_id == INVALID_COMPANY_ID {
-		c.String(http.StatusNonAuthoritativeInfo, "")
+		c.String(http.StatusUnauthorized, "")
 		return
 	}
 
@@ -89,7 +89,7 @@ func CompanyCreateHandler(c *gin.Context) {
 
 	current_user, err := auth.GetCurrentUser(c.Request)
 	if err != nil {
-		c.JSON(http.StatusNonAuthoritativeInfo, gin.H{ERROR_MSG:""})
+		c.JSON(http.StatusUnauthorized, gin.H{ERROR_MSG:""})
 		return
 	}
 

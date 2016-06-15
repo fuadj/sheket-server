@@ -310,13 +310,13 @@ func TransactionSyncHandler(c *gin.Context) {
 	defer trace("TransactionSyncHandler")()
 	company_id := GetCurrentCompanyId(c.Request)
 	if company_id == INVALID_COMPANY_ID {
-		c.JSON(http.StatusNonAuthoritativeInfo, gin.H{ERROR_MSG:""})
+		c.JSON(http.StatusUnauthorized, gin.H{ERROR_MSG:""})
 		return
 	}
 
 	user, err := currentUserGetter(c.Request)
 	if err != nil {
-		c.JSON(http.StatusNonAuthoritativeInfo, gin.H{ERROR_MSG:err.Error()})
+		c.JSON(http.StatusUnauthorized, gin.H{ERROR_MSG:err.Error()})
 		return
 	}
 
