@@ -189,7 +189,7 @@ func applyItemOperations(tnx *sql.Tx, posted_data *EntitySyncData, info *Identit
 		} else if prev_item != nil {
 			result.OldId2New_Items[old_item_id] = prev_item.ItemId
 			result.NewlyCreatedItemIds[prev_item.ItemId] = true
-			break
+			continue
 		}
 
 		if new_category_id, ok := result.OldId2New_Categories[item.CategoryId]; ok {

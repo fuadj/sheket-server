@@ -9,6 +9,7 @@ import (
 	"sheket/server/controller/auth"
 	"sheket/server/models"
 	"github.com/gin-gonic/gin"
+	_ "net/http/httputil"
 )
 
 const (
@@ -308,9 +309,17 @@ var currentUserGetter = auth.GetCurrentUser
 
 func TransactionSyncHandler(c *gin.Context) {
 	defer trace("TransactionSyncHandler")()
+
+	/*
+	d, err := httputil.DumpRequest(c.Request, true)
+	if err == nil {
+		fmt.Printf("Request %s\n", string(d))
+	}
+	*/
+
 	company_id := GetCurrentCompanyId(c.Request)
 	if company_id == INVALID_COMPANY_ID {
-		c.JSON(http.StatusUnauthorized, gin.H{ERROR_MSG:""})
+		c.JSON(http.StatusUnauthorized, gin.H{ERROR_MSG:"Invalid company id"})
 		return
 	}
 

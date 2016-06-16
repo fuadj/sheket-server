@@ -6,6 +6,7 @@ import (
 	_ "net/http/httputil"
 	"sheket/server/models"
 	"github.com/gin-gonic/gin"
+	_ "net/http/httputil"
 )
 
 const (
@@ -61,6 +62,13 @@ type EntityResult struct {
 
 func EntitySyncHandler(c *gin.Context) {
 	defer trace("EntitySyncHandler")()
+
+	/*
+	d, err := httputil.DumpRequest(c.Request, true)
+	if err == nil {
+		fmt.Printf("Request %s\n", string(d))
+	}
+	*/
 
 	info, err := GetIdentityInfo(c.Request)
 	if err != nil {
