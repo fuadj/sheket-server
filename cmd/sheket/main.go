@@ -21,6 +21,7 @@ func main() {
 
 	router := gin.New()
 	router.Use(gin.Logger())
+	router.Use(gin.Recovery())
 
 	router.POST("/api/v1/signup", c.UserSignupHandler)
 	router.POST("/api/v1/signin", c.UserLoginHandler)
