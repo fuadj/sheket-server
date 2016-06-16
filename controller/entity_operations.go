@@ -385,8 +385,8 @@ func applyBranchItemOperations(tnx *sql.Tx, posted_data *EntitySyncData, info *I
 			CompanyId:        info.CompanyId,
 			EntityType:       models.REV_ENTITY_BRANCH_ITEM,
 			ActionType:       models.REV_ACTION_CREATE,
-			EntityAffectedId: branch_id,
-			AdditionalInfo:   item_id,
+			EntityAffectedId: branch_item.BranchId,
+			AdditionalInfo:   branch_item.ItemId,
 		}
 
 		_, err := Store.AddEntityRevisionInTx(tnx, rev)
