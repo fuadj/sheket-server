@@ -10,7 +10,13 @@ import (
 const (
 	INVALID_COMPANY_ID int64 = -1
 
-	JSON_KEY_COMPANY_ID = "company_id"
+	/**
+	 * IMPORTANT: since this is used in a header it must comply with
+	 * the Canonical form of a header. That is [a-zA-Z]+(?:-?[a-zA-Z]+)*
+	 * You can't make the hyphen(-) un underscore. That is a BUG and
+	 * causes the whole app to not work.
+	 */
+	JSON_KEY_COMPANY_ID = "company-id"
 
 	KEY_JSON_ID_OLD = "o"
 	KEY_JSON_ID_NEW = "n"
