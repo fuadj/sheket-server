@@ -5,6 +5,7 @@ import (
 	"fmt"
 	_ "github.com/lib/pq"
 	"os"
+	"strconv"
 )
 
 // table names
@@ -60,6 +61,19 @@ func ConnectDbStore() (*dbStore, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	var limit int
+	s := os.Getenv("CONN_LIMIT")
+	if s != "" {
+		limit, err = strconv.Atoi(s)
+		if err != nil {
+			limit = 10
+		}
+	} else {
+		limit = 10
+	}
+
+	db.SetMaxOpenConns(limit)
 
 	// cleanup function
 	defer func() {
