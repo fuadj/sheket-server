@@ -74,8 +74,8 @@ func ConnectDbStore() (*dbStore, error) {
 		return nil, err
 	}
 
-	db.SetMaxIdleConns(getEnvironmentConstant("CONN_IDLE", 5))
-	db.SetMaxOpenConns(getEnvironmentConstant("CONN_LIMIT", 10))
+	db.SetMaxIdleConns(getEnvironmentConstant("CONN_IDLE", 10))
+	db.SetMaxOpenConns(getEnvironmentConstant("CONN_LIMIT", 15))
 
 	// cleanup function
 	defer func() {
