@@ -75,6 +75,7 @@ func _queryCompany(s *shStore, err_msg string, where_stmt string, args ...interf
 		return nil, fmt.Errorf("%s %v", err_msg, err)
 	}
 
+	defer rows.Close()
 	for rows.Next() {
 		c := new(Company)
 		err := rows.Scan(

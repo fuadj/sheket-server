@@ -112,6 +112,8 @@ func _queryCategoryInTx(tnx *sql.Tx, err_msg string, where_stmt string, args ...
 		return nil, fmt.Errorf("%s %v", err_msg, err)
 	}
 
+	defer rows.Close()
+
 	for rows.Next() {
 		c := new(ShCategory)
 		err := rows.Scan(
@@ -127,6 +129,5 @@ func _queryCategoryInTx(tnx *sql.Tx, err_msg string, where_stmt string, args ...
 
 		result = append(result, c)
 	}
-	rows.Close()
 	return result, nil
 }

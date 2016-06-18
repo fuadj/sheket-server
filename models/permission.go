@@ -153,6 +153,8 @@ func (b *shStore) GetUserCompanyPermissions(u *User) ([]*Pair_Company_UserPermis
 		return nil, err
 	}
 
+	defer rows.Close()
+
 	for rows.Next() {
 		pc := new(Pair_Company_UserPermission)
 		rows.Scan(
@@ -182,6 +184,8 @@ func (b *shStore) GetCompanyMembersPermissions(c *Company) ([]*Pair_User_UserPer
 	if err != nil {
 		return nil, err
 	}
+
+	defer rows.Close()
 
 	for rows.Next() {
 		member_permission := new(Pair_User_UserPermission)

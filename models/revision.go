@@ -49,12 +49,15 @@ func (s *shStore) AddEntityRevisionInTx(tnx *sql.Tx, rev *ShEntityRevision) (*Sh
 	if rows.Next() {
 		err = rows.Scan(&i)
 		if err != nil {
+			rows.Close()
 			return nil, fmt.Errorf("Revision Scan error : %s", err.Error())
 		}
 		if i.Valid {
 			max_rev = i.Int64
 		}
 	}
+	// we don't defer the rows.Close b/c we want to release the connection
+	// so that the Exec statement can use it immediately
 	rows.Close()
 
 	max_rev++
@@ -98,19 +101,28 @@ func (s *shStore) GetRevisionsSince(prev_rev *ShEntityRevision) (int64, []*ShEnt
 			&rev.AdditionalInfo,
 		)
 		if err != nil {
+			rows.Close()
 			return prev_rev.RevisionNumber, nil, fmt.Errorf("Revision Scan error : %s", err.Error())
 		}
 
 		result = append(result, rev)
 	}
+	// we don't defer the rows.Close b/c we want to release the connection
+	// so that the Exec statement can use it immediately
 	rows.Close()
 
 	rows, err = s.Query(
 		fmt.Sprintf("select max(revision_number) from %s "+
 			"where company_id = $1 AND entity_type = $2", TABLE_ENTITY_REVISION),
 		prev_rev.CompanyId, prev_rev.EntityType)
+	if err != nil {
+		return prev_rev.RevisionNumber, nil, fmt.Errorf("Revision query error : %s", err.Error())
+	}
+
+	defer rows.Close()
+
 	max_rev := prev_rev.RevisionNumber
-	if err == nil && rows.Next() {
+	if rows.Next() {
 		var i sql.NullInt64
 		if rows.Scan(&i) == nil {
 			max_rev = i.Int64

@@ -134,6 +134,8 @@ func _queryShTransactions(s *shStore, fetch_items bool, err_msg string, where_st
 		return nil, fmt.Errorf("%s %v", err_msg, err)
 	}
 
+	defer rows.Close()
+
 	for rows.Next() {
 		t := new(ShTransaction)
 		err := rows.Scan(
@@ -179,6 +181,8 @@ func _queryShTransactionsInTx(tnx *sql.Tx, err_msg string, where_stmt string, ar
 		return nil, fmt.Errorf("%s %v", err_msg, err)
 	}
 
+	defer rows.Close()
+
 	for rows.Next() {
 		t := new(ShTransaction)
 		err := rows.Scan(
@@ -213,6 +217,8 @@ func _queryShTransactionItems(s *shStore, err_msg string, where_stmt string, arg
 	if err != nil {
 		return nil, fmt.Errorf("%s %v", err_msg, err)
 	}
+
+	defer rows.Close()
 
 	for rows.Next() {
 		i := new(ShTransactionItem)

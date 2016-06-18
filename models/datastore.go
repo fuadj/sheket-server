@@ -54,6 +54,18 @@ func (d *dbStore) Begin() (*sql.Tx, error) {
 	return d.db.Begin()
 }
 
+func getEnvironmentConstant(name string, def_val int) int {
+	s := os.Getenv(name)
+	if s != "" {
+		result, err := strconv.Atoi(s)
+		if err == nil {
+			return result
+		}
+		return def_val
+	}
+	return def_val
+}
+
 func ConnectDbStore() (*dbStore, error) {
 	DB_URL := os.Getenv("DATABASE_URL")
 
@@ -62,18 +74,8 @@ func ConnectDbStore() (*dbStore, error) {
 		return nil, err
 	}
 
-	var limit int
-	s := os.Getenv("CONN_LIMIT")
-	if s != "" {
-		limit, err = strconv.Atoi(s)
-		if err != nil {
-			limit = 10
-		}
-	} else {
-		limit = 10
-	}
-
-	db.SetMaxOpenConns(limit)
+	db.SetMaxIdleConns(getEnvironmentConstant("CONN_IDLE", 5))
+	db.SetMaxOpenConns(getEnvironmentConstant("CONN_LIMIT", 10))
 
 	// cleanup function
 	defer func() {

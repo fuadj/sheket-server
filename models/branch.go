@@ -247,6 +247,7 @@ func _queryBranch(s *shStore, err_msg string, where_stmt string, args ...interfa
 	if err != nil {
 		return nil, fmt.Errorf("%s %v", err_msg, err)
 	}
+	defer rows.Close()
 
 	for rows.Next() {
 		b := new(ShBranch)
@@ -284,6 +285,8 @@ func _queryBranchInTx(tnx *sql.Tx, err_msg string, where_stmt string, args ...in
 		return nil, fmt.Errorf("%s %v", err_msg, err)
 	}
 
+	defer rows.Close()
+
 	for rows.Next() {
 		b := new(ShBranch)
 		err := rows.Scan(
@@ -320,6 +323,8 @@ func _queryBranchItem(s *shStore, err_msg string, where_stmt string, args ...int
 		return nil, fmt.Errorf("%s %v", err_msg, err)
 	}
 
+	defer rows.Close()
+
 	for rows.Next() {
 		b := new(ShBranchItem)
 		err := rows.Scan(
@@ -355,6 +360,8 @@ func _queryBranchItemInTx(tnx *sql.Tx, err_msg string, where_stmt string, args .
 	if err != nil {
 		return nil, fmt.Errorf("%s %v", err_msg, err)
 	}
+
+	defer rows.Close()
 
 	for rows.Next() {
 		b := new(ShBranchItem)

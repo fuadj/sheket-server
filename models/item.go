@@ -215,6 +215,8 @@ func _queryInventoryItems(s *shStore, err_msg string, where_stmt string, args ..
 		return nil, fmt.Errorf("%s %v", err_msg, err)
 	}
 
+	defer rows.Close()
+
 	for rows.Next() {
 		i := new(ShItem)
 		err := rows.Scan(
@@ -269,6 +271,8 @@ func _queryInventoryItemsInTx(tnx *sql.Tx, err_msg string, where_stmt string, ar
 		return nil, fmt.Errorf("%s %v", err_msg, err)
 	}
 
+	defer rows.Close()
+
 	for rows.Next() {
 		i := new(ShItem)
 		err := rows.Scan(
@@ -294,6 +298,5 @@ func _queryInventoryItemsInTx(tnx *sql.Tx, err_msg string, where_stmt string, ar
 
 		result = append(result, i)
 	}
-	rows.Close()
 	return result, nil
 }
