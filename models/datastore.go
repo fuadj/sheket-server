@@ -250,10 +250,10 @@ func checkRootCategoryCreated(db *sql.DB) error {
 		if err != nil {
 			return err
 		}
+		defer rows.Close()
 		if !rows.Next() {
 			return fmt.Errorf("root category creation failed")
 		}
-		rows.Close()
 	} else {
 		rows.Close()
 	}
