@@ -100,22 +100,22 @@ func ConnectDbStore() (*dbStore, error) {
 	exec(fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s ( "+
 		// user-table
 		"user_id		SERIAL PRIMARY KEY, "+
-		"username		VARCHAR(100) NOT NULL, "+
-		"hashpass 		VARCHAR(260) NOT NULL, "+
+		"username		TEXT NOT NULL, "+
+		"hashpass 		TEXT NOT NULL, "+
 		"UNIQUE(username));", TABLE_USER))
 
 	exec(fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s ( "+
 		// company-table
 		"company_id		SERIAL PRIMARY KEY, "+
-		"company_name	VARCHAR(100) NOT NULL, "+
-		"contact		VARCHAR(260) NOT NULL, "+
+		"company_name	TEXT NOT NULL, "+
+		"contact		TEXT NOT NULL, "+
 		"UNIQUE(company_name));", TABLE_COMPANY))
 
 	exec(fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s ( "+
 		// user-permission-table
 		"company_id			INTEGER REFERENCES %s(company_id), "+
 		"user_id			INTEGER REFERENCES %s(user_id), "+
-		"permission			VARCHAR(1000) NOT NULL);",
+		"permission			TEXT NOT NULL);",
 		TABLE_U_PERMISSION, TABLE_COMPANY, TABLE_USER))
 
 	exec(fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s ( "+
@@ -123,8 +123,8 @@ func ConnectDbStore() (*dbStore, error) {
 		"branch_id		SERIAL PRIMARY KEY, "+
 		"client_uuid	uuid, "+
 		"company_id		INTEGER REFERENCES %s(company_id), "+
-		"branch_name	VARCHAR(260) NOT NULL, "+
-		"location 		VARCHAR(200), "+
+		"branch_name	TEXT NOT NULL, "+
+		"location 		TEXT, "+
 
 		"UNIQUE(company_id, branch_name));",
 		TABLE_BRANCH, TABLE_COMPANY))
@@ -134,7 +134,7 @@ func ConnectDbStore() (*dbStore, error) {
 		"category_id	SERIAL PRIMARY KEY, "+
 		"client_uuid	uuid, "+
 		"company_id		INTEGER REFERENCES %s(company_id), "+
-		"name			VARCHAR(100) NOT NULL, "+
+		"name			TEXT NOT NULL, "+
 		"parent_id		INTEGER REFERENCES %s(category_id));",
 		TABLE_CATEGORY, TABLE_COMPANY, TABLE_CATEGORY))
 	if err = checkRootCategoryCreated(db); err != nil {
@@ -146,18 +146,18 @@ func ConnectDbStore() (*dbStore, error) {
 		_db_item_client_uuid+" uuid, "+
 		_db_item_company_id+" INTEGER REFERENCES %s(company_id), "+
 		_db_item_category_id+" INTEGER DEFAULT %d REFERENCES %s(category_id) ON DELETE SET DEFAULT, "+
-		_db_item_code + " varchar(200) not null, "+
-		_db_item_name + " varchar(200), "+
+		_db_item_code + " TEXT not null, "+
+		_db_item_name + " TEXT, "+
 
 		_db_item_units+" integer not null, "+
 		_db_item_has_derived_unit+" bool not null, "+
-		_db_item_derived_name+" varchar(20), "+
+		_db_item_derived_name+" TEXT, "+
 		_db_item_derived_factor+" real, "+
 		_db_item_reorder_level+" real, "+
 
-		_db_item_model_year+" varchar(10), "+
-		_db_item_part_number+" varchar(30), "+
-		_db_item_bar_code+" varchar(30), "+
+		_db_item_model_year+" TEXT, "+
+		_db_item_part_number+" TEXT, "+
+		_db_item_bar_code+" TEXT, "+
 		_db_item_has_bar_code+" bool); ",
 		TABLE_INVENTORY_ITEM, TABLE_COMPANY, ROOT_CATEGORY_ID, TABLE_CATEGORY))
 
@@ -167,7 +167,7 @@ func ConnectDbStore() (*dbStore, error) {
 		"branch_id		INTEGER NOT NULL, "+
 		"item_id		INTEGER references %s(" + _db_item_id + "), "+
 		"quantity		REAL NOT NULL, "+
-		"item_location		VARCHAR(20), "+
+		"item_location		TEXT, "+
 		"unique(branch_id, item_id));",
 		TABLE_BRANCH_ITEM, TABLE_COMPANY, TABLE_INVENTORY_ITEM))
 
