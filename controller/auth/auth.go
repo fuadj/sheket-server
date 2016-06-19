@@ -101,8 +101,6 @@ func AuthenticateUser(u *models.User, password string) (*models.User, error) {
 	found, err := Store.FindUserByName(u.Username)
 	if err != nil {
 		return nil, err
-	} else if found == nil {
-		return nil, fmt.Errorf("invalid username")
 	}
 
 	if !CompareHashAndPassword(found.HashedPassword, password) {

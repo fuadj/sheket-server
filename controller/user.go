@@ -14,8 +14,8 @@ const (
 	JSON_KEY_USERNAME = "username"
 	JSON_KEY_PASSWORD = "password"
 
-	JSON_KEY_USER_ID       = "user_id"
-	JSON_KEY_MEMBER_ID     = "user_id"
+	JSON_KEY_USER_ID   = "user_id"
+	JSON_KEY_MEMBER_ID = "user_id"
 
 	JSON_KEY_COMPANY_NAME    = "company_name"
 	JSON_KEY_COMPANY_CONTACT = "company_contact"
@@ -51,13 +51,12 @@ func UserSignupHandler(c *gin.Context) {
 		return
 	}
 
-	prev_user, err := Store.FindUserByNameInTx(tnx, username)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{ERROR_MSG: err.Error()})
-		return
-	}
-	if prev_user != nil {
+	if _, err = Store.FindUserByNameInTx(tnx, username); err == nil {
+		// this means a previous user was found
 		c.JSON(http.StatusBadRequest, gin.H{ERROR_MSG: fmt.Sprintf("%s already exists", username)})
+		return
+	} else if err != nil && (err != models.ErrNoData) {
+		c.JSON(http.StatusBadRequest, gin.H{ERROR_MSG: err.Error()})
 		return
 	}
 
