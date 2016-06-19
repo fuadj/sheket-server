@@ -211,7 +211,8 @@ func ConnectDbStore() (*dbStore, error) {
 		"trans_type			INTEGER NOT NULL, "+
 		"item_id			INTEGER REFERENCES %s(item_id), "+
 		"other_branch_id 	INTEGER, "+
-		"quantity 			REAL NOT NULL);",
+		"quantity 			REAL NOT NULL, " +
+		"trans_note 		TEXT);",
 		TABLE_TRANSACTION_ITEM, TABLE_COMPANY, TABLE_TRANSACTION, TABLE_INVENTORY_ITEM))
 
 	exec(fmt.Sprintf("create table if not exists %s ( "+
