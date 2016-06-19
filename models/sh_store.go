@@ -1,6 +1,14 @@
 package models
 
-import "database/sql"
+import (
+	"database/sql"
+	"errors"
+)
+
+// ErrNoData is the error returned if there is not data available
+// for your "query". You should check the returned error to see
+// if this is the type. If it ain't that means shit has gone wrong.
+var ErrNoData = errors.New("sheket: no data found")
 
 type TransactionStore interface {
 	CreateShTransactionInTx(*sql.Tx, *ShTransaction) (*ShTransaction, error)
