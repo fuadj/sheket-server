@@ -66,6 +66,21 @@ const (
 	ITEM_JSON_HAS_BAR_CODE = "has_bar_code"
 )
 
+func _checkItemArrError(items []*ShItem, err error) ([]*ShItem, error) {
+	if err == nil {
+		if len(items) == 0 {
+			return nil, ErrNoData
+		}
+		return items, nil
+	} else if err == sql.ErrNoRows {
+		return nil, ErrNoData
+	} else if err == ErrNoData {
+		return nil, err
+	} else {
+		return nil, err
+	}
+}
+
 func (s *shStore) CreateItem(item *ShItem) (*ShItem, error) {
 	tnx, err := s.Begin()
 	if err != nil {
@@ -138,55 +153,50 @@ func (s *shStore) UpdateItemInTx(tnx *sql.Tx, item *ShItem) (*ShItem, error) {
 
 func (s *shStore) GetItemByUUIDInTx(tnx *sql.Tx, uid string) (*ShItem, error) {
 	msg := fmt.Sprintf("no item with that uuid:%s", uid)
-	item, err := _queryInventoryItemsInTx(tnx, msg, "where client_uuid = $1", uid)
+	items, err := _queryInventoryItemsInTx(tnx, msg, "where client_uuid = $1", uid)
+
+	items, err = _checkItemArrError(items, err)
 	if err != nil {
 		return nil, err
 	}
 
-	if len(item) == 0 {
-		return nil, nil
-	}
-
-	return item[0], nil
+	return items[0], nil
 }
 
 func (s *shStore) GetItemById(id int64) (*ShItem, error) {
 	msg := fmt.Sprintf("no item with that id %d", id)
-	item, err := _queryInventoryItems(s, msg, "where item_id = $1", id)
+	items, err := _queryInventoryItems(s, msg, "where item_id = $1", id)
+
+	items, err = _checkItemArrError(items, err)
 	if err != nil {
 		return nil, err
 	}
-	if len(item) == 0 {
-		return nil, fmt.Errorf("error getting item:%d", id)
-	}
 
-	return item[0], nil
+	return items[0], nil
 }
 
 func (s *shStore) GetItemByIdInTx(tnx *sql.Tx, id int64) (*ShItem, error) {
 	msg := fmt.Sprintf("no item with that id %d", id)
-	item, err := _queryInventoryItemsInTx(tnx, msg, "where item_id = $1", id)
+	items, err := _queryInventoryItemsInTx(tnx, msg, "where item_id = $1", id)
+
+	items, err = _checkItemArrError(items, err)
 	if err != nil {
 		return nil, err
 	}
-	if len(item) == 0 {
-		return nil, fmt.Errorf("error getting item:%d", id)
-	}
 
-	return item[0], nil
+	return items[0], nil
 }
 
 func (s *shStore) GetAllCompanyItems(company_id int64) ([]*ShItem, error) {
 	msg := fmt.Sprintf("no item in company:%d", company_id)
-	item, err := _queryInventoryItems(s, msg, "where company = $1", company_id)
+	items, err := _queryInventoryItems(s, msg, "where company = $1", company_id)
+
+	items, err = _checkItemArrError(items, err)
 	if err != nil {
 		return nil, err
 	}
-	if len(item) == 0 {
-		return nil, fmt.Errorf("error getting items in company:%d", company_id)
-	}
 
-	return item, nil
+	return items, nil
 }
 
 func _queryInventoryItems(s *shStore, err_msg string, where_stmt string, args ...interface{}) ([]*ShItem, error) {
@@ -237,6 +247,9 @@ func _queryInventoryItems(s *shStore, err_msg string, where_stmt string, args ..
 			&i.HasBarCode,
 		)
 		if err != nil {
+			if err == sql.ErrNoRows {
+				return nil, ErrNoData
+			}
 			return nil, fmt.Errorf("%s %v", err_msg, err.Error())
 		}
 
@@ -293,6 +306,9 @@ func _queryInventoryItemsInTx(tnx *sql.Tx, err_msg string, where_stmt string, ar
 			&i.HasBarCode,
 		)
 		if err != nil {
+			if err == sql.ErrNoRows {
+				return nil, ErrNoData
+			}
 			return nil, fmt.Errorf("%s %v", err_msg, err.Error())
 		}
 

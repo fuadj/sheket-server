@@ -11,6 +11,20 @@ type User struct {
 	HashedPassword string
 }
 
+func _checkUserError(u *User, err error, err_msg string) (*User, error) {
+	if err == nil {
+		return u, nil
+	} else if err == sql.ErrNoRows {
+		return nil, ErrNoData
+	} else {
+		if err_msg == "" {
+			return nil, err
+		} else {
+			return nil, fmt.Errorf("%s %s", err_msg, err.Error())
+		}
+	}
+}
+
 func (b *shStore) CreateUser(u *User) (*User, error) {
 	tnx, err := b.Begin()
 	if err != nil {
@@ -42,17 +56,13 @@ func (b *shStore) CreateUserInTx(tnx *sql.Tx, u *User) (*User, error) {
 			"(username, hashpass) values "+
 			"($1, $2) returning user_id", TABLE_USER),
 		u.Username, u.HashedPassword).Scan(&u.UserId)
-	if err != nil {
-		return nil, err
-	}
-
-	return u, nil
+	return _checkUserError(u, err, "")
 }
 
 func (b *shStore) FindUserByName(username string) (*User, error) {
 	msg := fmt.Sprintf("no user with name %s", username)
 	user, err := _queryUser(b, msg, "where username = $1", username)
-	if err != nil || user == nil {
+	if err != nil {
 		return nil, err
 	}
 	return user, nil
@@ -66,7 +76,7 @@ func (b *shStore) FindUserByNameInTx(tnx *sql.Tx, username string) (*User, error
 func (b *shStore) FindUserById(id int64) (*User, error) {
 	msg := fmt.Sprintf("no user with id:%d", id)
 	user, err := _queryUser(b, msg, "where user_id = $1", id)
-	if err != nil || user == nil {
+	if err != nil {
 		return nil, err
 	}
 	return user, nil
@@ -83,11 +93,8 @@ func _queryUser(s *shStore, err_msg string, where_stmt string, args ...interface
 		row = s.QueryRow(query)
 	}
 
-	if err := row.Scan(&u.UserId, &u.Username, &u.HashedPassword); err != nil {
-		return nil, fmt.Errorf("%s %s", err_msg, err)
-	}
-
-	return u, nil
+	err := row.Scan(&u.UserId, &u.Username, &u.HashedPassword)
+	return _checkUserError(u, err, err_msg)
 }
 
 func _queryUserTnx(tnx *sql.Tx, err_msg string, where_stmt string, args ...interface{}) (*User, error) {
@@ -101,9 +108,6 @@ func _queryUserTnx(tnx *sql.Tx, err_msg string, where_stmt string, args ...inter
 		row = tnx.QueryRow(query)
 	}
 
-	if err := row.Scan(&u.UserId, &u.Username, &u.HashedPassword); err != nil {
-		return nil, fmt.Errorf("%s %s", err_msg, err)
-	}
-
-	return u, nil
+	err := row.Scan(&u.UserId, &u.Username, &u.HashedPassword)
+	return _checkUserError(u, err, err_msg)
 }
