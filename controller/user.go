@@ -52,10 +52,15 @@ func UserSignupHandler(c *gin.Context) {
 	}
 
 	prev_user, err := Store.FindUserByNameInTx(tnx, username)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{ERROR_MSG: err.Error()})
+		return
+	}
 	if prev_user != nil {
 		c.JSON(http.StatusBadRequest, gin.H{ERROR_MSG: fmt.Sprintf("%s already exists", username)})
 		return
 	}
+
 	user := &models.User{Username: username,
 		HashedPassword: auth.HashPassword(password)}
 	created, err := Store.CreateUserInTx(tnx, user)
