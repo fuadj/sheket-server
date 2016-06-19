@@ -26,12 +26,13 @@ const (
 )
 
 type ShTransactionItem struct {
-	CompanyId     int64
-	TransactionId int64
-	TransType     int64
-	ItemId        int64
-	OtherBranchId int64
-	Quantity      float64
+	CompanyId       int64
+	TransactionId   int64
+	TransType       int64
+	ItemId          int64
+	OtherBranchId   int64
+	Quantity        float64
+	TransactionNote string
 }
 
 const (
@@ -71,9 +72,9 @@ func (s *shStore) CreateShTransactionInTx(tnx *sql.Tx, trans *ShTransaction) (*S
 
 func (s *shStore) AddShTransactionItemInTx(tnx *sql.Tx, trans *ShTransaction, elem *ShTransactionItem) (*ShTransactionItem, error) {
 	_, err := tnx.Exec(fmt.Sprintf("insert into %s "+
-		"(company_id, transaction_id, trans_type, item_id, other_branch_id, quantity) values "+
-		"($1, $2, $3, $4, $5, $6)", TABLE_TRANSACTION_ITEM),
-		trans.CompanyId, trans.TransactionId, elem.TransType, elem.ItemId, elem.OtherBranchId, elem.Quantity)
+		"(company_id, transaction_id, trans_type, item_id, other_branch_id, quantity, trans_note) values "+
+		"($1, $2, $3, $4, $5, $6, $7)", TABLE_TRANSACTION_ITEM),
+		trans.CompanyId, trans.TransactionId, elem.TransType, elem.ItemId, elem.OtherBranchId, elem.Quantity, elem.TransactionNote)
 	if err != nil {
 		return nil, err
 	}
@@ -205,7 +206,7 @@ func _queryShTransactionItems(s *shStore, err_msg string, where_stmt string, arg
 	var result []*ShTransactionItem
 
 	query := fmt.Sprintf("select company_id, transaction_id, trans_type, item_id, "+
-		"other_branch_id, quantity from %s", TABLE_TRANSACTION_ITEM)
+		"other_branch_id, quantity, trans_note from %s", TABLE_TRANSACTION_ITEM)
 
 	var rows *sql.Rows
 	var err error
@@ -229,6 +230,7 @@ func _queryShTransactionItems(s *shStore, err_msg string, where_stmt string, arg
 			&i.ItemId,
 			&i.OtherBranchId,
 			&i.Quantity,
+			&i.TransactionNote,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("%s %v", err_msg, err.Error())
