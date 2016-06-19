@@ -2,8 +2,8 @@ package controller
 
 import (
 	"database/sql"
-	"sheket/server/models"
 	"fmt"
+	"sheket/server/models"
 )
 
 func applyEntityOperations(tnx *sql.Tx, posted_data *EntitySyncData, info *IdentityInfo) (*EntityResult, error) {
@@ -97,7 +97,7 @@ func applyCategoryOperations(tnx *sql.Tx, posted_data *EntitySyncData, info *Ide
 			if new_parent_id, ok := result.OldId2New_Categories[category.ParentId]; ok {
 				category.ParentId = new_parent_id
 			} else if (category.ParentId != models.ROOT_CATEGORY_ID) &&
-				category.ParentId < 0 {	// if we didn't add it and it is not root, add the parent first
+				category.ParentId < 0 { // if we didn't add it and it is not root, add the parent first
 
 				// TODO: figure out a better way to extend an array size, this is just a hack
 				// it is a hack b/c we append an elem to make sure it has enough capacity, we then
@@ -109,7 +109,7 @@ func applyCategoryOperations(tnx *sql.Tx, posted_data *EntitySyncData, info *Ide
 				continue
 			}
 
-			i--		// pop off the stack for the next round
+			i-- // pop off the stack for the next round
 			created_category, err := Store.CreateCategoryInTx(tnx, &category.ShCategory)
 			if err != nil {
 				return nil, fmt.Errorf("error creating category %s", err.Error())
@@ -184,9 +184,10 @@ func applyItemOperations(tnx *sql.Tx, posted_data *EntitySyncData, info *Identit
 			return nil, fmt.Errorf("item:%d doesn't have members defined", old_item_id)
 		}
 		prev_item, err := Store.GetItemByUUIDInTx(tnx, item.ClientUUID)
-		if err != nil {
-			return nil, fmt.Errorf("error getting item with uuid %s", err.Error())
-		} else if prev_item != nil {
+		if err != models.ErrNoData {
+			if err != nil {
+				return nil, fmt.Errorf("error getting item with uuid %s", err.Error())
+			}
 			result.OldId2New_Items[old_item_id] = prev_item.ItemId
 			result.NewlyCreatedItemIds[prev_item.ItemId] = true
 			continue
@@ -229,7 +230,7 @@ func applyItemOperations(tnx *sql.Tx, posted_data *EntitySyncData, info *Identit
 		}
 
 		previous_item, err := Store.GetItemByIdInTx(tnx, item_id)
-		if err != nil {
+		if err != nil && err != models.ErrNoData {
 			return nil, fmt.Errorf("error retriving item:%d '%s'", item_id, err.Error())
 		}
 
