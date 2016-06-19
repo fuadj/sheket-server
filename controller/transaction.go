@@ -105,6 +105,10 @@ func parseTransactionPost(r io.Reader, info *IdentityInfo) (*TransSyncData, erro
 			if err != nil {
 				return nil, err
 			}
+			item.TransactionNote, err = toStrErr(fields[4])
+			if err != nil {
+				return nil, err
+			}
 			trans_items[j] = item
 		}
 		trans.TransItems = trans_items

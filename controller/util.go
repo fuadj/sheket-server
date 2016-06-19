@@ -81,3 +81,11 @@ func intArrToSet(arr []int64) map[int64]bool {
 	}
 	return result
 }
+
+func toStrErr(i interface{}) (string, error) {
+	if val, ok := i.(string); ok {
+		return val, nil
+	}
+	return "", fmt.Errorf("'%v' not a string", i)
+}
+
