@@ -190,6 +190,7 @@ func addTransactionsToDataStore(tnx *sql.Tx, new_transactions []*models.ShTransa
 	result.OldId2New = make(map[int64]int64, len(new_transactions))
 	result.NewlyCreatedIds = make(map[int64]bool, len(new_transactions))
 
+
 	result.AffectedBranchItems = make(map[Pair_BranchItem]*CachedBranchItem)
 	for _, trans := range new_transactions {
 		user_trans_id := trans.TransactionId
