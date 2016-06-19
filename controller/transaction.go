@@ -4,12 +4,12 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/bitly/go-simplejson"
+	"github.com/gin-gonic/gin"
 	"io"
 	"net/http"
+	_ "net/http/httputil"
 	"sheket/server/controller/auth"
 	"sheket/server/models"
-	"github.com/gin-gonic/gin"
-	_ "net/http/httputil"
 )
 
 const (
@@ -190,7 +190,6 @@ func addTransactionsToDataStore(tnx *sql.Tx, new_transactions []*models.ShTransa
 	result.OldId2New = make(map[int64]int64, len(new_transactions))
 	result.NewlyCreatedIds = make(map[int64]bool, len(new_transactions))
 
-
 	result.AffectedBranchItems = make(map[Pair_BranchItem]*CachedBranchItem)
 	for _, trans := range new_transactions {
 		user_trans_id := trans.TransactionId
@@ -316,34 +315,34 @@ func TransactionSyncHandler(c *gin.Context) {
 	defer trace("TransactionSyncHandler")()
 
 	/*
-	d, err := httputil.DumpRequest(c.Request, true)
-	if err == nil {
-		fmt.Printf("Request %s\n", string(d))
-	}
+		d, err := httputil.DumpRequest(c.Request, true)
+		if err == nil {
+			fmt.Printf("Request %s\n", string(d))
+		}
 	*/
 
 	company_id := GetCurrentCompanyId(c.Request)
 	if company_id == INVALID_COMPANY_ID {
-		c.JSON(http.StatusUnauthorized, gin.H{ERROR_MSG:"Invalid company id"})
+		c.JSON(http.StatusUnauthorized, gin.H{ERROR_MSG: "Invalid company id"})
 		return
 	}
 
 	user, err := currentUserGetter(c.Request)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{ERROR_MSG:err.Error()})
+		c.JSON(http.StatusUnauthorized, gin.H{ERROR_MSG: err.Error()})
 		return
 	}
 
 	permission, err := Store.GetUserPermission(user, company_id)
 	if err != nil { // the user doesn't have permission to post
-		c.JSON(http.StatusUnauthorized, gin.H{ERROR_MSG:err.Error()})
+		c.JSON(http.StatusUnauthorized, gin.H{ERROR_MSG: err.Error()})
 		return
 	}
 
 	info := &IdentityInfo{CompanyId: company_id, User: user, Permission: permission}
 	posted_data, err := parseTransactionPost(c.Request.Body, info)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{ERROR_MSG:err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{ERROR_MSG: err.Error()})
 		return
 	}
 
@@ -358,13 +357,13 @@ func TransactionSyncHandler(c *gin.Context) {
 	if len(posted_data.NewTrans) > 0 {
 		tnx, err := Store.Begin()
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG:err.Error()})
+			c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG: err.Error()})
 			return
 		}
 		add_trans_result, err := addTransactionsToDataStore(tnx, posted_data.NewTrans, company_id)
 		if err != nil {
 			tnx.Rollback()
-			c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG:err.Error()})
+			c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG: err.Error()})
 			return
 		}
 		newly_created_trans_ids = add_trans_result.NewlyCreatedIds
@@ -372,7 +371,7 @@ func TransactionSyncHandler(c *gin.Context) {
 		// update items affected by the transactions
 		if err = updateBranchItems(tnx, add_trans_result.AffectedBranchItems, company_id); err != nil {
 			tnx.Rollback()
-			c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG:err.Error()})
+			c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG: err.Error()})
 			return
 		}
 
@@ -396,7 +395,7 @@ func TransactionSyncHandler(c *gin.Context) {
 		max_trans_id, trans_history, err := fetchTransactionsSince(company_id,
 			posted_data.UserTransRev, newly_created_trans_ids)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG:err.Error()})
+			c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG: err.Error()})
 			return
 		}
 		if len(trans_history) > 0 {
@@ -408,7 +407,7 @@ func TransactionSyncHandler(c *gin.Context) {
 	latest_rev, changed_branch_items, err := fetchChangedBranchItemsSinceRev(company_id,
 		posted_data.UserBranchItemRev)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG:err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG: err.Error()})
 		return
 	}
 
@@ -448,6 +447,7 @@ func fetchTransactionsSince(company_id, trans_rev int64, newly_created_ids map[i
 				"item_id":      trans_item.ItemId,
 				"other_branch": trans_item.OtherBranchId,
 				"quantity":     trans_item.Quantity,
+				"trans_note":   trans_item.TransactionNote,
 			}
 		}
 
