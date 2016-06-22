@@ -124,10 +124,12 @@ func UserCompanyListHandler(c *gin.Context) {
 		return
 	}
 
-	companies := make([]interface{}, 2)
-
-	i := 0
-	for ; i < len(company_permissions); i++ {
+	/**
+	 * See link why we don't do {@code var companies []interface{})
+	 * https://danott.co/posts/json-marshalling-empty-slices-to-empty-arrays-in-go.html
+	 */
+	companies := make([]interface{}, 0)
+	for i := 0; i < len(company_permissions); i++ {
 		company := make(map[string]interface{})
 
 		company[JSON_KEY_COMPANY_ID] = company_permissions[i].
@@ -141,6 +143,6 @@ func UserCompanyListHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, map[string]interface{}{
-		"companies": companies[:i],
+		"companies": companies,
 	})
 }
