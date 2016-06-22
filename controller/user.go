@@ -124,10 +124,10 @@ func UserCompanyListHandler(c *gin.Context) {
 		return
 	}
 
-	var companies []interface{}
+	companies := make([]interface{}, 2)
 
 	for i := 0; i < len(company_permissions); i++ {
-		company := make(map[string]interface{}, 10)
+		company := make(map[string]interface{})
 
 		company[JSON_KEY_COMPANY_ID] = company_permissions[i].
 			CompanyInfo.CompanyId
