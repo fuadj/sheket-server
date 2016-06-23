@@ -64,7 +64,7 @@ func (s *shStore) CreateCategoryInTx(tnx *sql.Tx, category *ShCategory) (*ShCate
 func (s *shStore) UpdateCategoryInTx(tnx *sql.Tx, category *ShCategory) (*ShCategory, error) {
 	_, err := tnx.Exec(
 		fmt.Sprintf("update %s set "+
-			"name = $1, parent_id = $2, "+
+			"name = $1, parent_id = $2 "+
 			"where category_id = $3", TABLE_CATEGORY),
 		category.Name, category.ParentId,
 		category.CategoryId)

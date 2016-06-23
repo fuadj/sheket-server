@@ -142,7 +142,7 @@ func (s *shStore) UpdateItemInTx(tnx *sql.Tx, item *ShItem) (*ShItem, error) {
 			_db_item_model_year+" = $8, "+
 			_db_item_part_number+" = $9, "+
 			_db_item_bar_code+" = $10, "+
-			_db_item_has_bar_code+" = $11, "+
+			_db_item_has_bar_code+" = $11 "+
 			" where "+_db_item_id+" = $12",
 		item.Name, item.ItemCode,
 		item.UnitOfMeasurement, item.HasDerivedUnit, item.DerivedName, item.DerivedFactor, item.ReorderLevel,

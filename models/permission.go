@@ -69,6 +69,7 @@ func (u *UserPermission) Encode() interface{} {
 }
 
 func DecodePermission(s string) (*UserPermission, error) {
+	// TODO: yet to be implemented
 	return nil, nil
 }
 
