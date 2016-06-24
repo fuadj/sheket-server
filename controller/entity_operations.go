@@ -143,12 +143,8 @@ func applyCategoryOperations(tnx *sql.Tx, posted_data *EntitySyncData, info *Ide
 			return nil, fmt.Errorf("error retriving category:%d '%s'", category_id, err.Error())
 		}
 
-		if category.SetFields[models.CATEGORY_JSON_NAME] {
-			prev_category.Name = category.Name
-		}
-		if category.SetFields[models.CATEGORY_JSON_PARENT_ID] {
-			prev_category.ParentId = category.ParentId
-		}
+		prev_category.Name = category.Name
+		prev_category.ParentId = category.ParentId
 
 		if _, err = Store.UpdateCategoryInTx(tnx, prev_category); err != nil {
 			return nil, fmt.Errorf("error updating category:%d '%s'", category_id, err.Error())
@@ -234,24 +230,20 @@ func applyItemOperations(tnx *sql.Tx, posted_data *EntitySyncData, info *Identit
 			return nil, fmt.Errorf("error retriving item:%d '%s'", item_id, err.Error())
 		}
 
-		if item.SetFields[models.ITEM_JSON_MODEL_YEAR] {
-			previous_item.ModelYear = item.ModelYear
-		}
-		if item.SetFields[models.ITEM_JSON_PART_NUMBER] {
-			previous_item.PartNumber = item.PartNumber
-		}
-		if item.SetFields[models.ITEM_JSON_BAR_CODE] {
-			previous_item.BarCode = item.BarCode
-		}
-		if item.SetFields[models.ITEM_JSON_CATEGORY_ID] {
-			previous_item.CategoryId = item.CategoryId
-		}
-		if item.SetFields[models.ITEM_JSON_ITEM_CODE] {
-			previous_item.ItemCode = item.ItemCode
-		}
-		if item.SetFields[models.ITEM_JSON_HAS_BAR_CODE] {
-			previous_item.HasBarCode = item.HasBarCode
-		}
+		previous_item.CategoryId = item.CategoryId
+		previous_item.Name = item.Name
+		previous_item.ItemCode = item.ItemCode
+
+		previous_item.UnitOfMeasurement = item.UnitOfMeasurement
+		previous_item.HasDerivedUnit = item.HasDerivedUnit
+		previous_item.DerivedName = item.DerivedName
+		previous_item.DerivedFactor = item.DerivedFactor
+		previous_item.ReorderLevel = item.ReorderLevel
+
+		previous_item.ModelYear = item.ModelYear
+		previous_item.PartNumber = item.PartNumber
+		previous_item.BarCode = item.BarCode
+		previous_item.HasBarCode = item.HasBarCode
 
 		if _, err = Store.UpdateItemInTx(tnx, previous_item); err != nil {
 			return nil, fmt.Errorf("error updating item:%d '%v'", item_id, err.Error())
@@ -326,12 +318,8 @@ func applyBranchOperations(tnx *sql.Tx, posted_data *EntitySyncData, info *Ident
 			return nil, fmt.Errorf("error retriving branch:%d '%s'", branch_id, err.Error())
 		}
 
-		if branch.SetFields[models.BRANCH_JSON_NAME] {
-			previous_branch.Name = branch.Name
-		}
-		if branch.SetFields[models.BRANCH_JSON_LOCATION] {
-			previous_branch.Location = branch.Location
-		}
+		previous_branch.Name = branch.Name
+		previous_branch.Location = branch.Location
 
 		if _, err = Store.UpdateBranchInTx(tnx, previous_branch); err != nil {
 			return nil, fmt.Errorf("error updating branch:%d '%v'", branch_id, err.Error())
