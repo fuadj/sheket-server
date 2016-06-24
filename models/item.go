@@ -132,19 +132,20 @@ func (s *shStore) UpdateItemInTx(tnx *sql.Tx, item *ShItem) (*ShItem, error) {
 		"update "+TABLE_INVENTORY_ITEM+" set "+
 			_db_item_name+" = $1, "+
 			_db_item_code+" = $2, "+
+			_db_item_category_id + " = $3, " +
 
-			_db_item_units+" = $3, "+
-			_db_item_has_derived_unit+" = $4, "+
-			_db_item_derived_name+" = $5, "+
-			_db_item_derived_factor+" = $6, "+
-			_db_item_reorder_level+" = $7, "+
+			_db_item_units+" = $4, "+
+			_db_item_has_derived_unit+" = $5, "+
+			_db_item_derived_name+" = $6, "+
+			_db_item_derived_factor+" = $7, "+
+			_db_item_reorder_level+" = $8, "+
 
-			_db_item_model_year+" = $8, "+
-			_db_item_part_number+" = $9, "+
-			_db_item_bar_code+" = $10, "+
-			_db_item_has_bar_code+" = $11 "+
-			" where "+_db_item_id+" = $12",
-		item.Name, item.ItemCode,
+			_db_item_model_year+" = $9, "+
+			_db_item_part_number+" = $10, "+
+			_db_item_bar_code+" = $11, "+
+			_db_item_has_bar_code+" = $12 "+
+			" where "+_db_item_id+" = $13",
+		item.Name, item.ItemCode, item.CategoryId,
 		item.UnitOfMeasurement, item.HasDerivedUnit, item.DerivedName, item.DerivedFactor, item.ReorderLevel,
 		item.ModelYear, item.PartNumber, item.BarCode, item.HasBarCode,
 		item.ItemId)
