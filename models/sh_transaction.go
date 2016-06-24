@@ -43,8 +43,7 @@ const (
 	TRANS_TYPE_ADD_TRANSFER_FROM_OTHER int64 = 3 // Increase stock from transfer from another branch
 
 	TRANS_TYPE_SUB_CURRENT_BRANCH_SALE int64 = 11 // Decrease stock by selling current branch inventory
-	TRANS_TYPE_SUB_DIRECT_SALE         int64 = 12 // Direct sale of purchased item without affecting branch inventory
-	TRANS_TYPE_SUB_TRANSFER_TO_OTHER   int64 = 13 // Decrease stock by sending inventory to other branch
+	TRANS_TYPE_SUB_TRANSFER_TO_OTHER   int64 = 12 // Decrease stock by sending inventory to other branch
 )
 
 func (s *shStore) CreateShTransactionInTx(tnx *sql.Tx, trans *ShTransaction) (*ShTransaction, error) {

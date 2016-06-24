@@ -233,13 +233,6 @@ func addTransactionsToDataStore(tnx *sql.Tx, new_transactions []*models.ShTransa
 			case models.TRANS_TYPE_SUB_CURRENT_BRANCH_SALE:
 				branch_item.Quantity -= trans_item.Quantity
 
-			case models.TRANS_TYPE_SUB_DIRECT_SALE:
-			// this doesn't affect inventory levels as the
-			// items are being sold directly after purchase without
-			// entering a store's inventory list. This is only
-			// 'visible' on transaction history list to see who sold
-			// how many
-
 			// these 2 affect another branch
 			// so, grab that branch and update it also
 			case models.TRANS_TYPE_ADD_TRANSFER_FROM_OTHER,
