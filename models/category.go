@@ -16,7 +16,6 @@ type ShCategory struct {
 const (
 	CATEGORY_JSON_CATEGORY_ID = "category_id"
 	CATEGORY_JSON_UUID        = "client_uuid"
-	CATEGORY_JSON_COMPANY_ID  = "company_id"
 	CATEGORY_JSON_PARENT_ID   = "parent_id"
 	CATEGORY_JSON_NAME        = "name"
 )
@@ -124,6 +123,9 @@ func _queryCategoryInTx(tnx *sql.Tx, err_msg string, where_stmt string, args ...
 			&c.ClientUUID,
 		)
 		if err != nil {
+			if err == sql.ErrNoRows {
+				return nil, ErrNoData
+			}
 			return nil, fmt.Errorf("%s %s", err_msg, err.Error())
 		}
 

@@ -66,6 +66,8 @@ func parseTransactionPost(r io.Reader, info *IdentityInfo) (*TransSyncData, erro
 		trans.TransactionId = toInt64(fields[models.TRANS_JSON_TRANS_ID])
 		trans.BranchId = toInt64(fields[models.TRANS_JSON_BRANCH_ID])
 		trans.Date = toInt64(fields[models.TRANS_JSON_DATE])
+		trans.TransNote, _ = toStrErr(fields[models.TRANS_JSON_TRANS_NOTE])
+
 		if trans.ClientUUID, ok = fields[models.TRANS_JSON_UUID].(string); !ok {
 			return nil, fmt.Errorf("transaction %d missing uuid", i)
 		}
@@ -105,7 +107,7 @@ func parseTransactionPost(r io.Reader, info *IdentityInfo) (*TransSyncData, erro
 			if err != nil {
 				return nil, err
 			}
-			item.TransactionNote, err = toStrErr(fields[4])
+			item.ItemNote, err = toStrErr(fields[4])
 			if err != nil {
 				return nil, err
 			}
@@ -200,12 +202,12 @@ func addTransactionsToDataStore(tnx *sql.Tx, new_transactions []*models.ShTransa
 		 * them the id.
 		 */
 		prev_trans, t_err := Store.GetShTransactionByUUIDInTx(tnx, trans.ClientUUID)
-		if t_err != nil {
-			return nil, t_err
-		} else if prev_trans != nil {
+		if t_err == nil {
 			result.OldId2New[user_trans_id] = prev_trans.TransactionId
 			result.NewlyCreatedIds[prev_trans.TransactionId] = true
 			continue
+		} else if t_err != models.ErrNoData {
+			return nil, t_err
 		}
 
 		created, t_err := Store.CreateShTransactionInTx(tnx, trans)
@@ -440,17 +442,18 @@ func fetchTransactionsSince(company_id, trans_rev int64, newly_created_ids map[i
 				"item_id":      trans_item.ItemId,
 				"other_branch": trans_item.OtherBranchId,
 				"quantity":     trans_item.Quantity,
-				"trans_note":   trans_item.TransactionNote,
+				"item_note":    trans_item.ItemNote,
 			}
 		}
 
 		trans_history[i] = map[string]interface{}{
-			models.TRANS_JSON_TRANS_ID:  trans.TransactionId,
-			models.TRANS_JSON_UUID:      trans.ClientUUID,
-			models.TRANS_JSON_USER_ID:   trans.UserId,
-			models.TRANS_JSON_BRANCH_ID: trans.BranchId,
-			models.TRANS_JSON_DATE:      trans.Date,
-			models.TRANS_JSON_ITEMS:     item_history,
+			models.TRANS_JSON_TRANS_ID:   trans.TransactionId,
+			models.TRANS_JSON_UUID:       trans.ClientUUID,
+			models.TRANS_JSON_USER_ID:    trans.UserId,
+			models.TRANS_JSON_BRANCH_ID:  trans.BranchId,
+			models.TRANS_JSON_DATE:       trans.Date,
+			models.TRANS_JSON_TRANS_NOTE: trans.TransNote,
+			models.TRANS_JSON_ITEMS:      item_history,
 		}
 		i++
 	}
@@ -479,6 +482,9 @@ func fetchChangedBranchItemsSinceRev(company_id, branch_item_rev int64) (latest_
 
 		branch_item, err := Store.GetBranchItem(branch_id, item_id)
 		if err != nil {
+			if err != models.ErrNoData {
+				return max_rev, nil, err
+			}
 			continue
 		}
 

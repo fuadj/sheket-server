@@ -10,34 +10,36 @@ type ShTransaction struct {
 	TransactionId int64
 	ClientUUID    string
 
-	UserId     int64
-	BranchId   int64
-	Date       int64
+	UserId    int64
+	BranchId  int64
+	Date      int64
+	TransNote string
+
 	TransItems []*ShTransactionItem
 }
 
 const (
-	TRANS_JSON_TRANS_ID  = "trans_id"
-	TRANS_JSON_UUID      = "client_uuid"
-	TRANS_JSON_USER_ID   = "user_id"
-	TRANS_JSON_BRANCH_ID = "branch_id"
-	TRANS_JSON_DATE      = "date"
-	TRANS_JSON_ITEMS     = "items"
+	TRANS_JSON_TRANS_ID   = "trans_id"
+	TRANS_JSON_UUID       = "client_uuid"
+	TRANS_JSON_USER_ID    = "user_id"
+	TRANS_JSON_BRANCH_ID  = "branch_id"
+	TRANS_JSON_DATE       = "date"
+	TRANS_JSON_TRANS_NOTE = "trans_note"
+	TRANS_JSON_ITEMS      = "items"
 )
 
 type ShTransactionItem struct {
-	CompanyId       int64
-	TransactionId   int64
-	TransType       int64
-	ItemId          int64
-	OtherBranchId   int64
-	Quantity        float64
-	TransactionNote string
+	CompanyId     int64
+	TransactionId int64
+	TransType     int64
+	ItemId        int64
+	OtherBranchId int64
+	Quantity      float64
+	ItemNote      string
 }
 
 const (
 	// Transaction Type constants
-
 	TRANS_TYPE_ADD_PURCHASED           int64 = 1 // Increase stock count from purchased merchandise
 	TRANS_TYPE_ADD_RETURN_ITEM         int64 = 2 // When a customer returns an item
 	TRANS_TYPE_ADD_TRANSFER_FROM_OTHER int64 = 3 // Increase stock from transfer from another branch
@@ -49,10 +51,11 @@ const (
 func (s *shStore) CreateShTransactionInTx(tnx *sql.Tx, trans *ShTransaction) (*ShTransaction, error) {
 	err := tnx.QueryRow(
 		fmt.Sprintf("insert into %s "+
-			"(company_id, user_id, branch_id, t_date, client_uuid) values "+
-			"($1, $2, $3, $4, $5) RETURNING transaction_id",
+			"(company_id, user_id, branch_id, t_date, trans_note, client_uuid) values "+
+			"($1, $2, $3, $4, $5, $6) RETURNING transaction_id",
 			TABLE_TRANSACTION),
-		trans.CompanyId, trans.UserId, trans.BranchId, trans.Date, trans.ClientUUID).
+		trans.CompanyId, trans.UserId, trans.BranchId,
+		trans.Date, trans.TransNote, trans.ClientUUID).
 		Scan(&trans.TransactionId)
 	if err != nil {
 		return nil, err
@@ -71,9 +74,9 @@ func (s *shStore) CreateShTransactionInTx(tnx *sql.Tx, trans *ShTransaction) (*S
 
 func (s *shStore) AddShTransactionItemInTx(tnx *sql.Tx, trans *ShTransaction, elem *ShTransactionItem) (*ShTransactionItem, error) {
 	_, err := tnx.Exec(fmt.Sprintf("insert into %s "+
-		"(company_id, transaction_id, trans_type, item_id, other_branch_id, quantity, trans_note) values "+
+		"(company_id, transaction_id, trans_type, item_id, other_branch_id, quantity, item_note) values "+
 		"($1, $2, $3, $4, $5, $6, $7)", TABLE_TRANSACTION_ITEM),
-		trans.CompanyId, trans.TransactionId, elem.TransType, elem.ItemId, elem.OtherBranchId, elem.Quantity, elem.TransactionNote)
+		trans.CompanyId, trans.TransactionId, elem.TransType, elem.ItemId, elem.OtherBranchId, elem.Quantity, elem.ItemNote)
 	if err != nil {
 		return nil, err
 	}
@@ -88,9 +91,6 @@ func (s *shStore) GetShTransactionById(company_id, trans_id int64, fetch_items b
 	if err != nil {
 		return nil, err
 	}
-	if len(transaction) == 0 {
-		return nil, fmt.Errorf("error fetching transaction:%d", trans_id)
-	}
 	return transaction[0], nil
 }
 
@@ -99,9 +99,6 @@ func (s *shStore) GetShTransactionByUUIDInTx(tnx *sql.Tx, uid string) (*ShTransa
 	transaction, err := _queryShTransactionsInTx(tnx, msg, "where client_uuid = $1", uid)
 	if err != nil {
 		return nil, err
-	}
-	if len(transaction) == 0 {
-		return nil, nil
 	}
 	return transaction[0], nil
 }
@@ -120,7 +117,7 @@ func _queryShTransactions(s *shStore, fetch_items bool, err_msg string, where_st
 	var result []*ShTransaction
 
 	query := fmt.Sprintf("select transaction_id, company_id, "+
-		"branch_id, user_id, t_date, client_uuid from %s", TABLE_TRANSACTION)
+		"branch_id, user_id, t_date, trans_note, client_uuid from %s", TABLE_TRANSACTION)
 	sort_by := " ORDER BY transaction_id asc"
 
 	var rows *sql.Rows
@@ -144,9 +141,13 @@ func _queryShTransactions(s *shStore, fetch_items bool, err_msg string, where_st
 			&t.BranchId,
 			&t.UserId,
 			&t.Date,
+			&t.TransNote,
 			&t.ClientUUID,
 		)
 		if err != nil {
+			if err == sql.ErrNoRows {
+				return nil, ErrNoData
+			}
 			return nil, fmt.Errorf("%s %v", err_msg, err.Error())
 		}
 
@@ -154,6 +155,9 @@ func _queryShTransactions(s *shStore, fetch_items bool, err_msg string, where_st
 		if fetch_items {
 			items, err = _queryShTransactionItems(s, err_msg, "where transaction_id = $1", t.TransactionId)
 			if err != nil {
+				if err == sql.ErrNoRows {
+					return nil, ErrNoData
+				}
 				return nil, err
 			}
 		}
@@ -167,7 +171,7 @@ func _queryShTransactionsInTx(tnx *sql.Tx, err_msg string, where_stmt string, ar
 	var result []*ShTransaction
 
 	query := fmt.Sprintf("select transaction_id, company_id, "+
-		"branch_id, user_id, t_date, client_uuid from %s", TABLE_TRANSACTION)
+		"branch_id, user_id, t_date, trans_note, client_uuid from %s", TABLE_TRANSACTION)
 	sort_by := " ORDER BY transaction_id asc"
 
 	var rows *sql.Rows
@@ -191,9 +195,13 @@ func _queryShTransactionsInTx(tnx *sql.Tx, err_msg string, where_stmt string, ar
 			&t.BranchId,
 			&t.UserId,
 			&t.Date,
+			&t.TransNote,
 			&t.ClientUUID,
 		)
 		if err != nil {
+			if err == sql.ErrNoRows {
+				return nil, ErrNoData
+			}
 			return nil, fmt.Errorf("%s %v", err_msg, err.Error())
 		}
 		result = append(result, t)
@@ -205,7 +213,7 @@ func _queryShTransactionItems(s *shStore, err_msg string, where_stmt string, arg
 	var result []*ShTransactionItem
 
 	query := fmt.Sprintf("select company_id, transaction_id, trans_type, item_id, "+
-		"other_branch_id, quantity, trans_note from %s", TABLE_TRANSACTION_ITEM)
+		"other_branch_id, quantity, item_note from %s", TABLE_TRANSACTION_ITEM)
 
 	var rows *sql.Rows
 	var err error
@@ -229,9 +237,12 @@ func _queryShTransactionItems(s *shStore, err_msg string, where_stmt string, arg
 			&i.ItemId,
 			&i.OtherBranchId,
 			&i.Quantity,
-			&i.TransactionNote,
+			&i.ItemNote,
 		)
 		if err != nil {
+			if err == sql.ErrNoRows {
+				return nil, ErrNoData
+			}
 			return nil, fmt.Errorf("%s %v", err_msg, err.Error())
 		}
 

@@ -177,10 +177,11 @@ func ConnectDbStore() (*dbStore, error) {
 		// transaction-table
 		"transaction_id			SERIAL PRIMARY KEY, "+
 		"client_uuid			uuid, "+
-		"company_id				integer references %s(company_id), "+
-		"branch_id				integer references %s(branch_id), "+
-		"user_id				integer references %s(user_id), "+
-		"t_date 					integer);",
+		"company_id				INTEGER REFERENCES %s(company_id), "+
+		"branch_id				INTEGER REFERENCES %s(branch_id), "+
+		"user_id				INTEGER REFERENCES %s(user_id), "+
+		"t_date 				INTEGER, " +
+		"trans_note				TEXT);",
 		TABLE_TRANSACTION, TABLE_COMPANY, TABLE_BRANCH, TABLE_USER))
 
 	/**
@@ -212,7 +213,7 @@ func ConnectDbStore() (*dbStore, error) {
 		"item_id			INTEGER REFERENCES %s(item_id), "+
 		"other_branch_id 	INTEGER, "+
 		"quantity 			REAL NOT NULL, " +
-		"trans_note 		TEXT);",
+		"item_note	 		TEXT);",
 		TABLE_TRANSACTION_ITEM, TABLE_COMPANY, TABLE_TRANSACTION, TABLE_INVENTORY_ITEM))
 
 	exec(fmt.Sprintf("create table if not exists %s ( "+

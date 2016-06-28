@@ -158,7 +158,7 @@ func (b *shStore) GetUserCompanyPermissions(u *User) ([]*Pair_Company_UserPermis
 
 	for rows.Next() {
 		pc := new(Pair_Company_UserPermission)
-		rows.Scan(
+		err = rows.Scan(
 			&pc.CompanyInfo.CompanyId,
 			&pc.CompanyInfo.CompanyName,
 			&pc.CompanyInfo.Contact,
@@ -167,6 +167,12 @@ func (b *shStore) GetUserCompanyPermissions(u *User) ([]*Pair_Company_UserPermis
 			&pc.Permission.UserId,
 			&pc.Permission.EncodedPermission,
 		)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				return nil, ErrNoData
+			}
+			return nil, err
+		}
 		result = append(result, pc)
 	}
 	return result, nil
@@ -190,13 +196,19 @@ func (b *shStore) GetCompanyMembersPermissions(c *Company) ([]*Pair_User_UserPer
 
 	for rows.Next() {
 		member_permission := new(Pair_User_UserPermission)
-		rows.Scan(
+		err = rows.Scan(
 			&member_permission.Permission.CompanyId,
 			&member_permission.Permission.UserId,
 			&member_permission.Permission.EncodedPermission,
 			&member_permission.Member.UserId,
 			&member_permission.Member.Username,
 		)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				return nil, ErrNoData
+			}
+			return nil, err
+		}
 		result = append(result, member_permission)
 	}
 	return result, nil

@@ -2,11 +2,10 @@ package controller
 
 import (
 	"fmt"
+	"github.com/gin-gonic/gin"
 	"net/http"
 	_ "net/http/httputil"
 	"sheket/server/models"
-	"github.com/gin-gonic/gin"
-	_ "net/http/httputil"
 )
 
 const (
@@ -64,34 +63,34 @@ func EntitySyncHandler(c *gin.Context) {
 	defer trace("EntitySyncHandler")()
 
 	/*
-	d, err := httputil.DumpRequest(c.Request, true)
-	if err == nil {
-		fmt.Printf("Request %s\n", string(d))
-	}
+		d, err := httputil.DumpRequest(c.Request, true)
+		if err == nil {
+			fmt.Printf("Request %s\n", string(d))
+		}
 	*/
 
 	info, err := GetIdentityInfo(c.Request)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{ERROR_MSG:err.Error()})
+		c.JSON(http.StatusUnauthorized, gin.H{ERROR_MSG: err.Error()})
 		return
 	}
 
 	posted_data, err := parseEntityPost(c.Request.Body, parsers, info)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{ERROR_MSG:err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{ERROR_MSG: err.Error()})
 		return
 	}
 
 	tnx, err := Store.Begin()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG:err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG: err.Error()})
 		return
 	}
 
 	result, err := applyEntityOperations(tnx, posted_data, info)
 	if err != nil {
 		tnx.Rollback()
-		c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG:err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG: err.Error()})
 		return
 	}
 	tnx.Commit()
@@ -100,12 +99,12 @@ func EntitySyncHandler(c *gin.Context) {
 	response[JSON_KEY_COMPANY_ID] = info.CompanyId
 
 	if err = syncNewEntities(response, result); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG:err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG: err.Error()})
 		return
 	}
 
 	if err = syncModifiedEntities(response, posted_data, result, info); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG:err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG: err.Error()})
 		return
 	}
 
@@ -212,7 +211,7 @@ func fetchChangedCategoriesSinceRev(company_id, last_category_rev int64, newly_c
 			EntityType:     models.REV_ENTITY_CATEGORY,
 			RevisionNumber: last_category_rev,
 		})
-	if err != nil {
+	if err != nil && err != models.ErrNoData {
 		return max_rev, nil, err
 	}
 
@@ -225,9 +224,13 @@ func fetchChangedCategoriesSinceRev(company_id, last_category_rev int64, newly_c
 			continue
 		}
 		category, err := Store.GetCategoryById(category_id)
+
+		// it can be ErrNoData if the category has been deleted since
 		if err != nil {
-			// TODO: differentiate deleted from error
-			fmt.Printf("GetCategoryById error '%v'", err.Error())
+			if err != models.ErrNoData {
+				fmt.Printf("GetCategoryById error '%v'", err.Error())
+				return max_rev, nil, err
+			}
 			continue
 		}
 
@@ -256,7 +259,7 @@ func fetchChangedItemsSinceRev(company_id, item_rev int64, newly_created_item_id
 			EntityType:     models.REV_ENTITY_ITEM,
 			RevisionNumber: item_rev,
 		})
-	if err != nil {
+	if err != nil && err != models.ErrNoData {
 		return max_rev, nil, err
 	}
 
@@ -269,8 +272,12 @@ func fetchChangedItemsSinceRev(company_id, item_rev int64, newly_created_item_id
 		}
 
 		item, err := Store.GetItemById(item_id)
+		// it can be ErrNoData if the item has been deleted since
 		if err != nil {
-			fmt.Printf("GetItemById error '%v'", err.Error())
+			if err != models.ErrNoData {
+				fmt.Printf("GetItemById error '%v'", err.Error())
+				return max_rev, nil, err
+			}
 			continue
 		}
 
@@ -310,7 +317,7 @@ func fetchChangedBranchesSinceRev(company_id, branch_rev int64, newly_created_br
 			EntityType:     models.REV_ENTITY_BRANCH,
 			RevisionNumber: branch_rev,
 		})
-	if err != nil {
+	if err != nil && err != models.ErrNoData {
 		return max_rev, nil, err
 	}
 	result := make([]map[string]interface{}, len(new_branch_revs))
@@ -323,11 +330,13 @@ func fetchChangedBranchesSinceRev(company_id, branch_rev int64, newly_created_br
 		}
 
 		branch, err := Store.GetBranchById(branch_id)
+
+		// it can be ErrNoData if the branch has been deleted since
 		if err != nil {
-			// if a branch has been deleted in future revisions, we won't see it
-			// so skip any error valued branches, and only return to the user those
-			// that are correctly fetched
-			fmt.Printf("GetBranchById Error '%v'", err.Error())
+			if err != models.ErrNoData {
+				fmt.Printf("GetBranchById Error '%v'", err.Error())
+				return max_rev, nil, err
+			}
 			continue
 		}
 
@@ -351,7 +360,7 @@ func fetchChangedMemberSinceRev(company_id, member_rev int64) (latest_rev int64,
 			EntityType:     models.REV_ENTITY_MEMBERS,
 			RevisionNumber: member_rev,
 		})
-	if err != nil {
+	if err != nil && err != models.ErrNoData {
 		return max_rev, nil, err
 	}
 
@@ -362,13 +371,19 @@ func fetchChangedMemberSinceRev(company_id, member_rev int64) (latest_rev int64,
 
 		user, err := Store.FindUserById(member_id)
 		if err != nil {
-			fmt.Printf("fetch changes FindUserById error '%v'", err)
+			if err != models.ErrNoData {
+				fmt.Printf("fetchChangedMemberSinceRev FindUserById error '%v'", err)
+				return max_rev, nil, err
+			}
 			continue
 		}
 
 		permission, err := Store.GetUserPermission(user, company_id)
 		if err != nil {
-			fmt.Printf("fetch changes GetUserPermission error '%v'", err)
+			if err != models.ErrNoData {
+				fmt.Printf("fetchChangedMemberSinceRev GetUserPermission error '%v'", err)
+				return max_rev, nil, err
+			}
 			continue
 		}
 

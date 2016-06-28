@@ -259,6 +259,9 @@ func _queryBranch(s *shStore, err_msg string, where_stmt string, args ...interfa
 			&b.ClientUUID,
 		)
 		if err != nil {
+			if err == sql.ErrNoRows {
+				return nil, ErrNoData
+			}
 			return nil, fmt.Errorf("%s %v", err_msg, err.Error())
 		}
 
@@ -297,6 +300,9 @@ func _queryBranchInTx(tnx *sql.Tx, err_msg string, where_stmt string, args ...in
 			&b.ClientUUID,
 		)
 		if err != nil {
+			if err == sql.ErrNoRows {
+				return nil, ErrNoData
+			}
 			return nil, fmt.Errorf("%s %v", err_msg, err.Error())
 		}
 
@@ -335,6 +341,9 @@ func _queryBranchItem(s *shStore, err_msg string, where_stmt string, args ...int
 			&b.ItemLocation,
 		)
 		if err != nil {
+			if err == sql.ErrNoRows {
+				return nil, ErrNoData
+			}
 			return nil, fmt.Errorf("%s %v", err_msg, err.Error())
 		}
 
@@ -373,6 +382,9 @@ func _queryBranchItemInTx(tnx *sql.Tx, err_msg string, where_stmt string, args .
 			&b.ItemLocation,
 		)
 		if err != nil {
+			if err == sql.ErrNoRows {
+				return nil, ErrNoData
+			}
 			return nil, fmt.Errorf("%s %v", err_msg, err.Error())
 		}
 
