@@ -108,7 +108,12 @@ func (s *shStore) GetShTransactionSinceTransId(company_id, prev_id int64) (trans
 	transaction, err := _queryShTransactions(s, true, msg,
 		"where company_id = $1 AND transaction_id > $2", company_id, prev_id)
 	if err != nil {
-		return nil, err
+		if err != ErrNoData {
+			return nil, err
+		} else {
+			// we have an empty array, that is totally valid
+			return trans, nil
+		}
 	}
 	return transaction, nil
 }
@@ -164,6 +169,11 @@ func _queryShTransactions(s *shStore, fetch_items bool, err_msg string, where_st
 		t.TransItems = items
 		result = append(result, t)
 	}
+
+	if len(result) == 0 {
+		return nil, ErrNoData
+	}
+
 	return result, nil
 }
 
@@ -206,6 +216,10 @@ func _queryShTransactionsInTx(tnx *sql.Tx, err_msg string, where_stmt string, ar
 		}
 		result = append(result, t)
 	}
+
+	if len(result) == 0 {
+		return nil, ErrNoData
+	}
 	return result, nil
 }
 
@@ -247,6 +261,10 @@ func _queryShTransactionItems(s *shStore, err_msg string, where_stmt string, arg
 		}
 
 		result = append(result, i)
+	}
+
+	if len(result) == 0 {
+		return nil, ErrNoData
 	}
 	return result, nil
 }

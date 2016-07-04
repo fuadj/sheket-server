@@ -2,7 +2,6 @@ package models
 
 import (
 	"database/sql"
-	"errors"
 	"fmt"
 )
 
@@ -52,9 +51,6 @@ func (b *shStore) GetCompanyById(id int64) (*Company, error) {
 	if err != nil {
 		return nil, err
 	}
-	if len(companies) == 0 {
-		return nil, errors.New(fmt.Sprintf("No company with id:%d", id))
-	}
 	return companies[0], nil
 }
 
@@ -78,16 +74,20 @@ func _queryCompany(s *shStore, err_msg string, where_stmt string, args ...interf
 	defer rows.Close()
 	for rows.Next() {
 		c := new(Company)
-		err := rows.Scan(
+		if err := rows.Scan(
 			&c.CompanyId,
 			&c.CompanyName,
 			&c.Contact,
-		)
-		if err != nil {
+		); err == sql.ErrNoRows {
+			// no-op
+		} else if err != nil {
 			return nil, fmt.Errorf("%s %v", err_msg, err.Error())
+		} else {
+			result = append(result, c)
 		}
-
-		result = append(result, c)
+	}
+	if len(result) == 0 {
+		return nil, ErrNoData
 	}
 	return result, nil
 }

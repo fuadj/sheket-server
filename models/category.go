@@ -73,7 +73,7 @@ func (s *shStore) UpdateCategoryInTx(tnx *sql.Tx, category *ShCategory) (*ShCate
 func (s *shStore) GetCategoryByUUIDInTx(tnx *sql.Tx, uid string) (*ShCategory, error) {
 	msg := fmt.Sprintf("no category with that uuid:%s", uid)
 	category, err := _queryCategoryInTx(tnx, msg, "where client_uuid = $1", uid)
-	if err != nil || len(category) == 0 {
+	if err != nil {
 		return nil, err
 	}
 	return category[0], nil
@@ -89,7 +89,7 @@ func (s *shStore) GetCategoryById(id int64) (*ShCategory, error) {
 func (s *shStore) GetCategoryByIdInTx(tnx *sql.Tx, id int64) (*ShCategory, error) {
 	msg := fmt.Sprintf("no category with that id:%d", id)
 	category, err := _queryCategoryInTx(tnx, msg, "where category_id = $1", id)
-	if err != nil || len(category) == 0 {
+	if err != nil {
 		return nil, err
 	}
 	return category[0], nil
@@ -130,6 +130,10 @@ func _queryCategoryInTx(tnx *sql.Tx, err_msg string, where_stmt string, args ...
 		}
 
 		result = append(result, c)
+	}
+
+	if len(result) == 0 {
+		return nil, ErrNoData
 	}
 	return result, nil
 }

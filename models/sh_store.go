@@ -30,7 +30,6 @@ type ItemStore interface {
 	GetItemById(int64) (*ShItem, error)
 	GetItemByUUIDInTx(*sql.Tx, string) (*ShItem, error)
 	GetItemByIdInTx(*sql.Tx, int64) (*ShItem, error)
-	GetAllCompanyItems(int64) ([]*ShItem, error)
 }
 
 type BranchStore interface {
@@ -41,7 +40,6 @@ type BranchStore interface {
 	GetBranchByUUIDInTx(*sql.Tx, string) (*ShBranch, error)
 	GetBranchById(int64) (*ShBranch, error)
 	GetBranchByIdInTx(*sql.Tx, int64) (*ShBranch, error)
-	ListCompanyBranches(int64) ([]*ShBranch, error)
 }
 
 type BranchItemStore interface {
@@ -53,9 +51,6 @@ type BranchItemStore interface {
 	GetBranchItem(branch_id, item_id int64) (*ShBranchItem, error)
 	GetBranchItemInTx(tnx *sql.Tx, branch_id, item_id int64) (*ShBranchItem, error)
 	UpdateBranchItemInTx(*sql.Tx, *ShBranchItem) (*ShBranchItem, error)
-
-	GetItemsInBranch(int64) ([]*ShBranchItem, error)
-	GetItemsInAllCompanyBranches(int64) ([]*ShBranchItem, error)
 }
 
 type CompanyStore interface {

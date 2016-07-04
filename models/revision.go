@@ -100,15 +100,14 @@ func (s *shStore) GetRevisionsSince(prev_rev *ShEntityRevision) (int64, []*ShEnt
 			&rev.EntityAffectedId,
 			&rev.AdditionalInfo,
 		)
-		if err != nil {
+		if err == sql.ErrNoRows {
+			// no-op
+		} else if err != nil {
 			rows.Close()
-			if err == sql.ErrNoRows{
-				return prev_rev.RevisionNumber, nil, ErrNoData
-			}
 			return prev_rev.RevisionNumber, nil, fmt.Errorf("Revision Scan error : %s", err.Error())
+		} else {
+			result = append(result, rev)
 		}
-
-		result = append(result, rev)
 	}
 	// we don't defer the rows.Close b/c we want to release the connection
 	// so that the Exec statement can use it immediately

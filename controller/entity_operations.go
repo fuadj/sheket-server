@@ -83,14 +83,14 @@ func applyCategoryOperations(tnx *sql.Tx, posted_data *EntitySyncData, info *Ide
 			}
 			// Check if the category has already been created in another sync round
 			prev_category, err := Store.GetCategoryByUUIDInTx(tnx, category.ClientUUID)
-			if err != nil {
-				return nil, fmt.Errorf("error getting category with uuid %s", err.Error())
-			} else if prev_category != nil {
+			if err == nil {
 				result.OldId2New_Categories[id] = prev_category.CategoryId
 				result.NewlyCreatedCategoryIds[prev_category.CategoryId] = true
 				// pop-off the stack for the next round
 				i--
 				continue
+			} else if err != models.ErrNoData {
+				return nil, fmt.Errorf("error getting category with uuid %s", err.Error())
 			}
 
 			// if the parent has been added to the DataStore, update the id with the new id
@@ -180,13 +180,12 @@ func applyItemOperations(tnx *sql.Tx, posted_data *EntitySyncData, info *Identit
 			return nil, fmt.Errorf("item:%d doesn't have members defined", old_item_id)
 		}
 		prev_item, err := Store.GetItemByUUIDInTx(tnx, item.ClientUUID)
-		if err != models.ErrNoData {
-			if err != nil {
-				return nil, fmt.Errorf("error getting item with uuid %s", err.Error())
-			}
+		if err == nil {
 			result.OldId2New_Items[old_item_id] = prev_item.ItemId
 			result.NewlyCreatedItemIds[prev_item.ItemId] = true
 			continue
+		} else if err != models.ErrNoData {
+			return nil, fmt.Errorf("error getting item with uuid %s", err.Error())
 		}
 
 		if new_category_id, ok := result.OldId2New_Categories[item.CategoryId]; ok {
@@ -226,7 +225,7 @@ func applyItemOperations(tnx *sql.Tx, posted_data *EntitySyncData, info *Identit
 		}
 
 		previous_item, err := Store.GetItemByIdInTx(tnx, item_id)
-		if err != nil && err != models.ErrNoData {
+		if err != nil {
 			return nil, fmt.Errorf("error retriving item:%d '%s'", item_id, err.Error())
 		}
 
@@ -280,12 +279,12 @@ func applyBranchOperations(tnx *sql.Tx, posted_data *EntitySyncData, info *Ident
 			return nil, fmt.Errorf("branch:%d doesn't have members defined")
 		}
 		prev_branch, err := Store.GetBranchByUUIDInTx(tnx, branch.ClientUUID)
-		if err != nil {
-			return nil, err
-		} else if prev_branch != nil {
+		if err == nil {
 			result.OldId2New_Branches[old_branch_id] = prev_branch.BranchId
 			result.NewlyCreatedBranchIds[prev_branch.BranchId] = true
 			continue
+		} else if err != models.ErrNoData {
+			return nil, err
 		}
 
 		created_branch, err := Store.CreateBranchInTx(tnx, &branch.ShBranch)

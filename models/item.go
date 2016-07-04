@@ -188,18 +188,6 @@ func (s *shStore) GetItemByIdInTx(tnx *sql.Tx, id int64) (*ShItem, error) {
 	return items[0], nil
 }
 
-func (s *shStore) GetAllCompanyItems(company_id int64) ([]*ShItem, error) {
-	msg := fmt.Sprintf("no item in company:%d", company_id)
-	items, err := _queryInventoryItems(s, msg, "where company = $1", company_id)
-
-	items, err = _checkItemArrError(items, err)
-	if err != nil {
-		return nil, err
-	}
-
-	return items, nil
-}
-
 func _queryInventoryItems(s *shStore, err_msg string, where_stmt string, args ...interface{}) ([]*ShItem, error) {
 	var result []*ShItem
 
@@ -255,6 +243,10 @@ func _queryInventoryItems(s *shStore, err_msg string, where_stmt string, args ..
 		}
 
 		result = append(result, i)
+	}
+
+	if len(result) == 0 {
+		return nil, ErrNoData
 	}
 	return result, nil
 }
@@ -314,6 +306,10 @@ func _queryInventoryItemsInTx(tnx *sql.Tx, err_msg string, where_stmt string, ar
 		}
 
 		result = append(result, i)
+	}
+
+	if len(result) == 0 {
+		return nil, ErrNoData
 	}
 	return result, nil
 }

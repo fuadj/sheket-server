@@ -156,16 +156,19 @@ func searchBranchItemInCache(tnx *sql.Tx, seenItems map[Pair_BranchItem]*CachedB
 	branch_item, err := Store.GetBranchItemInTx(tnx,
 		search_item.BranchId, search_item.ItemId)
 
-	if err != nil { // the item doesn't exist in the branch-items list
+	if err == models.ErrNoData { // the item doesn't exist in the branch-items list
 		cached_branch_item = &CachedBranchItem{
 			ShBranchItem:       search_item,
 			itemExistsInBranch: false,
 			itemVisited:        false}
-	} else {
+	} else if err == nil {
 		cached_branch_item = &CachedBranchItem{
 			ShBranchItem:       branch_item,
 			itemExistsInBranch: true,
 			itemVisited:        false}
+	} else if err != nil {
+		// TODO: handle the error properly
+		// handle the case when the error is other type
 	}
 
 	cached_branch_item.itemVisited = false
@@ -389,11 +392,10 @@ func TransactionSyncHandler(c *gin.Context) {
 	if permission.PermissionType <= models.PERMISSION_TYPE_BRANCH_MANAGER {
 		max_trans_id, trans_history, err := fetchTransactionsSince(company_id,
 			posted_data.UserTransRev, newly_created_trans_ids)
-		if err != nil {
+		if err != nil && err != models.ErrNoData {
 			c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG: err.Error()})
 			return
-		}
-		if len(trans_history) > 0 {
+		} else if len(trans_history) > 0 {
 			sync_result[key_sync_transactions] = trans_history
 		}
 		sync_result[key_trans_rev] = max_trans_id

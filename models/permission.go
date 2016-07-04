@@ -133,10 +133,6 @@ func (b *shStore) GetUserPermission(u *User, company_id int64) (*UserPermission,
 	if err != nil {
 		return nil, err
 	}
-	if permission == nil {
-		return nil, fmt.Errorf("user %d, doesn't have permission in company %d",
-			u.UserId, company_id)
-	}
 	return permission, nil
 }
 
@@ -175,6 +171,10 @@ func (b *shStore) GetUserCompanyPermissions(u *User) ([]*Pair_Company_UserPermis
 		}
 		result = append(result, pc)
 	}
+
+	if len(result) == 0 {
+		return nil, ErrNoData
+	}
 	return result, nil
 }
 
@@ -210,6 +210,10 @@ func (b *shStore) GetCompanyMembersPermissions(c *Company) ([]*Pair_User_UserPer
 			return nil, err
 		}
 		result = append(result, member_permission)
+	}
+
+	if len(result) == 0 {
+		return nil, ErrNoData
 	}
 	return result, nil
 }

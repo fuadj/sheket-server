@@ -2,7 +2,6 @@ package models
 
 import (
 	"database/sql"
-	"errors"
 	"fmt"
 )
 
@@ -83,9 +82,6 @@ func (s *shStore) GetBranchById(id int64) (*ShBranch, error) {
 	if err != nil {
 		return nil, err
 	}
-	if len(branches) == 0 {
-		return nil, errors.New(fmt.Sprintf("No branch with id:%d", id))
-	}
 	return branches[0], nil
 }
 
@@ -94,9 +90,6 @@ func (s *shStore) GetBranchByIdInTx(tnx *sql.Tx, id int64) (*ShBranch, error) {
 	branches, err := _queryBranchInTx(tnx, msg, "where branch_id = $1", id)
 	if err != nil {
 		return nil, err
-	}
-	if len(branches) == 0 {
-		return nil, errors.New(fmt.Sprintf("No branch with id:%d", id))
 	}
 	return branches[0], nil
 }
@@ -107,19 +100,7 @@ func (s *shStore) GetBranchByUUIDInTx(tnx *sql.Tx, uid string) (*ShBranch, error
 	if err != nil {
 		return nil, err
 	}
-	if len(branches) == 0 {
-		return nil, nil
-	}
 	return branches[0], nil
-}
-
-func (s *shStore) ListCompanyBranches(id int64) ([]*ShBranch, error) {
-	msg := fmt.Sprintf("error fetching branches of company:%d", id)
-	branches, err := _queryBranch(s, msg, "where company_id = $1", id)
-	if err != nil {
-		return nil, err
-	}
-	return branches, nil
 }
 
 func (s *shStore) AddItemToBranch(item *ShBranchItem) (*ShBranchItem, error) {
@@ -191,8 +172,6 @@ func (s *shStore) GetBranchItem(branch_id, item_id int64) (*ShBranchItem, error)
 		branch_id, item_id)
 	if err != nil {
 		return nil, err
-	} else if len(items) == 0 {
-		return nil, fmt.Errorf("no item found, item:%d branch:%d", item_id, branch_id)
 	}
 	return items[0], nil
 }
@@ -203,28 +182,8 @@ func (s *shStore) GetBranchItemInTx(tnx *sql.Tx, branch_id, item_id int64) (*ShB
 		branch_id, item_id)
 	if err != nil {
 		return nil, err
-	} else if len(items) == 0 {
-		return nil, fmt.Errorf("no item found, item:%d branch:%d", item_id, branch_id)
 	}
 	return items[0], nil
-}
-
-func (s *shStore) GetItemsInBranch(id int64) ([]*ShBranchItem, error) {
-	msg := fmt.Sprintf("error fetching items in branch:%d", id)
-	items, err := _queryBranchItem(s, msg, "where branch_id = $1", id)
-	if err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-func (s *shStore) GetItemsInAllCompanyBranches(id int64) ([]*ShBranchItem, error) {
-	msg := fmt.Sprintf("error fetching branches of company:%d", id)
-	items, err := _queryBranchItem(s, msg, "where company_id = $1", id)
-	if err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 /**
@@ -251,21 +210,23 @@ func _queryBranch(s *shStore, err_msg string, where_stmt string, args ...interfa
 
 	for rows.Next() {
 		b := new(ShBranch)
-		err := rows.Scan(
+		if err := rows.Scan(
 			&b.CompanyId,
 			&b.BranchId,
 			&b.Name,
 			&b.Location,
 			&b.ClientUUID,
-		)
-		if err != nil {
-			if err == sql.ErrNoRows {
-				return nil, ErrNoData
-			}
+		); err == sql.ErrNoRows {
+			// no-op
+		} else if err != nil {
 			return nil, fmt.Errorf("%s %v", err_msg, err.Error())
+		} else {
+			result = append(result, b)
 		}
+	}
 
-		result = append(result, b)
+	if len(result) == 0 {
+		return nil, ErrNoData
 	}
 	return result, nil
 }
@@ -299,14 +260,17 @@ func _queryBranchInTx(tnx *sql.Tx, err_msg string, where_stmt string, args ...in
 			&b.Location,
 			&b.ClientUUID,
 		)
-		if err != nil {
-			if err == sql.ErrNoRows {
-				return nil, ErrNoData
-			}
+		if err == sql.ErrNoRows {
+			// no-op
+		} else if err != nil {
 			return nil, fmt.Errorf("%s %v", err_msg, err.Error())
+		} else {
+			result = append(result, b)
 		}
+	}
 
-		result = append(result, b)
+	if len(result) == 0 {
+		return nil, ErrNoData
 	}
 	return result, nil
 }
@@ -333,22 +297,25 @@ func _queryBranchItem(s *shStore, err_msg string, where_stmt string, args ...int
 
 	for rows.Next() {
 		b := new(ShBranchItem)
-		err := rows.Scan(
+		if err := rows.Scan(
 			&b.CompanyId,
 			&b.BranchId,
 			&b.ItemId,
 			&b.Quantity,
 			&b.ItemLocation,
-		)
-		if err != nil {
-			if err == sql.ErrNoRows {
-				return nil, ErrNoData
-			}
+		); err == sql.ErrNoRows {
+			// no-op
+		} else if err != nil {
 			return nil, fmt.Errorf("%s %v", err_msg, err.Error())
+		} else {
+			result = append(result, b)
 		}
-
-		result = append(result, b)
 	}
+
+	if len(result) == 0 {
+		return nil, ErrNoData
+	}
+
 	return result, nil
 }
 
@@ -374,21 +341,23 @@ func _queryBranchItemInTx(tnx *sql.Tx, err_msg string, where_stmt string, args .
 
 	for rows.Next() {
 		b := new(ShBranchItem)
-		err := rows.Scan(
+		if err := rows.Scan(
 			&b.CompanyId,
 			&b.BranchId,
 			&b.ItemId,
 			&b.Quantity,
 			&b.ItemLocation,
-		)
-		if err != nil {
-			if err == sql.ErrNoRows {
-				return nil, ErrNoData
-			}
+		); err == sql.ErrNoRows {
+			// no-op
+		} else if err != nil {
 			return nil, fmt.Errorf("%s %v", err_msg, err.Error())
+		} else {
+			result = append(result, b)
 		}
+	}
 
-		result = append(result, b)
+	if len(result) == 0 {
+		return nil, ErrNoData
 	}
 	return result, nil
 }
