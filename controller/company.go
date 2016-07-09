@@ -47,7 +47,7 @@ func AddCompanyMember(c *gin.Context) {
 
 	member, err := Store.FindUserById(member_id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG:""})
+		c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG:"Couldn't find member"})
 		return
 	}
 
@@ -59,7 +59,7 @@ func AddCompanyMember(c *gin.Context) {
 
 	_, err = Store.SetUserPermissionInTx(tnx, p)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG:""})
+		c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG:"setting user permission"})
 		return
 	}
 
@@ -73,7 +73,7 @@ func AddCompanyMember(c *gin.Context) {
 
 	_, err = Store.AddEntityRevisionInTx(tnx, rev)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG:""})
+		c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG:"updating member table"})
 		return
 	}
 	tnx.Commit()
