@@ -119,7 +119,7 @@ func UserCompanyListHandler(c *gin.Context) {
 	}
 
 	company_permissions, err := Store.GetUserCompanyPermissions(current_user)
-	if err != nil {
+	if err != nil && err != models.ErrNoData {
 		c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG: err.Error()})
 		return
 	}
