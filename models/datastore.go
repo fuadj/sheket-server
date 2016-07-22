@@ -174,12 +174,12 @@ func ConnectDbStore() (*dbStore, error) {
 	exec(fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s ( "+
 		// branch-item table
 		"company_id		INTEGER REFERENCES %s(company_id), "+
-		"branch_id		INTEGER NOT NULL, "+
+		"branch_id		INTEGER REFERENCES %s(branch_id), "+
 		"item_id		INTEGER references %s(" + _db_item_id + "), "+
 		"quantity		REAL NOT NULL, "+
 		"item_location		TEXT, "+
 		"unique(branch_id, item_id));",
-		TABLE_BRANCH_ITEM, TABLE_COMPANY, TABLE_INVENTORY_ITEM))
+		TABLE_BRANCH_ITEM, TABLE_COMPANY, TABLE_BRANCH, TABLE_INVENTORY_ITEM))
 
 	/**
 	 */
