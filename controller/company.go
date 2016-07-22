@@ -35,7 +35,7 @@ func AddCompanyMember(c *gin.Context) {
 
 	if member_id == invalid_id ||
 		len(encoded_permission) == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{ERROR_MSG:""})
+		c.JSON(http.StatusBadRequest, gin.H{ERROR_MSG:"error parsing member id"})
 		return
 	}
 
@@ -47,7 +47,7 @@ func AddCompanyMember(c *gin.Context) {
 
 	member, err := Store.FindUserById(member_id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG:"Couldn't find member"})
+		c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG:"Couldn't find member: " + err.Error()})
 		return
 	}
 
