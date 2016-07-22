@@ -15,6 +15,7 @@ const (
 	TABLE_BRANCH           = "s_branch"
 	TABLE_U_PERMISSION     = "s_user_permission_table"
 	TABLE_CATEGORY         = "s_category"
+	TABLE_BRANCH_CATEGORY  = "s_branch_category"
 	TABLE_INVENTORY_ITEM   = "s_inventory_item"
 	TABLE_BRANCH_ITEM      = "s_branch_item"
 	TABLE_TRANSACTION      = "s_business_transaction"
@@ -140,6 +141,15 @@ func ConnectDbStore() (*dbStore, error) {
 	if err = checkRootCategoryCreated(db); err != nil {
 		return nil, err
 	}
+
+	exec(fmt.Sprintf("create table if not exists %s ( " +
+		// branch-category table
+		"company_id		integer references %s(company_id), " +
+		"branch_id		integer references %s(branch_id), " +
+		"category_id	integer references %s(category_id), " +
+		"unique(branch_id, category_id));",
+		TABLE_BRANCH_CATEGORY,
+		TABLE_COMPANY, TABLE_BRANCH, TABLE_CATEGORY))
 
 	exec(fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s ( "+
 		_db_item_id+" serial primary key, "+
