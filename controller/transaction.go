@@ -491,10 +491,10 @@ func fetchChangedBranchItemsSinceRev(company_id, branch_item_rev int64) (latest_
 		}
 
 		result[i] = map[string]interface{}{
-			"branch_id": branch_id,
-			"item_id":   item_id,
-			"quantity":  branch_item.Quantity,
-			"loc":       branch_item.ItemLocation,
+			models.BRANCH_ITEM_JSON_BRANCH_ID:     branch_id,
+			models.BRANCH_ITEM_JSON_ITEM_ID:       item_id,
+			models.BRANCH_ITEM_JSON_QUANTITY:      branch_item.Quantity,
+			models.BRANCH_ITEM_JSON_ITEM_LOCATION: branch_item.ItemLocation,
 		}
 		i++
 	}
