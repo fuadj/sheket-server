@@ -143,3 +143,130 @@ func _queryCategoryInTx(tnx *sql.Tx, err_msg string, where_stmt string, args ...
 	}
 	return result, nil
 }
+
+func (s *shStore) AddCategoryToBranch(tnx *sql.Tx, branch_category *ShBranchCategory) (*ShBranchCategory, error) {
+	rows, err := tnx.Query(
+		fmt.Sprintf("select branch_id from %s " +
+			"where branch_id = $1 and category_id = $2", TABLE_BRANCH_CATEGORY),
+		branch_category.BranchId, branch_category.CategoryId)
+	if err != nil {
+		return nil, err
+	}
+	if rows.Next() {		// if the category exists inside the branch, we're done
+		rows.Close()
+	} else {
+		rows.Close()
+		_, err = tnx.Exec(
+			fmt.Sprintf("insert into %s " +
+				"(company_id, branch_id, category_id) values " +
+				"($1, $2, $3)", TABLE_BRANCH_CATEGORY),
+			branch_category.CompanyId, branch_category.BranchId, branch_category.CategoryId)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return branch_category, nil
+}
+
+func (s *shStore) GetBranchCategory(branch_id, category_id int64) (*ShBranchCategory, error) {
+	err_msg := fmt.Sprintf("err fetching category:%d in branch:%d", category_id, branch_id)
+	categories, err := _queryBranchCategory(s, err_msg, "where branch_id = $1 and category_id = $2",
+		branch_id, category_id)
+	if err != nil {
+		return nil, err
+	}
+	return categories[0], nil
+}
+
+func (s *shStore) GetBranchCategoryInTx(tnx *sql.Tx, branch_id, category_id int64) (*ShBranchCategory, error) {
+	err_msg := fmt.Sprintf("err fetching category:%d in branch:%d", category_id, branch_id)
+	categories, err := _queryBranchCategoryInTx(s, err_msg, "where branch_id = $1 and category_id = $2",
+		branch_id, category_id)
+	if err != nil {
+		return nil, err
+	}
+	return categories[0], nil
+}
+
+func _queryBranchCategory(s *shStore, err_msg string, where_stmt string, args ...interface{}) ([]*ShBranchCategory, error) {
+	var result []*ShBranchCategory
+
+	query := fmt.Sprintf("select company_id, branch_id, category_id from %s",
+		TABLE_BRANCH_CATEGORY)
+	sort_by := " ORDER BY branch_id desc"
+
+	var rows *sql.Rows
+	var err error
+	if len(where_stmt) > 0 {
+		rows, err = s.Query(query + " " + where_stmt + sort_by, args...)
+	} else {
+		rows, err = s.Query(query + sort_by)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("%s %v", err_msg, err)
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		bc := new(ShBranchCategory)
+		if err := rows.Scan(
+			&bc.CompanyId,
+			&bc.BranchId,
+			&bc.CategoryId,
+		); err == sql.ErrNoRows {
+			// no-op
+		} else if err != nil {
+			return nil, fmt.Errorf("%s %v", err_msg, err.Error())
+		} else {
+			result = append(result, bc)
+		}
+	}
+
+	if len(result) == 0 {
+		return nil, ErrNoData
+	}
+	return result, nil
+}
+
+func _queryBranchCategoryInTx(tnx *sql.Tx, err_msg string, where_stmt string, args ...interface{}) ([]*ShBranchCategory, error) {
+	var result []*ShBranchCategory
+
+	query := fmt.Sprintf("select company_id, branch_id, category_id from %s",
+		TABLE_BRANCH_CATEGORY)
+	sort_by := " ORDER BY branch_id desc"
+
+	var rows *sql.Rows
+	var err error
+	if len(where_stmt) > 0 {
+		rows, err = tnx.Query(query + " " + where_stmt + sort_by, args...)
+	} else {
+		rows, err = tnx.Query(query + sort_by)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("%s %v", err_msg, err)
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		bc := new(ShBranchCategory)
+		if err := rows.Scan(
+			&bc.CompanyId,
+			&bc.BranchId,
+			&bc.CategoryId,
+		); err == sql.ErrNoRows {
+			// no-op
+		} else if err != nil {
+			return nil, fmt.Errorf("%s %v", err_msg, err.Error())
+		} else {
+			result = append(result, bc)
+		}
+	}
+
+	if len(result) == 0 {
+		return nil, ErrNoData
+	}
+	return result, nil
+}
