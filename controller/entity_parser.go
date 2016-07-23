@@ -1,13 +1,10 @@
 package controller
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/bitly/go-simplejson"
 	"io"
 	"sheket/server/models"
-	"strconv"
-	"strings"
 )
 
 type CRUD_ACTION int64
@@ -250,62 +247,6 @@ func parseCRUDIntIds(entity_name string, root *simplejson.Json, entity_ids map[C
 	return nil
 }
 
-func get_string(key string, check_map map[string]interface{}, fields map[string]bool) (string, bool) {
-	if val, ok := check_map[key]; ok {
-		s, ok := val.(string)
-		if !ok {
-			return "", false
-		}
-		fields[key] = true
-		return s, true
-	}
-	return "", false
-}
-
-func get_bool(key string, check_map map[string]interface{}, fields map[string]bool) (bool, bool) {
-	if val, ok := check_map[key]; ok {
-		b, ok := val.(bool)
-		if !ok {
-			return false, false
-		}
-		fields[key] = true
-		return b, true
-	}
-	return false, false
-}
-
-func get_int64(key string, check_map map[string]interface{}, fields map[string]bool) (int64, bool) {
-	if val, ok := check_map[key]; ok {
-		number, ok := val.(json.Number)
-		if !ok {
-			return -1, false
-		}
-		int_val, err := number.Int64()
-		if err != nil {
-			return -1, false
-		}
-		fields[key] = true
-		return int_val, true
-	}
-	return -1, false
-}
-
-func get_float64(key string, check_map map[string]interface{}, fields map[string]bool) (float64, bool) {
-	if val, ok := check_map[key]; ok {
-		number, ok := val.(json.Number)
-		if !ok {
-			return -1, false
-		}
-		float_val, err := number.Float64()
-		if err != nil {
-			return -1, false
-		}
-		fields[key] = true
-		return float_val, true
-	}
-	return -1, false
-}
-
 func itemParser(sync_data *EntitySyncData, root *simplejson.Json, info *IdentityInfo) error {
 	if err := parseCRUDIntIds("item", root, sync_data.ItemIds); err != nil {
 		return err
@@ -410,44 +351,6 @@ func branchParser(sync_data *EntitySyncData, root *simplejson.Json, info *Identi
 	}
 
 	return nil
-}
-
-func toPair_BranchItem(s string) (Pair_BranchItem, error) {
-	result := Pair_BranchItem{}
-	index := strings.Index(s, ":")
-	if index == -1 {
-		return result, fmt.Errorf("'%s' doesn't have : separator", s)
-	}
-	if index == 0 || index == (len(s)-1) {
-		return result, fmt.Errorf("branch_item id doesn't split around ':'")
-	}
-	branch_id, err := strconv.Atoi(s[:index])
-	if err != nil {
-		return result, err
-	}
-	item_id, err := strconv.Atoi(s[index+1:])
-	if err != nil {
-		return result, err
-	}
-	result.BranchId = int64(branch_id)
-	result.ItemId = int64(item_id)
-	return result, nil
-}
-
-func toPair_BranchItemSet(arr []interface{}) (map[Pair_BranchItem]bool, error) {
-	set := make(map[Pair_BranchItem]bool, len(arr))
-	for i, v := range arr {
-		s, ok := v.(string)
-		if !ok {
-			return nil, fmt.Errorf("branch_item:%d invalid id '%v'", i, v)
-		}
-		pair_branch_item, err := toPair_BranchItem(s)
-		if err != nil {
-			return nil, err
-		}
-		set[pair_branch_item] = true
-	}
-	return set, nil
 }
 
 func branchItemParser(sync_data *EntitySyncData, root *simplejson.Json, info *IdentityInfo) error {
