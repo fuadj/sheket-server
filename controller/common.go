@@ -34,6 +34,11 @@ type Pair_BranchItem struct {
 	ItemId   int64
 }
 
+type Pair_BranchCategory struct {
+	BranchId 	int64
+	CategoryId 	int64
+}
+
 func GetCurrentCompanyId(r *http.Request) int64 {
 	id, err := strconv.ParseInt(r.Header.Get(JSON_KEY_COMPANY_ID), 10, 64)
 	if err != nil {

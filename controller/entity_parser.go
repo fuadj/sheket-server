@@ -23,11 +23,12 @@ const (
 )
 
 type EntitySyncData struct {
-	RevisionItem        int64
-	RevisionBranch      int64
-	RevisionBranch_Item int64
-	RevisionMember      int64
-	RevisionCategory    int64
+	RevisionItem            int64
+	RevisionBranch          int64
+	RevisionBranch_Item     int64
+	RevisionMember          int64
+	RevisionCategory        int64
+	RevisionBranch_Category int64
 
 	// This holds the 'type' of items in the upload
 	Types map[string]bool
@@ -48,6 +49,9 @@ type EntitySyncData struct {
 
 	Branch_ItemIds    map[CRUD_ACTION]map[Pair_BranchItem]bool
 	Branch_ItemFields map[Pair_BranchItem]*SyncBranchItem
+
+	Branch_CategoryIds    map[CRUD_ACTION]map[Pair_BranchItem]bool
+	Branch_CategoryFields map[Pair_BranchItem]*SyncBranchItem
 }
 
 const (
