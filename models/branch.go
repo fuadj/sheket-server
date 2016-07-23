@@ -6,11 +6,20 @@ import (
 )
 
 const (
-	BRANCH_JSON_COMPANY_ID = "company_id"
 	BRANCH_JSON_BRANCH_ID  = "branch_id"
 	BRANCH_JSON_UUID       = "client_uuid"
 	BRANCH_JSON_NAME       = "name"
 	BRANCH_JSON_LOCATION   = "location"
+)
+
+const (
+	// branch item constants
+
+	// the val of this should be string of "branch_id:item_id"
+	BRANCH_ITEM_JSON_ID = "branch_item_id"
+
+	BRANCH_ITEM_JSON_QUANTITY      = "quantity"
+	BRANCH_ITEM_JSON_ITEM_LOCATION = "item_location"
 )
 
 type ShBranch struct {
@@ -28,17 +37,6 @@ type ShBranchItem struct {
 	Quantity     float64
 	ItemLocation string
 }
-
-const (
-	// the val of this should be string of "branch_id:item_id"
-	BRANCH_ITEM_JSON_ID = "branch_item_id"
-
-	BRANCH_ITEM_JSON_COMPANY_ID    = "company_id"
-	BRANCH_ITEM_JSON_BRANCH_ID     = "branch_id"
-	BRANCH_ITEM_JSON_ITEM_ID       = "item_id"
-	BRANCH_ITEM_JSON_QUANTITY      = "quantity"
-	BRANCH_ITEM_JSON_ITEM_LOCATION = "item_location"
-)
 
 func (s *shStore) CreateBranch(b *ShBranch) (*ShBranch, error) {
 	tnx, err := s.Begin()
