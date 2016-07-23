@@ -5,14 +5,6 @@ import (
 	"fmt"
 )
 
-type ShBranch struct {
-	CompanyId  int64
-	BranchId   int64
-	ClientUUID string
-	Name       string
-	Location   string
-}
-
 const (
 	BRANCH_JSON_COMPANY_ID = "company_id"
 	BRANCH_JSON_BRANCH_ID  = "branch_id"
@@ -20,6 +12,14 @@ const (
 	BRANCH_JSON_NAME       = "name"
 	BRANCH_JSON_LOCATION   = "location"
 )
+
+type ShBranch struct {
+	CompanyId  int64
+	BranchId   int64
+	ClientUUID string
+	Name       string
+	Location   string
+}
 
 type ShBranchItem struct {
 	CompanyId    int64
