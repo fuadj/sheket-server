@@ -168,6 +168,7 @@ func parseEntityPost(r io.Reader, parsers map[string]EntityParser, info *Identit
 	entity_sync_data.RevisionMember = data.Get(key_member_revision).MustInt64(no_rev)
 	entity_sync_data.RevisionCategory = data.Get(key_category_revision).MustInt64(no_rev)
 	entity_sync_data.RevisionBranch_Item = data.Get(key_branch_item_rev).MustInt64(no_rev)
+	entity_sync_data.RevisionBranch_Category = data.Get(key_branch_category_revision).MustInt64(no_rev)
 
 	for _, v := range data.Get(key_types).MustArray() {
 		t, ok := v.(string)

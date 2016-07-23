@@ -9,10 +9,11 @@ import (
 )
 
 const (
-	key_item_revision     = "item_rev"
-	key_branch_revision   = "branch_rev"
-	key_member_revision   = "member_rev"
-	key_category_revision = "category_rev"
+	key_item_revision            = "item_rev"
+	key_branch_revision          = "branch_rev"
+	key_member_revision          = "member_rev"
+	key_category_revision        = "category_rev"
+	key_branch_category_revision = "branch_category_rev"
 
 	key_types = "types"
 
