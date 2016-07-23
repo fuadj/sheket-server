@@ -117,10 +117,19 @@ type CategoryStore interface {
 	UpdateCategoryInTx(*sql.Tx, *ShCategory) (*ShCategory, error)
 }
 
+type BranchCategoryStore interface {
+	AddCategoryToBranch(*ShBranchCategory) (*ShBranchCategory, error)
+	AddCategoryToBranchInTx(*sql.Tx, *ShBranchCategory) (*ShBranchCategory, error)
+
+	GetCategoryBranch(branch_id, category_id int64) (*ShBranchCategory, error)
+	GetCategoryBranchInTx(tnx *sql.Tx, branch_id, category_id int64) (*ShBranchCategory, error)
+}
+
 type ShStore interface {
 	TransactionStore
 	ItemStore
 	CategoryStore
+	BranchCategoryStore
 	BranchStore
 	BranchItemStore
 	CompanyStore
