@@ -713,26 +713,26 @@ func (_mr *_MockBranchCategoryStoreRecorder) AddCategoryToBranchInTx(arg0, arg1 
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "AddCategoryToBranchInTx", arg0, arg1)
 }
 
-func (_m *MockBranchCategoryStore) GetCategoryBranch(branch_id int64, category_id int64) (*ShBranchCategory, error) {
-	ret := _m.ctrl.Call(_m, "GetCategoryBranch", branch_id, category_id)
+func (_m *MockBranchCategoryStore) GetBranchCategory(branch_id int64, category_id int64) (*ShBranchCategory, error) {
+	ret := _m.ctrl.Call(_m, "GetBranchCategory", branch_id, category_id)
 	ret0, _ := ret[0].(*ShBranchCategory)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-func (_mr *_MockBranchCategoryStoreRecorder) GetCategoryBranch(arg0, arg1 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetCategoryBranch", arg0, arg1)
+func (_mr *_MockBranchCategoryStoreRecorder) GetBranchCategory(arg0, arg1 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetBranchCategory", arg0, arg1)
 }
 
-func (_m *MockBranchCategoryStore) GetCategoryBranchInTx(tnx *sql.Tx, branch_id int64, category_id int64) (*ShBranchCategory, error) {
-	ret := _m.ctrl.Call(_m, "GetCategoryBranchInTx", tnx, branch_id, category_id)
+func (_m *MockBranchCategoryStore) GetBranchCategoryInTx(tnx *sql.Tx, branch_id int64, category_id int64) (*ShBranchCategory, error) {
+	ret := _m.ctrl.Call(_m, "GetBranchCategoryInTx", tnx, branch_id, category_id)
 	ret0, _ := ret[0].(*ShBranchCategory)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-func (_mr *_MockBranchCategoryStoreRecorder) GetCategoryBranchInTx(arg0, arg1, arg2 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetCategoryBranchInTx", arg0, arg1, arg2)
+func (_mr *_MockBranchCategoryStoreRecorder) GetBranchCategoryInTx(arg0, arg1, arg2 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetBranchCategoryInTx", arg0, arg1, arg2)
 }
 
 // Mock of ShStore interface
@@ -943,26 +943,26 @@ func (_mr *_MockShStoreRecorder) AddCategoryToBranchInTx(arg0, arg1 interface{})
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "AddCategoryToBranchInTx", arg0, arg1)
 }
 
-func (_m *MockShStore) GetCategoryBranch(branch_id int64, category_id int64) (*ShBranchCategory, error) {
-	ret := _m.ctrl.Call(_m, "GetCategoryBranch", branch_id, category_id)
+func (_m *MockShStore) GetBranchCategory(branch_id int64, category_id int64) (*ShBranchCategory, error) {
+	ret := _m.ctrl.Call(_m, "GetBranchCategory", branch_id, category_id)
 	ret0, _ := ret[0].(*ShBranchCategory)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-func (_mr *_MockShStoreRecorder) GetCategoryBranch(arg0, arg1 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetCategoryBranch", arg0, arg1)
+func (_mr *_MockShStoreRecorder) GetBranchCategory(arg0, arg1 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetBranchCategory", arg0, arg1)
 }
 
-func (_m *MockShStore) GetCategoryBranchInTx(tnx *sql.Tx, branch_id int64, category_id int64) (*ShBranchCategory, error) {
-	ret := _m.ctrl.Call(_m, "GetCategoryBranchInTx", tnx, branch_id, category_id)
+func (_m *MockShStore) GetBranchCategoryInTx(tnx *sql.Tx, branch_id int64, category_id int64) (*ShBranchCategory, error) {
+	ret := _m.ctrl.Call(_m, "GetBranchCategoryInTx", tnx, branch_id, category_id)
 	ret0, _ := ret[0].(*ShBranchCategory)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-func (_mr *_MockShStoreRecorder) GetCategoryBranchInTx(arg0, arg1, arg2 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetCategoryBranchInTx", arg0, arg1, arg2)
+func (_mr *_MockShStoreRecorder) GetBranchCategoryInTx(arg0, arg1, arg2 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetBranchCategoryInTx", arg0, arg1, arg2)
 }
 
 func (_m *MockShStore) CreateBranch(_param0 *ShBranch) (*ShBranch, error) {
