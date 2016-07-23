@@ -334,28 +334,6 @@ func (_mr *_MockBranchItemStoreRecorder) UpdateBranchItemInTx(arg0, arg1 interfa
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "UpdateBranchItemInTx", arg0, arg1)
 }
 
-func (_m *MockBranchItemStore) GetItemsInBranch(_param0 int64) ([]*ShBranchItem, error) {
-	ret := _m.ctrl.Call(_m, "GetItemsInBranch", _param0)
-	ret0, _ := ret[0].([]*ShBranchItem)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-func (_mr *_MockBranchItemStoreRecorder) GetItemsInBranch(arg0 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetItemsInBranch", arg0)
-}
-
-func (_m *MockBranchItemStore) GetItemsInAllCompanyBranches(_param0 int64) ([]*ShBranchItem, error) {
-	ret := _m.ctrl.Call(_m, "GetItemsInAllCompanyBranches", _param0)
-	ret0, _ := ret[0].([]*ShBranchItem)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-func (_mr *_MockBranchItemStoreRecorder) GetItemsInAllCompanyBranches(arg0 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetItemsInAllCompanyBranches", arg0)
-}
-
 // Mock of CompanyStore interface
 type MockCompanyStore struct {
 	ctrl     *gomock.Controller
@@ -703,6 +681,71 @@ func (_mr *_MockCategoryStoreRecorder) UpdateCategoryInTx(arg0, arg1 interface{}
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "UpdateCategoryInTx", arg0, arg1)
 }
 
+// Mock of BranchCategoryStore interface
+type MockBranchCategoryStore struct {
+	ctrl     *gomock.Controller
+	recorder *_MockBranchCategoryStoreRecorder
+}
+
+// Recorder for MockBranchCategoryStore (not exported)
+type _MockBranchCategoryStoreRecorder struct {
+	mock *MockBranchCategoryStore
+}
+
+func NewMockBranchCategoryStore(ctrl *gomock.Controller) *MockBranchCategoryStore {
+	mock := &MockBranchCategoryStore{ctrl: ctrl}
+	mock.recorder = &_MockBranchCategoryStoreRecorder{mock}
+	return mock
+}
+
+func (_m *MockBranchCategoryStore) EXPECT() *_MockBranchCategoryStoreRecorder {
+	return _m.recorder
+}
+
+func (_m *MockBranchCategoryStore) AddCategoryToBranch(_param0 *ShBranchCategory) (*ShBranchCategory, error) {
+	ret := _m.ctrl.Call(_m, "AddCategoryToBranch", _param0)
+	ret0, _ := ret[0].(*ShBranchCategory)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (_mr *_MockBranchCategoryStoreRecorder) AddCategoryToBranch(arg0 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "AddCategoryToBranch", arg0)
+}
+
+func (_m *MockBranchCategoryStore) AddCategoryToBranchInTx(_param0 *sql.Tx, _param1 *ShBranchCategory) (*ShBranchCategory, error) {
+	ret := _m.ctrl.Call(_m, "AddCategoryToBranchInTx", _param0, _param1)
+	ret0, _ := ret[0].(*ShBranchCategory)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (_mr *_MockBranchCategoryStoreRecorder) AddCategoryToBranchInTx(arg0, arg1 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "AddCategoryToBranchInTx", arg0, arg1)
+}
+
+func (_m *MockBranchCategoryStore) GetCategoryBranch(branch_id int64, category_id int64) (*ShBranchCategory, error) {
+	ret := _m.ctrl.Call(_m, "GetCategoryBranch", branch_id, category_id)
+	ret0, _ := ret[0].(*ShBranchCategory)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (_mr *_MockBranchCategoryStoreRecorder) GetCategoryBranch(arg0, arg1 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetCategoryBranch", arg0, arg1)
+}
+
+func (_m *MockBranchCategoryStore) GetCategoryBranchInTx(tnx *sql.Tx, branch_id int64, category_id int64) (*ShBranchCategory, error) {
+	ret := _m.ctrl.Call(_m, "GetCategoryBranchInTx", tnx, branch_id, category_id)
+	ret0, _ := ret[0].(*ShBranchCategory)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (_mr *_MockBranchCategoryStoreRecorder) GetCategoryBranchInTx(arg0, arg1, arg2 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetCategoryBranchInTx", arg0, arg1, arg2)
+}
+
 // Mock of ShStore interface
 type MockShStore struct {
 	ctrl     *gomock.Controller
@@ -900,6 +943,50 @@ func (_mr *_MockShStoreRecorder) UpdateCategoryInTx(arg0, arg1 interface{}) *gom
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "UpdateCategoryInTx", arg0, arg1)
 }
 
+func (_m *MockShStore) AddCategoryToBranch(_param0 *ShBranchCategory) (*ShBranchCategory, error) {
+	ret := _m.ctrl.Call(_m, "AddCategoryToBranch", _param0)
+	ret0, _ := ret[0].(*ShBranchCategory)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (_mr *_MockShStoreRecorder) AddCategoryToBranch(arg0 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "AddCategoryToBranch", arg0)
+}
+
+func (_m *MockShStore) AddCategoryToBranchInTx(_param0 *sql.Tx, _param1 *ShBranchCategory) (*ShBranchCategory, error) {
+	ret := _m.ctrl.Call(_m, "AddCategoryToBranchInTx", _param0, _param1)
+	ret0, _ := ret[0].(*ShBranchCategory)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (_mr *_MockShStoreRecorder) AddCategoryToBranchInTx(arg0, arg1 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "AddCategoryToBranchInTx", arg0, arg1)
+}
+
+func (_m *MockShStore) GetCategoryBranch(branch_id int64, category_id int64) (*ShBranchCategory, error) {
+	ret := _m.ctrl.Call(_m, "GetCategoryBranch", branch_id, category_id)
+	ret0, _ := ret[0].(*ShBranchCategory)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (_mr *_MockShStoreRecorder) GetCategoryBranch(arg0, arg1 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetCategoryBranch", arg0, arg1)
+}
+
+func (_m *MockShStore) GetCategoryBranchInTx(tnx *sql.Tx, branch_id int64, category_id int64) (*ShBranchCategory, error) {
+	ret := _m.ctrl.Call(_m, "GetCategoryBranchInTx", tnx, branch_id, category_id)
+	ret0, _ := ret[0].(*ShBranchCategory)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (_mr *_MockShStoreRecorder) GetCategoryBranchInTx(arg0, arg1, arg2 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetCategoryBranchInTx", arg0, arg1, arg2)
+}
+
 func (_m *MockShStore) CreateBranch(_param0 *ShBranch) (*ShBranch, error) {
 	ret := _m.ctrl.Call(_m, "CreateBranch", _param0)
 	ret0, _ := ret[0].(*ShBranch)
@@ -1019,28 +1106,6 @@ func (_m *MockShStore) UpdateBranchItemInTx(_param0 *sql.Tx, _param1 *ShBranchIt
 
 func (_mr *_MockShStoreRecorder) UpdateBranchItemInTx(arg0, arg1 interface{}) *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "UpdateBranchItemInTx", arg0, arg1)
-}
-
-func (_m *MockShStore) GetItemsInBranch(_param0 int64) ([]*ShBranchItem, error) {
-	ret := _m.ctrl.Call(_m, "GetItemsInBranch", _param0)
-	ret0, _ := ret[0].([]*ShBranchItem)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-func (_mr *_MockShStoreRecorder) GetItemsInBranch(arg0 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetItemsInBranch", arg0)
-}
-
-func (_m *MockShStore) GetItemsInAllCompanyBranches(_param0 int64) ([]*ShBranchItem, error) {
-	ret := _m.ctrl.Call(_m, "GetItemsInAllCompanyBranches", _param0)
-	ret0, _ := ret[0].([]*ShBranchItem)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-func (_mr *_MockShStoreRecorder) GetItemsInAllCompanyBranches(arg0 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetItemsInAllCompanyBranches", arg0)
 }
 
 func (_m *MockShStore) CreateCompany(u *User, c *Company) (*Company, error) {
