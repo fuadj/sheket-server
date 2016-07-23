@@ -22,11 +22,12 @@ const (
 
 	key_fields = "fields"
 
-	type_categories   = "category"
-	type_items        = "item"
-	type_branches     = "branch"
-	type_branch_items = "branch_item"
-	type_members      = "member"
+	type_categories        = "category"
+	type_items             = "item"
+	type_branches          = "branch"
+	type_branch_items      = "branch_item"
+	type_members           = "member"
+	type_branch_categories = "branch_category"
 
 	// used in the response to hold the newly updated category ids
 	key_updated_category_ids = "updated_category_ids"
