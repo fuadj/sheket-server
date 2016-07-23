@@ -5,14 +5,6 @@ import (
 	"fmt"
 )
 
-type ShCategory struct {
-	CategoryId int64
-	ClientUUID string
-	CompanyId  int64
-	ParentId   int64
-	Name       string
-}
-
 const (
 	CATEGORY_JSON_CATEGORY_ID = "category_id"
 	CATEGORY_JSON_UUID        = "client_uuid"
@@ -24,6 +16,20 @@ const (
 	ROOT_CATEGORY_ID   = 1
 	ROOT_CATEGORY_NAME = "__root category__"
 )
+
+type ShCategory struct {
+	CategoryId int64
+	ClientUUID string
+	CompanyId  int64
+	ParentId   int64
+	Name       string
+}
+
+type ShBranchCategory struct {
+	CompanyId 		int64
+	BranchId 		int64
+	CategoryId 		int64
+}
 
 func runInTransaction(s *shStore, f func(*sql.Tx) (*ShCategory, error)) (*ShCategory, error) {
 	tnx, err := s.Begin()
