@@ -99,6 +99,13 @@ type SyncMember struct {
 	SuppliedFields
 }
 
+type SyncBranchCategory struct {
+	models.ShBranchCategory
+	PostType	int64
+
+	SuppliedFields
+}
+
 func NewEntitySyncData() *EntitySyncData {
 	s := &EntitySyncData{}
 
@@ -132,6 +139,12 @@ func NewEntitySyncData() *EntitySyncData {
 	s.Branch_ItemIds[ACTION_UPDATE] = make(map[Pair_BranchItem]bool)
 	s.Branch_ItemIds[ACTION_DELETE] = make(map[Pair_BranchItem]bool)
 	s.Branch_ItemFields = make(map[Pair_BranchItem]*SyncBranchItem)
+
+	s.Branch_CategoryIds = make(map[CRUD_ACTION]map[Pair_BranchCategory]bool)
+	s.Branch_CategoryIds[ACTION_CREATE] = make(map[Pair_BranchCategory]bool)
+	s.Branch_CategoryIds[ACTION_UPDATE] = make(map[Pair_BranchCategory]bool)
+	s.Branch_CategoryIds[ACTION_DELETE] = make(map[Pair_BranchCategory]bool)
+	s.Branch_CategoryFields = make(map[Pair_BranchCategory]*SyncBranchCategory)
 
 	return s
 }
