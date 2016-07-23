@@ -15,7 +15,9 @@ const (
 const (
 	// branch category constants
 	BRANCH_CATEGORY_JSON_ID = "branch_category_id"
-	// It has no other fields
+
+	BRANCH_CATEGORY_JSON_BRANCH_ID   = "branch_id"
+	BRANCH_CATEGORY_JSON_CATEGORY_ID = "category_id"
 )
 
 const (
@@ -32,9 +34,9 @@ type ShCategory struct {
 }
 
 type ShBranchCategory struct {
-	CompanyId 		int64
-	BranchId 		int64
-	CategoryId 		int64
+	CompanyId  int64
+	BranchId   int64
+	CategoryId int64
 }
 
 func runInTransaction(s *shStore, f func(*sql.Tx) (*ShCategory, error)) (*ShCategory, error) {
@@ -152,19 +154,19 @@ func _queryCategoryInTx(tnx *sql.Tx, err_msg string, where_stmt string, args ...
 
 func (s *shStore) AddCategoryToBranch(tnx *sql.Tx, branch_category *ShBranchCategory) (*ShBranchCategory, error) {
 	rows, err := tnx.Query(
-		fmt.Sprintf("select branch_id from %s " +
+		fmt.Sprintf("select branch_id from %s "+
 			"where branch_id = $1 and category_id = $2", TABLE_BRANCH_CATEGORY),
 		branch_category.BranchId, branch_category.CategoryId)
 	if err != nil {
 		return nil, err
 	}
-	if rows.Next() {		// if the category exists inside the branch, we're done
+	if rows.Next() { // if the category exists inside the branch, we're done
 		rows.Close()
 	} else {
 		rows.Close()
 		_, err = tnx.Exec(
-			fmt.Sprintf("insert into %s " +
-				"(company_id, branch_id, category_id) values " +
+			fmt.Sprintf("insert into %s "+
+				"(company_id, branch_id, category_id) values "+
 				"($1, $2, $3)", TABLE_BRANCH_CATEGORY),
 			branch_category.CompanyId, branch_category.BranchId, branch_category.CategoryId)
 		if err != nil {
@@ -205,7 +207,7 @@ func _queryBranchCategory(s *shStore, err_msg string, where_stmt string, args ..
 	var rows *sql.Rows
 	var err error
 	if len(where_stmt) > 0 {
-		rows, err = s.Query(query + " " + where_stmt + sort_by, args...)
+		rows, err = s.Query(query+" "+where_stmt+sort_by, args...)
 	} else {
 		rows, err = s.Query(query + sort_by)
 	}
@@ -246,7 +248,7 @@ func _queryBranchCategoryInTx(tnx *sql.Tx, err_msg string, where_stmt string, ar
 	var rows *sql.Rows
 	var err error
 	if len(where_stmt) > 0 {
-		rows, err = tnx.Query(query + " " + where_stmt + sort_by, args...)
+		rows, err = tnx.Query(query+" "+where_stmt+sort_by, args...)
 	} else {
 		rows, err = tnx.Query(query + sort_by)
 	}

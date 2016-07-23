@@ -49,6 +49,9 @@ const (
 	key_sync_branches = "sync_branches"
 
 	key_sync_members = "sync_members"
+
+	// key of json holding any updated branch categories since last sync
+	key_sync_branch_categories = "sync_branch_categories"
 )
 
 type EntityResult struct {
@@ -189,6 +192,16 @@ func syncModifiedEntities(sync_response map[string]interface{},
 	sync_response[key_branch_revision] = latest_branch_rev
 	if len(changed_branches) > 0 {
 		sync_response[key_sync_branches] = changed_branches
+	}
+
+	latest_branch_category_rev, changed_branch_categories, err := fetchChangedBranchCategoriesSinceRev(info.CompanyId,
+		posted_data.RevisionBranch_Category)
+	if err != nil {
+		return err
+	}
+	sync_response[key_branch_category_revision] = latest_branch_category_rev
+	if len(changed_branch_categories) > 0 {
+		sync_response[key_sync_branch_categories] = changed_branch_categories
 	}
 
 	if info.Permission.PermissionType <= models.PERMISSION_TYPE_BRANCH_MANAGER {
@@ -395,6 +408,43 @@ func fetchChangedMemberSinceRev(company_id, member_rev int64) (latest_rev int64,
 			JSON_KEY_USERNAME:                        user.Username,
 		}
 
+		i++
+	}
+
+	return max_rev, result[:i], nil
+}
+
+func fetchChangedBranchCategoriesSinceRev(company_id, last_branch_category_rev int64) (latest_rev int64,
+	branch_categories_since []map[string]interface{}, err error) {
+	max_rev, changed_branch_category_revs, err := Store.GetRevisionsSince(
+		&models.ShEntityRevision{
+			CompanyId:company_id,
+			EntityType:models.REV_ENTITY_CATEGORY,
+			RevisionNumber: last_branch_category_rev,
+		})
+	if err != nil && err != models.ErrNoData {
+		return max_rev, nil, err
+	}
+
+	result := make([]map[string]interface{}, len(changed_branch_category_revs))
+	i := 0
+	for _, branch_category_rev := range changed_branch_category_revs {
+		branch_id := branch_category_rev.EntityAffectedId
+		category_id := branch_category_rev.AdditionalInfo
+
+		branch_category, err := Store.GetBranchCategory(branch_id, category_id)
+		if err != nil {
+			if err != models.ErrNoData {
+				fmt.Printf("fetching changed branch categoires, GetBranchCategory error '%s'", err.Error())
+				return max_rev, nil, err
+			}
+			continue
+		}
+
+		result[i] = map[string]interface{} {
+			models.BRANCH_CATEGORY_JSON_BRANCH_ID: branch_category.BranchId,
+			models.BRANCH_CATEGORY_JSON_CATEGORY_ID: branch_category.CategoryId,
+		}
 		i++
 	}
 
