@@ -27,11 +27,12 @@ const (
 )
 
 const (
-	REV_ENTITY_ITEM        int64 = 1
-	REV_ENTITY_BRANCH      int64 = 2
-	REV_ENTITY_BRANCH_ITEM int64 = 3
-	REV_ENTITY_MEMBERS     int64 = 4
-	REV_ENTITY_CATEGORY    int64 = 5
+	REV_ENTITY_ITEM            int64 = 1
+	REV_ENTITY_BRANCH          int64 = 2
+	REV_ENTITY_BRANCH_ITEM     int64 = 3
+	REV_ENTITY_MEMBERS         int64 = 4
+	REV_ENTITY_CATEGORY        int64 = 5
+	REV_ENTITY_BRANCH_CATEGORY int64 = 6
 )
 
 func (s *shStore) AddEntityRevisionInTx(tnx *sql.Tx, rev *ShEntityRevision) (*ShEntityRevision, error) {
