@@ -118,7 +118,6 @@ type CategoryStore interface {
 }
 
 type BranchCategoryStore interface {
-	AddCategoryToBranch(*ShBranchCategory) (*ShBranchCategory, error)
 	AddCategoryToBranchInTx(*sql.Tx, *ShBranchCategory) (*ShBranchCategory, error)
 
 	GetCategoryBranch(branch_id, category_id int64) (*ShBranchCategory, error)

@@ -702,17 +702,6 @@ func (_m *MockBranchCategoryStore) EXPECT() *_MockBranchCategoryStoreRecorder {
 	return _m.recorder
 }
 
-func (_m *MockBranchCategoryStore) AddCategoryToBranch(_param0 *ShBranchCategory) (*ShBranchCategory, error) {
-	ret := _m.ctrl.Call(_m, "AddCategoryToBranch", _param0)
-	ret0, _ := ret[0].(*ShBranchCategory)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-func (_mr *_MockBranchCategoryStoreRecorder) AddCategoryToBranch(arg0 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "AddCategoryToBranch", arg0)
-}
-
 func (_m *MockBranchCategoryStore) AddCategoryToBranchInTx(_param0 *sql.Tx, _param1 *ShBranchCategory) (*ShBranchCategory, error) {
 	ret := _m.ctrl.Call(_m, "AddCategoryToBranchInTx", _param0, _param1)
 	ret0, _ := ret[0].(*ShBranchCategory)
@@ -941,17 +930,6 @@ func (_m *MockShStore) UpdateCategoryInTx(_param0 *sql.Tx, _param1 *ShCategory) 
 
 func (_mr *_MockShStoreRecorder) UpdateCategoryInTx(arg0, arg1 interface{}) *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "UpdateCategoryInTx", arg0, arg1)
-}
-
-func (_m *MockShStore) AddCategoryToBranch(_param0 *ShBranchCategory) (*ShBranchCategory, error) {
-	ret := _m.ctrl.Call(_m, "AddCategoryToBranch", _param0)
-	ret0, _ := ret[0].(*ShBranchCategory)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-func (_mr *_MockShStoreRecorder) AddCategoryToBranch(arg0 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "AddCategoryToBranch", arg0)
 }
 
 func (_m *MockShStore) AddCategoryToBranchInTx(_param0 *sql.Tx, _param1 *ShBranchCategory) (*ShBranchCategory, error) {
