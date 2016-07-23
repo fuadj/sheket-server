@@ -73,10 +73,11 @@ package controller
 		"item_rev":item_rev_number
 		"branch_rev":branch_rev_number
 		"branch_item_rev":branch_item_rev_number
+		"branch_category_rev":branch_category_rev_number
 
 		"types": [ see "ENTITY TYPES" ]
 
-		// could be {"items" OR "branches" OR "branch_items"}
+		// could be {"items" OR "branches" OR "branch_items" OR "members" OR "branch_categories" }
 		"entity": {
 			// ids will be different for each type
 			// look at -- ENTITY ID TYPES -- for details
@@ -99,6 +100,7 @@ package controller
 	2) "members"
 	3) "branches"
 	4) "branch_items"
+	5) "branch_categories"
 	-- END ENTITY TYPES --
 
 	-- ENTITY ID TYPES -- of Entity Upload Format
@@ -110,6 +112,8 @@ package controller
 		id is integer
 	"branch_items":
 		id is a colon separated string of branch_id & item_id => "branch_id:item_id"
+	"branch_categories":
+		id is a colon separated string of branch_id & category_id => "branch_id:category_id"
 
 
 	-- INTERNAL FIELDS -- of Entity Upload Format
@@ -146,9 +150,9 @@ package controller
 			"location": (string)
 
 		"branch_items":
-			// The "id" field can contain -ve values is either branch|item is being created.
+			// The "id" field can contain -ve values if either branch|item is being created.
 			// see "items"."item_id" & "branches"."branch_id" for more info
-			// The "id" and & "company_id" fields are necessary.
+			// The "id" field are necessary.
 			"id": (string) 	// "branch_id:item_id"
 
 			// used on CREATE and UPDATE
@@ -156,11 +160,19 @@ package controller
 			"quantity": (float)
 			"item_location": (string)
 
+		"branch_categories":
+			// The "id" field can contain -ve values if either branch|item is being created.
+			"id": (string)	// "branch_id:category_id"
+
+			// Branch Categories(at-least for now) don't contain any other fields
+
 	Entity Sync Result format
 	{
 		"company_id":company_id
 		"item_rev":item_rev
 		"branch_rev": branch_rev
+		"member_rev": member_rev
+		"branch_category_rev": branch_category_rev
 
 		// only exists if user uploaded new items and server assigned new ids to them
 		"updated_item_ids": [
@@ -201,6 +213,16 @@ package controller
 				"branch_id":,
 				"name":,
 				"location":,
+			}, ...
+		]
+
+		"sync_branch_categories: [
+			{
+				"branch_id":,
+				"category_id:,
+
+				// included for branch_categories that have been deleted since last sync
+				"is_deleted":(boolean) optional,
 			}, ...
 		]
 	}
