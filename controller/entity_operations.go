@@ -38,6 +38,11 @@ func applyEntityOperations(tnx *sql.Tx, posted_data *EntitySyncData, info *Ident
 		return nil, err
 	}
 
+	result, err = applyBranchCategoryOperations(tnx, posted_data, info, result)
+	if err != nil {
+		return nil, err
+	}
+
 	if info.Permission.PermissionType <= models.PERMISSION_TYPE_MANAGER {
 		result, err = applyMemberOperations(tnx, posted_data, info, result)
 		if err != nil {
@@ -469,4 +474,45 @@ func applyMemberOperations(tnx *sql.Tx, posted_data *EntitySyncData, info *Ident
 	}
 
 	return result, nil
+}
+
+func applyBranchCategoryOperations(tnx *sql.Tx, posted_data *EntitySyncData, info *IdentityInfo, result *EntityResult) (*EntityResult, error) {
+	if len(posted_data.Branch_CategoryFields) == 0 {
+		return result, nil
+	}
+	for pair_branch_category := range posted_data.Branch_CategoryIds[ACTION_CREATE] {
+		branch_category, ok := posted_data.Branch_CategoryFields[pair_branch_category]
+		if !ok {
+			return nil, fmt.Errorf("branchCategory:(%d,%d) doesn't have members defined",
+				pair_branch_category.BranchId, pair_branch_category.CategoryId)
+		}
+
+		branch_id, category_id := pair_branch_category.BranchId, pair_branch_category.CategoryId
+
+		// if the id's of the branch category were the locally user generated(yet to be replaced with
+		// server generated global ids), then use the server's
+		if new_branch_id, ok := result.OldId2New_Branches[branch_id]; ok {
+			branch_category.BranchId = new_branch_id
+		}
+		if new_category_id, ok := result.OldId2New_Categories[category_id]; ok {
+			branch_category.CategoryId = new_category_id
+		}
+
+		if _, err := Store.AddCategoryToBranchInTx(tnx, &branch_category.ShBranchCategory); err != nil {
+			return nil, fmt.Errorf("error adding category:%d to branch:%d '%s'",
+				branch_category.CategoryId, branch_category.BranchId, err.Error())
+		}
+
+		rev := &models.ShEntityRevision{{
+			CompanyId:        info.CompanyId,
+			EntityType:       models.REV_ENTITY_BRANCH_CATEGORY,
+			ActionType:       models.REV_ACTION_CREATE,
+			EntityAffectedId: branch_category.BranchId,
+			AdditionalInfo:   branch_category.CategoryId,
+		}}
+
+		if _, err := Store.AddEntityRevisionInTx(tnx, rev); err != nil {
+			return nil, err
+		}
+	}
 }
