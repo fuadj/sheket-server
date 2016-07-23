@@ -98,7 +98,7 @@ type SyncMember struct {
 
 type SyncBranchCategory struct {
 	models.ShBranchCategory
-	PostType	int64
+	PostType int64
 
 	SuppliedFields
 }
@@ -197,11 +197,12 @@ func parseEntityPost(r io.Reader, parsers map[string]EntityParser, info *Identit
 }
 
 var parsers = map[string]EntityParser{
-	type_items:        itemParser,
-	type_branches:     branchParser,
-	type_branch_items: branchItemParser,
-	type_members:      memberParser,
-	type_categories:   categoryParser,
+	type_items:             itemParser,
+	type_branches:          branchParser,
+	type_branch_items:      branchItemParser,
+	type_members:           memberParser,
+	type_categories:        categoryParser,
+	type_branch_categories: branchCategoryParser,
 }
 
 // checks if the json has { create & update & delete } keys
@@ -498,6 +499,68 @@ func categoryParser(sync_data *EntitySyncData, root *simplejson.Json, info *Iden
 		}
 
 		sync_data.CategoryFields[category.CategoryId] = category
+	}
+
+	return nil
+}
+
+func branchCategoryParser(sync_data *EntitySyncData, root *simplejson.Json, info *IdentityInfo) error {
+	var err error
+	if err = checkCRUDsExist(type_branch_categories, root); err != nil {
+		return err
+	}
+
+	sync_data.Branch_CategoryIds[ACTION_CREATE], err = toPair_BranchCategorySet(
+		root.Get(key_created).MustArray())
+	if err != nil {
+		return err
+	}
+	sync_data.Branch_CategoryIds[ACTION_UPDATE], err = toPair_BranchCategorySet(
+		root.Get(key_updated).MustArray())
+	if err != nil {
+		return err
+	}
+	sync_data.Branch_CategoryIds[ACTION_DELETE], err = toPair_BranchCategorySet(
+		root.Get(key_deleted).MustArray())
+	if err != nil {
+		return err
+	}
+	if _, ok := root.CheckGet(key_fields); !ok {
+		return fmt.Errorf("branch_category_id fields doesn't exist")
+	}
+
+	for _, v := range root.Get(key_fields).MustArray() {
+		fields, ok := v.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("invalid branch category fields %v", v)
+		}
+
+		branch_category := &SyncBranchCategory{}
+		branch_category.CompanyId = info.CompanyId
+		branch_category.SetFields = make(map[string]bool)
+
+		set_fields := branch_category.SetFields
+
+		s_branch_category, ok := get_string(models.BRANCH_CATEGORY_JSON_ID, fields, set_fields)
+		if !ok {
+			return fmt.Errorf("invalid branch_category id %v", v)
+		}
+		pair_branch_category, err := toPair_BranchCategory(s_branch_category)
+		if err != nil {
+			return err
+		}
+
+		if sync_data.Branch_CategoryIds[ACTION_CREATE][pair_branch_category] {
+			branch_category.PostType = POST_TYPE_CREATE
+		} else if sync_data.Branch_CategoryIds[ACTION_UPDATE][pair_branch_category] {
+			branch_category.PostType = POST_TYPE_UPDATE
+		} else if  sync_data.Branch_CategoryIds[ACTION_DELETE][pair_branch_category] {
+			branch_category.PostType = POST_TYPE_DELETE
+		} else {
+			fmt.Errorf("branch_category not listed in any of CRUD operations:%v", pair_branch_category)
+		}
+
+		sync_data.Branch_CategoryFields[pair_branch_category] = branch_category
 	}
 
 	return nil

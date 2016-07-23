@@ -13,6 +13,12 @@ const (
 )
 
 const (
+	// branch category constants
+	BRANCH_CATEGORY_JSON_ID = "branch_category_id"
+	// It has no other fields
+)
+
+const (
 	ROOT_CATEGORY_ID   = 1
 	ROOT_CATEGORY_NAME = "__root category__"
 )
