@@ -47,8 +47,8 @@ type EntitySyncData struct {
 	Branch_ItemIds    map[CRUD_ACTION]map[Pair_BranchItem]bool
 	Branch_ItemFields map[Pair_BranchItem]*SyncBranchItem
 
-	Branch_CategoryIds    map[CRUD_ACTION]map[Pair_BranchItem]bool
-	Branch_CategoryFields map[Pair_BranchItem]*SyncBranchItem
+	Branch_CategoryIds    map[CRUD_ACTION]map[Pair_BranchCategory]bool
+	Branch_CategoryFields map[Pair_BranchCategory]*SyncBranchCategory
 }
 
 const (
