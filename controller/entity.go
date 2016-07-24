@@ -419,7 +419,7 @@ func fetchChangedBranchCategoriesSinceRev(company_id, last_branch_category_rev i
 	max_rev, changed_branch_category_revs, err := Store.GetRevisionsSince(
 		&models.ShEntityRevision{
 			CompanyId:company_id,
-			EntityType:models.REV_ENTITY_CATEGORY,
+			EntityType:models.REV_ENTITY_BRANCH_CATEGORY,
 			RevisionNumber: last_branch_category_rev,
 		})
 	if err != nil && err != models.ErrNoData {
