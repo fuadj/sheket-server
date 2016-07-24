@@ -13,6 +13,7 @@ type ComposableShStoreMock struct {
 	ItemStore
 	BranchStore
 	BranchItemStore
+	BranchCategoryStore
 	CompanyStore
 	UserStore
 	RevisionStore
@@ -27,6 +28,7 @@ func NewComposableShStoreMock(ctrl *gomock.Controller) *ComposableShStoreMock {
 	c.ItemStore = NewMockItemStore(ctrl)
 	c.BranchStore = NewMockBranchStore(ctrl)
 	c.BranchItemStore = NewMockBranchItemStore(ctrl)
+	c.BranchCategoryStore = NewMockBranchCategoryStore(ctrl)
 	c.CompanyStore = NewMockCompanyStore(ctrl)
 	c.UserStore = NewMockUserStore(ctrl)
 	c.RevisionStore = NewMockRevisionStore(ctrl)
