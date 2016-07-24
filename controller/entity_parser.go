@@ -550,6 +550,8 @@ func branchCategoryParser(sync_data *EntitySyncData, root *simplejson.Json, info
 		if err != nil {
 			return err
 		}
+		branch_category.BranchId = pair_branch_category.BranchId
+		branch_category.CategoryId = pair_branch_category.CategoryId
 
 		if sync_data.Branch_CategoryIds[ACTION_CREATE][pair_branch_category] {
 			branch_category.PostType = POST_TYPE_CREATE
