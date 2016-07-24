@@ -503,16 +503,18 @@ func applyBranchCategoryOperations(tnx *sql.Tx, posted_data *EntitySyncData, inf
 				branch_category.CategoryId, branch_category.BranchId, err.Error())
 		}
 
-		rev := &models.ShEntityRevision{{
+		rev := &models.ShEntityRevision{
 			CompanyId:        info.CompanyId,
 			EntityType:       models.REV_ENTITY_BRANCH_CATEGORY,
 			ActionType:       models.REV_ACTION_CREATE,
 			EntityAffectedId: branch_category.BranchId,
 			AdditionalInfo:   branch_category.CategoryId,
-		}}
+		}
 
 		if _, err := Store.AddEntityRevisionInTx(tnx, rev); err != nil {
 			return nil, err
 		}
 	}
+
+	return result, nil
 }

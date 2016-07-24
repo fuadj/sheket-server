@@ -152,7 +152,7 @@ func _queryCategoryInTx(tnx *sql.Tx, err_msg string, where_stmt string, args ...
 	return result, nil
 }
 
-func (s *shStore) AddCategoryToBranch(tnx *sql.Tx, branch_category *ShBranchCategory) (*ShBranchCategory, error) {
+func (s *shStore) AddCategoryToBranchInTx(tnx *sql.Tx, branch_category *ShBranchCategory) (*ShBranchCategory, error) {
 	rows, err := tnx.Query(
 		fmt.Sprintf("select branch_id from %s "+
 			"where branch_id = $1 and category_id = $2", TABLE_BRANCH_CATEGORY),
@@ -189,7 +189,7 @@ func (s *shStore) GetBranchCategory(branch_id, category_id int64) (*ShBranchCate
 
 func (s *shStore) GetBranchCategoryInTx(tnx *sql.Tx, branch_id, category_id int64) (*ShBranchCategory, error) {
 	err_msg := fmt.Sprintf("err fetching category:%d in branch:%d", category_id, branch_id)
-	categories, err := _queryBranchCategoryInTx(s, err_msg, "where branch_id = $1 and category_id = $2",
+	categories, err := _queryBranchCategoryInTx(tnx, err_msg, "where branch_id = $1 and category_id = $2",
 		branch_id, category_id)
 	if err != nil {
 		return nil, err

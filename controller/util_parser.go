@@ -88,14 +88,16 @@ func splitColonSeparatedIntegers(s, err_msg string) (first, second int64, err er
 	if index == 0 || index == (len(s)-1) {
 		return first, second, fmt.Errorf("':' doesn't have one of the fields")
 	}
-	first, err = strconv.Atoi(s[:index])
+	i, err := strconv.Atoi(s[:index])
 	if err != nil {
 		return first, second, err
 	}
-	second, err = strconv.Atoi(s[index+1:])
+	first = int64(i)
+	i, err = strconv.Atoi(s[index+1:])
 	if err != nil {
 		return first, second, err
 	}
+	second = int64(i)
 	return first, second, nil
 }
 
