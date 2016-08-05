@@ -156,8 +156,8 @@ func ConnectDbStore() (*dbStore, error) {
 		_db_item_client_uuid+" uuid, "+
 		_db_item_company_id+" INTEGER REFERENCES %s(company_id), "+
 		_db_item_category_id+" INTEGER DEFAULT %d REFERENCES %s(category_id) ON DELETE SET DEFAULT, "+
-		_db_item_code + " TEXT not null, "+
-		_db_item_name + " TEXT, "+
+		_db_item_code + " TEXT, "+
+		_db_item_name + " TEXT not null, "+
 
 		_db_item_units+" integer not null, "+
 		_db_item_has_derived_unit+" bool not null, "+
