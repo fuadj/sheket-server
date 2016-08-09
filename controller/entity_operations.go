@@ -176,7 +176,7 @@ func applyCategoryOperations(tnx *sql.Tx, posted_data *EntitySyncData, info *Ide
 			return nil, fmt.Errorf("error retriving category:%d '%s'", category_id, err.Error())
 		}
 
-		if _, err = Store.DeleteCategoryInTx(tnx, category_id); err != nil {
+		if err = Store.DeleteCategoryInTx(tnx, category_id); err != nil {
 			return nil, fmt.Errorf("error deleting category: %d '%s'", category_id, err.Error())
 		}
 
@@ -552,7 +552,7 @@ func applyBranchCategoryOperations(tnx *sql.Tx, posted_data *EntitySyncData, inf
 				branch_id, category_id, err.Error())
 		}
 
-		if _, err = Store.DeleteBranchCategoryInTx(tnx, branch_id, category_id); err != nil {
+		if err = Store.DeleteBranchCategoryInTx(tnx, branch_id, category_id); err != nil {
 			return nil, fmt.Errorf("error deleting branch_category: (%d:%d) '%s'",
 				branch_id, category_id, err.Error())
 		}

@@ -255,7 +255,7 @@ func fetchCategoriesSinceRev(company_id,
 	latest_rev int64,
 
 	changed_since []map[string]interface{},
-	deleted_since []map[string]interface{},
+	deleted_since []int64,
 
 	err error,
 ) {
@@ -267,13 +267,13 @@ func fetchCategoriesSinceRev(company_id,
 			RevisionNumber: last_category_rev,
 		})
 	if err != nil && err != models.ErrNoData {
-		return max_rev, nil, err
+		return max_rev, nil, nil, err
 	}
 
 	// we don't know which ones are create-update/delete,
 	// so we need to allocate BOTH arrays for worst case(to possibly hold all revisions since)
 	changed_result := make([]map[string]interface{}, len(category_revs))
-	deleted_result := make([]map[string]interface{}, len(category_revs))
+	deleted_result := make([]int64, len(category_revs))
 
 	changed_index := 0
 	deleted_index := 0
@@ -286,7 +286,7 @@ func fetchCategoriesSinceRev(company_id,
 		}
 
 		switch rev.ActionType {
-		case models.REV_ACTION_CREATE | models.REV_ACTION_UPDATE:
+		case models.REV_ACTION_CREATE, models.REV_ACTION_UPDATE:
 
 			category, err := Store.GetCategoryById(category_id)
 			// it can be ErrNoData if the category has been deleted since
@@ -295,7 +295,7 @@ func fetchCategoriesSinceRev(company_id,
 					continue
 				} else {
 					fmt.Printf("GetCategoryById error '%s'", err.Error())
-					return max_rev, nil, err
+					return max_rev, nil, nil, err
 				}
 			}
 
@@ -482,7 +482,7 @@ func fetchBranchCategoriesSinceRev(company_id,
 	latest_rev int64,
 
 	changed_since []map[string]interface{},
-	deleted_since []map[string]interface{},
+	deleted_since []string,
 
 	err error) {
 
@@ -493,13 +493,13 @@ func fetchBranchCategoriesSinceRev(company_id,
 			RevisionNumber: last_branch_category_rev,
 		})
 	if err != nil && err != models.ErrNoData {
-		return max_rev, nil, err
+		return max_rev, nil, nil, err
 	}
 
 	// we don't know which ones are create-update/delete,
 	// so we need to allocate BOTH arrays for worst case(to possibly hold all revisions since)
 	changed_result := make([]map[string]interface{}, len(branch_category_revs))
-	deleted_result := make([]map[string]interface{}, len(branch_category_revs))
+	deleted_result := make([]string, len(branch_category_revs))
 
 	changed_index := 0
 	deleted_index := 0
@@ -507,13 +507,14 @@ func fetchBranchCategoriesSinceRev(company_id,
 	for _, rev := range branch_category_revs {
 		branch_id := rev.EntityAffectedId
 		category_id := rev.AdditionalInfo
+
 		switch rev.ActionType {
-		case models.REV_ACTION_CREATE | models.REV_ACTION_UPDATE:
+		case models.REV_ACTION_CREATE, models.REV_ACTION_UPDATE:
 			branch_category, err := Store.GetBranchCategory(branch_id, category_id)
 			if err != nil {
 				if err != models.ErrNoData {
 					fmt.Printf("fetching changed branch categoires, GetBranchCategory error '%s'", err.Error())
-					return max_rev, nil, err
+					return max_rev, nil, nil, err
 				}
 				continue
 			}
