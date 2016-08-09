@@ -42,6 +42,9 @@ const (
 	// key of json holding any updated categories since last sync
 	key_sync_categories = "sync_categories"
 
+	// key of json for categories deleted since last sync
+	key_sync_deleted_categories = "deleted_categories"
+
 	// key of json holding any updated items since last sync
 	key_sync_items = "sync_items"
 
@@ -164,14 +167,21 @@ func syncModifiedEntities(sync_response map[string]interface{},
 	posted_data *EntitySyncData, sync_result *EntityResult,
 	info *IdentityInfo) error {
 
-	latest_category_rev, changed_categories, err := fetchChangedCategoriesSinceRev(info.CompanyId,
-		posted_data.RevisionCategory, sync_result.NewlyCreatedCategoryIds)
+	latest_category_rev,
+		changed_categories, deleted_categories,
+		err :=
+		fetchCategoriesSinceRev(info.CompanyId,
+			posted_data.RevisionCategory,
+			sync_result.NewlyCreatedCategoryIds)
 	if err != nil {
 		return err
 	}
 	sync_response[key_category_revision] = latest_category_rev
 	if len(changed_categories) > 0 {
 		sync_response[key_sync_categories] = changed_categories
+	}
+	if len(deleted_categories) > 0 {
+		sync_response[key_sync_deleted_categories] = deleted_categories
 	}
 
 	latest_item_rev, changed_items, err := fetchChangedItemsSinceRev(info.CompanyId,
@@ -218,9 +228,29 @@ func syncModifiedEntities(sync_response map[string]interface{},
 	return nil
 }
 
-func fetchChangedCategoriesSinceRev(company_id, last_category_rev int64, newly_created_category_ids map[int64]bool) (latest_rev int64,
-	categories_since []map[string]interface{}, err error) {
-	max_rev, changed_category_revs, err := Store.GetRevisionsSince(
+/**
+ * fetches creates/updates/deletes of categories since revision. Both the updates/deletes can be made
+ * by the current user.
+ *
+ * @return:
+ * 		latest_rev			the latest category revision
+ *
+ *		changes_since		the created/updated categories since last rev
+ *		deleted_since		the deleted since last rev
+ */
+func fetchCategoriesSinceRev(company_id,
+	last_category_rev int64,
+	newly_created_category_ids map[int64]bool) (
+
+	latest_rev int64,
+
+	changed_since []map[string]interface{},
+	deleted_since []map[string]interface{},
+
+	err error,
+) {
+
+	max_rev, category_revs, err := Store.GetRevisionsSince(
 		&models.ShEntityRevision{
 			CompanyId:      company_id,
 			EntityType:     models.REV_ENTITY_CATEGORY,
@@ -230,39 +260,60 @@ func fetchChangedCategoriesSinceRev(company_id, last_category_rev int64, newly_c
 		return max_rev, nil, err
 	}
 
-	result := make([]map[string]interface{}, len(changed_category_revs))
-	i := 0
-	for _, category_rev := range changed_category_revs {
-		category_id := category_rev.EntityAffectedId
+	// we don't know which ones are create-update/delete,
+	// so we need to allocate BOTH arrays for worst case(to possibly hold all revisions since)
+	changed_result := make([]map[string]interface{}, len(category_revs))
+	deleted_result := make([]map[string]interface{}, len(category_revs))
+
+	changed_index := 0
+	deleted_index := 0
+
+	for _, rev := range category_revs {
+		category_id := rev.EntityAffectedId
 		// the category was created in this sync "round", we already have it
 		if newly_created_category_ids[category_id] {
 			continue
 		}
-		category, err := Store.GetCategoryById(category_id)
 
-		// it can be ErrNoData if the category has been deleted since
-		if err != nil {
-			if err != models.ErrNoData {
-				fmt.Printf("GetCategoryById error '%v'", err.Error())
-				return max_rev, nil, err
+		switch rev.ActionType {
+		case models.REV_ACTION_CREATE | models.REV_ACTION_UPDATE:
+
+			category, err := Store.GetCategoryById(category_id)
+			// TODO: check if the check against models.ErrNoData is correct
+			// if the category has since been deleted, shouldn't it appear in the
+			// ACTION_DELETE case
+			// it can be ErrNoData if the category has been deleted since
+			if err != nil {
+				if err != models.ErrNoData {
+					fmt.Printf("GetCategoryById error '%v'", err.Error())
+					return max_rev, nil, err
+				}
+				continue
 			}
-			continue
-		}
 
-		// convert back to client root category id
-		if category.ParentId == models.ROOT_CATEGORY_ID {
-			category.ParentId = CLIENT_ROOT_CATEGORY_ID
-		}
+			// convert back to client root category id
+			if category.ParentId == models.ROOT_CATEGORY_ID {
+				category.ParentId = CLIENT_ROOT_CATEGORY_ID
+			}
 
-		result[i] = map[string]interface{}{
-			models.CATEGORY_JSON_CATEGORY_ID: category.CategoryId,
-			models.CATEGORY_JSON_NAME:        category.Name,
-			models.CATEGORY_JSON_PARENT_ID:   category.ParentId,
-			models.CATEGORY_JSON_UUID:        category.ClientUUID,
+			changed_result[changed_index] = map[string]interface{}{
+				models.CATEGORY_JSON_CATEGORY_ID: category.CategoryId,
+				models.CATEGORY_JSON_NAME:        category.Name,
+				models.CATEGORY_JSON_PARENT_ID:   category.ParentId,
+				models.CATEGORY_JSON_UUID:        category.ClientUUID,
+			}
+			changed_index++
+
+		case models.REV_ACTION_DELETE:
+			deleted_result[deleted_index] = category_id
+			deleted_index++
 		}
-		i++
 	}
-	return max_rev, result[:i], nil
+
+	return max_rev,
+		changed_result[:changed_index],
+		deleted_result[:deleted_index],
+		nil
 }
 
 func fetchChangedItemsSinceRev(company_id, item_rev int64, newly_created_item_ids map[int64]bool) (latest_rev int64,
@@ -418,8 +469,8 @@ func fetchChangedBranchCategoriesSinceRev(company_id, last_branch_category_rev i
 	branch_categories_since []map[string]interface{}, err error) {
 	max_rev, changed_branch_category_revs, err := Store.GetRevisionsSince(
 		&models.ShEntityRevision{
-			CompanyId:company_id,
-			EntityType:models.REV_ENTITY_BRANCH_CATEGORY,
+			CompanyId:      company_id,
+			EntityType:     models.REV_ENTITY_BRANCH_CATEGORY,
 			RevisionNumber: last_branch_category_rev,
 		})
 	if err != nil && err != models.ErrNoData {
@@ -441,8 +492,8 @@ func fetchChangedBranchCategoriesSinceRev(company_id, last_branch_category_rev i
 			continue
 		}
 
-		result[i] = map[string]interface{} {
-			models.BRANCH_CATEGORY_JSON_BRANCH_ID: branch_category.BranchId,
+		result[i] = map[string]interface{}{
+			models.BRANCH_CATEGORY_JSON_BRANCH_ID:   branch_category.BranchId,
 			models.BRANCH_CATEGORY_JSON_CATEGORY_ID: branch_category.CategoryId,
 		}
 		i++
