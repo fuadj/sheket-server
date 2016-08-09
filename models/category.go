@@ -84,6 +84,13 @@ func (s *shStore) UpdateCategoryInTx(tnx *sql.Tx, category *ShCategory) (*ShCate
 	return category, err
 }
 
+func (s *shStore) DeleteCategoryInTx(tnx *sql.Tx, category_id int64) error {
+	_, err := tnx.Exec(
+		fmt.Sprintf("delete from %s where category_id = $1", TABLE_CATEGORY),
+		category_id)
+	return err
+}
+
 func (s *shStore) GetCategoryByUUIDInTx(tnx *sql.Tx, uid string) (*ShCategory, error) {
 	msg := fmt.Sprintf("no category with that uuid:%s", uid)
 	category, err := _queryCategoryInTx(tnx, msg, "where client_uuid = $1", uid)
