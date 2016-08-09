@@ -170,10 +170,9 @@ func applyCategoryOperations(tnx *sql.Tx, posted_data *EntitySyncData, info *Ide
 
 	for category_id := range posted_data.CategoryIds[ACTION_DELETE] {
 		_, err := Store.GetCategoryByIdInTx(tnx, category_id)
-		if err != nil {
-			if err == models.ErrNoData {
-				continue
-			}
+		if err == models.ErrNoData {
+			continue
+		} else if err != nil {
 			return nil, fmt.Errorf("error retriving category:%d '%s'", category_id, err.Error())
 		}
 
@@ -538,6 +537,36 @@ func applyBranchCategoryOperations(tnx *sql.Tx, posted_data *EntitySyncData, inf
 		}
 
 		if _, err := Store.AddEntityRevisionInTx(tnx, rev); err != nil {
+			return nil, err
+		}
+	}
+
+	for pair_branch_category := range posted_data.Branch_CategoryIds[ACTION_DELETE] {
+		branch_id, category_id := pair_branch_category.BranchId,
+			pair_branch_category.CategoryId
+		_, err := Store.GetBranchCategoryInTx(tnx, branch_id, category_id)
+		if err == models.ErrNoData {
+			continue
+		} else if err != nil {
+			return nil, fmt.Errorf("error retriving branch category:(%d:%d) '%s'",
+				branch_id, category_id, err.Error())
+		}
+
+		if _, err = Store.DeleteBranchCategoryInTx(tnx, branch_id, category_id); err != nil {
+			return nil, fmt.Errorf("error deleting branch_category: (%d:%d) '%s'",
+				branch_id, category_id, err.Error())
+		}
+
+		rev := &models.ShEntityRevision{
+			CompanyId:        info.CompanyId,
+			EntityType:       models.REV_ENTITY_BRANCH_CATEGORY,
+			ActionType:       models.REV_ACTION_DELETE,
+			EntityAffectedId: branch_id,
+			AdditionalInfo:   category_id,
+		}
+
+		_, err = Store.AddEntityRevisionInTx(tnx, rev)
+		if err != nil {
 			return nil, err
 		}
 	}
