@@ -55,6 +55,9 @@ const (
 
 	// key of json holding any updated branch categories since last sync
 	key_sync_branch_categories = "sync_branch_categories"
+
+	// key of json for branch categories that have been deleted since last sync
+	key_sync_deleted_branch_categories = "deleted_branch_categories"
 )
 
 type EntityResult struct {
@@ -204,14 +207,21 @@ func syncModifiedEntities(sync_response map[string]interface{},
 		sync_response[key_sync_branches] = changed_branches
 	}
 
-	latest_branch_category_rev, changed_branch_categories, err := fetchBranchCategoriesSinceRev(info.CompanyId,
-		posted_data.RevisionBranch_Category)
+	latest_branch_category_rev,
+		changed_branch_categories,
+		deleted_branch_categories,
+		err :=
+		fetchBranchCategoriesSinceRev(info.CompanyId,
+			posted_data.RevisionBranch_Category)
 	if err != nil {
 		return err
 	}
 	sync_response[key_branch_category_revision] = latest_branch_category_rev
 	if len(changed_branch_categories) > 0 {
 		sync_response[key_sync_branch_categories] = changed_branch_categories
+	}
+	if len(deleted_categories) > 0 {
+		sync_response[key_sync_deleted_branch_categories] = deleted_branch_categories
 	}
 
 	if info.Permission.PermissionType <= models.PERMISSION_TYPE_BRANCH_MANAGER {
@@ -463,9 +473,20 @@ func fetchMemberSinceRev(company_id, member_rev int64) (latest_rev int64,
 	return max_rev, result[:i], nil
 }
 
-func fetchBranchCategoriesSinceRev(company_id, last_branch_category_rev int64) (latest_rev int64,
-	branch_categories_since []map[string]interface{}, err error) {
-	max_rev, changed_branch_category_revs, err := Store.GetRevisionsSince(
+/**
+ * fetches creates/updates/deletes of branch categories since revision.
+ */
+func fetchBranchCategoriesSinceRev(company_id,
+	last_branch_category_rev int64) (
+
+	latest_rev int64,
+
+	changed_since []map[string]interface{},
+	deleted_since []map[string]interface{},
+
+	err error) {
+
+	max_rev, branch_category_revs, err := Store.GetRevisionsSince(
 		&models.ShEntityRevision{
 			CompanyId:      company_id,
 			EntityType:     models.REV_ENTITY_BRANCH_CATEGORY,
@@ -475,27 +496,41 @@ func fetchBranchCategoriesSinceRev(company_id, last_branch_category_rev int64) (
 		return max_rev, nil, err
 	}
 
-	result := make([]map[string]interface{}, len(changed_branch_category_revs))
-	i := 0
-	for _, branch_category_rev := range changed_branch_category_revs {
-		branch_id := branch_category_rev.EntityAffectedId
-		category_id := branch_category_rev.AdditionalInfo
+	// we don't know which ones are create-update/delete,
+	// so we need to allocate BOTH arrays for worst case(to possibly hold all revisions since)
+	changed_result := make([]map[string]interface{}, len(branch_category_revs))
+	deleted_result := make([]map[string]interface{}, len(branch_category_revs))
 
-		branch_category, err := Store.GetBranchCategory(branch_id, category_id)
-		if err != nil {
-			if err != models.ErrNoData {
-				fmt.Printf("fetching changed branch categoires, GetBranchCategory error '%s'", err.Error())
-				return max_rev, nil, err
+	changed_index := 0
+	deleted_index := 0
+
+	for _, rev := range branch_category_revs {
+		branch_id := rev.EntityAffectedId
+		category_id := rev.AdditionalInfo
+		switch rev.ActionType {
+		case models.REV_ACTION_CREATE | models.REV_ACTION_UPDATE:
+			branch_category, err := Store.GetBranchCategory(branch_id, category_id)
+			if err != nil {
+				if err != models.ErrNoData {
+					fmt.Printf("fetching changed branch categoires, GetBranchCategory error '%s'", err.Error())
+					return max_rev, nil, err
+				}
+				continue
 			}
-			continue
-		}
 
-		result[i] = map[string]interface{}{
-			models.BRANCH_CATEGORY_JSON_BRANCH_ID:   branch_category.BranchId,
-			models.BRANCH_CATEGORY_JSON_CATEGORY_ID: branch_category.CategoryId,
+			changed_result[changed_index] = map[string]interface{}{
+				models.BRANCH_CATEGORY_JSON_BRANCH_ID:   branch_category.BranchId,
+				models.BRANCH_CATEGORY_JSON_CATEGORY_ID: branch_category.CategoryId,
+			}
+			changed_index++
+		case models.REV_ACTION_DELETE:
+			deleted_result[deleted_index] = fmt.Sprintf("%d:%d", branch_id, category_id)
+			deleted_index++
 		}
-		i++
 	}
 
-	return max_rev, result[:i], nil
+	return max_rev,
+		changed_result[:changed_index],
+		deleted_result[:deleted_index],
+		nil
 }
