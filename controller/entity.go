@@ -184,7 +184,7 @@ func syncModifiedEntities(sync_response map[string]interface{},
 		sync_response[key_sync_deleted_categories] = deleted_categories
 	}
 
-	latest_item_rev, changed_items, err := fetchChangedItemsSinceRev(info.CompanyId,
+	latest_item_rev, changed_items, err := fetchItemsSinceRev(info.CompanyId,
 		posted_data.RevisionItem, sync_result.NewlyCreatedItemIds)
 	if err != nil {
 		return err
@@ -194,7 +194,7 @@ func syncModifiedEntities(sync_response map[string]interface{},
 		sync_response[key_sync_items] = changed_items
 	}
 
-	latest_branch_rev, changed_branches, err := fetchChangedBranchesSinceRev(info.CompanyId,
+	latest_branch_rev, changed_branches, err := fetchBranchesSinceRev(info.CompanyId,
 		posted_data.RevisionBranch, sync_result.NewlyCreatedBranchIds)
 	if err != nil {
 		return err
@@ -204,7 +204,7 @@ func syncModifiedEntities(sync_response map[string]interface{},
 		sync_response[key_sync_branches] = changed_branches
 	}
 
-	latest_branch_category_rev, changed_branch_categories, err := fetchChangedBranchCategoriesSinceRev(info.CompanyId,
+	latest_branch_category_rev, changed_branch_categories, err := fetchBranchCategoriesSinceRev(info.CompanyId,
 		posted_data.RevisionBranch_Category)
 	if err != nil {
 		return err
@@ -215,7 +215,7 @@ func syncModifiedEntities(sync_response map[string]interface{},
 	}
 
 	if info.Permission.PermissionType <= models.PERMISSION_TYPE_BRANCH_MANAGER {
-		max_member_rev, members, err := fetchChangedMemberSinceRev(info.CompanyId,
+		max_member_rev, members, err := fetchMemberSinceRev(info.CompanyId,
 			posted_data.RevisionMember)
 		if err != nil {
 			return err
@@ -279,16 +279,14 @@ func fetchCategoriesSinceRev(company_id,
 		case models.REV_ACTION_CREATE | models.REV_ACTION_UPDATE:
 
 			category, err := Store.GetCategoryById(category_id)
-			// TODO: check if the check against models.ErrNoData is correct
-			// if the category has since been deleted, shouldn't it appear in the
-			// ACTION_DELETE case
 			// it can be ErrNoData if the category has been deleted since
 			if err != nil {
-				if err != models.ErrNoData {
-					fmt.Printf("GetCategoryById error '%v'", err.Error())
+				if err == models.ErrNoData {
+					continue
+				} else {
+					fmt.Printf("GetCategoryById error '%s'", err.Error())
 					return max_rev, nil, err
 				}
-				continue
 			}
 
 			// convert back to client root category id
@@ -316,7 +314,7 @@ func fetchCategoriesSinceRev(company_id,
 		nil
 }
 
-func fetchChangedItemsSinceRev(company_id, item_rev int64, newly_created_item_ids map[int64]bool) (latest_rev int64,
+func fetchItemsSinceRev(company_id, item_rev int64, newly_created_item_ids map[int64]bool) (latest_rev int64,
 	items_since []map[string]interface{}, err error) {
 
 	max_rev, changed_item_revs, err := Store.GetRevisionsSince(
@@ -374,7 +372,7 @@ func fetchChangedItemsSinceRev(company_id, item_rev int64, newly_created_item_id
 	return max_rev, result[:i], nil
 }
 
-func fetchChangedBranchesSinceRev(company_id, branch_rev int64, newly_created_branch_ids map[int64]bool) (latest_rev int64,
+func fetchBranchesSinceRev(company_id, branch_rev int64, newly_created_branch_ids map[int64]bool) (latest_rev int64,
 	branches_since []map[string]interface{}, err error) {
 
 	max_rev, new_branch_revs, err := Store.GetRevisionsSince(
@@ -417,7 +415,7 @@ func fetchChangedBranchesSinceRev(company_id, branch_rev int64, newly_created_br
 	return max_rev, result[:i], nil
 }
 
-func fetchChangedMemberSinceRev(company_id, member_rev int64) (latest_rev int64,
+func fetchMemberSinceRev(company_id, member_rev int64) (latest_rev int64,
 	members_since []map[string]interface{}, err error) {
 
 	max_rev, changed_member_revs, err := Store.GetRevisionsSince(
@@ -465,7 +463,7 @@ func fetchChangedMemberSinceRev(company_id, member_rev int64) (latest_rev int64,
 	return max_rev, result[:i], nil
 }
 
-func fetchChangedBranchCategoriesSinceRev(company_id, last_branch_category_rev int64) (latest_rev int64,
+func fetchBranchCategoriesSinceRev(company_id, last_branch_category_rev int64) (latest_rev int64,
 	branch_categories_since []map[string]interface{}, err error) {
 	max_rev, changed_branch_category_revs, err := Store.GetRevisionsSince(
 		&models.ShEntityRevision{
