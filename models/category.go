@@ -204,6 +204,13 @@ func (s *shStore) GetBranchCategoryInTx(tnx *sql.Tx, branch_id, category_id int6
 	return categories[0], nil
 }
 
+func (s *shStore) DeleteBranchCategoryInTx(tnx *sql.Tx, branch_id, category_id int64) error {
+	_, err := tnx.Exec(
+		fmt.Sprintf("delete from %s where branch_id = $1 and category_id = $2", TABLE_BRANCH_CATEGORY),
+		branch_id, category_id)
+	return err
+}
+
 func _queryBranchCategory(s *shStore, err_msg string, where_stmt string, args ...interface{}) ([]*ShBranchCategory, error) {
 	var result []*ShBranchCategory
 
