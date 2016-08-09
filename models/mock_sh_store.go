@@ -681,6 +681,16 @@ func (_mr *_MockCategoryStoreRecorder) UpdateCategoryInTx(arg0, arg1 interface{}
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "UpdateCategoryInTx", arg0, arg1)
 }
 
+func (_m *MockCategoryStore) DeleteCategoryInTx(_param0 *sql.Tx, _param1 int64) error {
+	ret := _m.ctrl.Call(_m, "DeleteCategoryInTx", _param0, _param1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+func (_mr *_MockCategoryStoreRecorder) DeleteCategoryInTx(arg0, arg1 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "DeleteCategoryInTx", arg0, arg1)
+}
+
 // Mock of BranchCategoryStore interface
 type MockBranchCategoryStore struct {
 	ctrl     *gomock.Controller
@@ -733,6 +743,16 @@ func (_m *MockBranchCategoryStore) GetBranchCategoryInTx(tnx *sql.Tx, branch_id 
 
 func (_mr *_MockBranchCategoryStoreRecorder) GetBranchCategoryInTx(arg0, arg1, arg2 interface{}) *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetBranchCategoryInTx", arg0, arg1, arg2)
+}
+
+func (_m *MockBranchCategoryStore) DeleteBranchCategoryInTx(tnx *sql.Tx, branch_id int64, category_id int64) error {
+	ret := _m.ctrl.Call(_m, "DeleteBranchCategoryInTx", tnx, branch_id, category_id)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+func (_mr *_MockBranchCategoryStoreRecorder) DeleteBranchCategoryInTx(arg0, arg1, arg2 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "DeleteBranchCategoryInTx", arg0, arg1, arg2)
 }
 
 // Mock of ShStore interface
@@ -932,6 +952,16 @@ func (_mr *_MockShStoreRecorder) UpdateCategoryInTx(arg0, arg1 interface{}) *gom
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "UpdateCategoryInTx", arg0, arg1)
 }
 
+func (_m *MockShStore) DeleteCategoryInTx(_param0 *sql.Tx, _param1 int64) error {
+	ret := _m.ctrl.Call(_m, "DeleteCategoryInTx", _param0, _param1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+func (_mr *_MockShStoreRecorder) DeleteCategoryInTx(arg0, arg1 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "DeleteCategoryInTx", arg0, arg1)
+}
+
 func (_m *MockShStore) AddCategoryToBranchInTx(_param0 *sql.Tx, _param1 *ShBranchCategory) (*ShBranchCategory, error) {
 	ret := _m.ctrl.Call(_m, "AddCategoryToBranchInTx", _param0, _param1)
 	ret0, _ := ret[0].(*ShBranchCategory)
@@ -963,6 +993,16 @@ func (_m *MockShStore) GetBranchCategoryInTx(tnx *sql.Tx, branch_id int64, categ
 
 func (_mr *_MockShStoreRecorder) GetBranchCategoryInTx(arg0, arg1, arg2 interface{}) *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetBranchCategoryInTx", arg0, arg1, arg2)
+}
+
+func (_m *MockShStore) DeleteBranchCategoryInTx(tnx *sql.Tx, branch_id int64, category_id int64) error {
+	ret := _m.ctrl.Call(_m, "DeleteBranchCategoryInTx", tnx, branch_id, category_id)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+func (_mr *_MockShStoreRecorder) DeleteBranchCategoryInTx(arg0, arg1, arg2 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "DeleteBranchCategoryInTx", arg0, arg1, arg2)
 }
 
 func (_m *MockShStore) CreateBranch(_param0 *ShBranch) (*ShBranch, error) {

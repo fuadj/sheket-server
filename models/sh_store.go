@@ -115,6 +115,7 @@ type CategoryStore interface {
 	GetCategoryByUUIDInTx(*sql.Tx, string) (*ShCategory, error)
 
 	UpdateCategoryInTx(*sql.Tx, *ShCategory) (*ShCategory, error)
+	DeleteCategoryInTx(*sql.Tx, int64) (error)
 }
 
 type BranchCategoryStore interface {
@@ -122,6 +123,8 @@ type BranchCategoryStore interface {
 
 	GetBranchCategory(branch_id, category_id int64) (*ShBranchCategory, error)
 	GetBranchCategoryInTx(tnx *sql.Tx, branch_id, category_id int64) (*ShBranchCategory, error)
+
+	DeleteBranchCategoryInTx(tnx *sql.Tx, branch_id, category_id int64) (error)
 }
 
 type ShStore interface {
