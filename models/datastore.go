@@ -146,7 +146,9 @@ func ConnectDbStore() (*dbStore, error) {
 		// branch-category table
 		"company_id		integer references %s(company_id), " +
 		"branch_id		integer references %s(branch_id), " +
-		"category_id	integer references %s(category_id), " +
+
+		// removing the category also removes its branchCategories
+		"category_id	integer references %s(category_id) ON DELETE CASCADE, " +
 		"unique(branch_id, category_id));",
 		TABLE_BRANCH_CATEGORY,
 		TABLE_COMPANY, TABLE_BRANCH, TABLE_CATEGORY))
