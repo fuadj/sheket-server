@@ -168,7 +168,33 @@ func applyCategoryOperations(tnx *sql.Tx, posted_data *EntitySyncData, info *Ide
 		}
 	}
 
-	// TODO: implement deletion
+	for category_id := range posted_data.CategoryIds[ACTION_DELETE] {
+		_, err := Store.GetCategoryByIdInTx(tnx, category_id)
+		if err != nil {
+			if err == models.ErrNoData {
+				continue
+			}
+			return nil, fmt.Errorf("error retriving category:%d '%s'", category_id, err.Error())
+		}
+
+		if _, err = Store.DeleteCategoryInTx(tnx, category_id); err != nil {
+			return nil, fmt.Errorf("error deleting category: %d '%s'", category_id, err.Error())
+		}
+
+		rev := &models.ShEntityRevision{
+			CompanyId:        info.CompanyId,
+			EntityType:       models.REV_ENTITY_CATEGORY,
+			ActionType:       models.REV_ACTION_DELETE,
+			EntityAffectedId: category_id,
+			AdditionalInfo:   -1,
+		}
+
+		_, err = Store.AddEntityRevisionInTx(tnx, rev)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return result, nil
 }
 

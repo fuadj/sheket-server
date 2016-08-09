@@ -184,6 +184,16 @@ package controller
 			{"o": old_id, "n":new_id}, ...
 		]
 
+		// Contains deleted category ids since last sync. The ids are just integers
+		"deleted_category_ids": [
+			ids, ...
+		]
+
+		"deleted_branch_category_ids": [
+			ids, ...
+			// NOTE: id is string of branch & category ids separated by colon => ( branch_id:category_id )
+		]
+
 		// only exists if there are added|changed items
 		"sync_items": [
 			{
