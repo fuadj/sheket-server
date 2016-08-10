@@ -1,0 +1,61 @@
+To view all contrains in all tables run this command
+
+SELECT tc.constraint_name,
+tc.constraint_type,
+tc.table_name,
+kcu.column_name,
+tc.is_deferrable,
+tc.initially_deferred,
+rc.match_option AS match_type,
+
+rc.update_rule AS on_update,
+rc.delete_rule AS on_delete,
+ccu.table_name AS references_table,
+ccu.column_name AS references_field
+FROM information_schema.table_constraints tc
+
+LEFT JOIN information_schema.key_column_usage kcu
+ON tc.constraint_catalog = kcu.constraint_catalog
+AND tc.constraint_schema = kcu.constraint_schema
+AND tc.constraint_name = kcu.constraint_name
+
+LEFT JOIN information_schema.referential_constraints rc
+ON tc.constraint_catalog = rc.constraint_catalog
+AND tc.constraint_schema = rc.constraint_schema
+AND tc.constraint_name = rc.constraint_name
+
+LEFT JOIN information_schema.constraint_column_usage ccu
+ON rc.unique_constraint_catalog = ccu.constraint_catalog
+AND rc.unique_constraint_schema = ccu.constraint_schema
+AND rc.unique_constraint_name = ccu.constraint_name
+
+WHERE lower(tc.constraint_type) in ('foreign key');
+
+
+
+                 constraint_name                 | constraint_type |         table_name          |  column_name   | is_deferrable | initially_deferred | match_type | on_update |  on_delete  |    references_table    | references_field 
+-------------------------------------------------+-----------------+-----------------------------+----------------+---------------+--------------------+------------+-----------+-------------+------------------------+------------------
+ s_business_transaction_user_id_fkey             | FOREIGN KEY     | s_business_transaction      | user_id        | NO            | NO                 | NONE       | NO ACTION | NO ACTION   | s_user_table           | user_id
+ s_user_permission_table_user_id_fkey            | FOREIGN KEY     | s_user_permission_table     | user_id        | NO            | NO                 | NONE       | NO ACTION | NO ACTION   | s_user_table           | user_id
+ s_table_entity_revision_company_id_fkey         | FOREIGN KEY     | s_table_entity_revision     | company_id     | NO            | NO                 | NONE       | NO ACTION | NO ACTION   | s_company              | company_id
+ s_business_transaction_item_company_id_fkey     | FOREIGN KEY     | s_business_transaction_item | company_id     | NO            | NO                 | NONE       | NO ACTION | NO ACTION   | s_company              | company_id
+ s_business_transaction_company_id_fkey          | FOREIGN KEY     | s_business_transaction      | company_id     | NO            | NO                 | NONE       | NO ACTION | NO ACTION   | s_company              | company_id
+ s_branch_item_company_id_fkey                   | FOREIGN KEY     | s_branch_item               | company_id     | NO            | NO                 | NONE       | NO ACTION | NO ACTION   | s_company              | company_id
+ s_inventory_item_company_id_fkey                | FOREIGN KEY     | s_inventory_item            | company_id     | NO            | NO                 | NONE       | NO ACTION | NO ACTION   | s_company              | company_id
+ s_branch_category_company_id_fkey               | FOREIGN KEY     | s_branch_category           | company_id     | NO            | NO                 | NONE       | NO ACTION | NO ACTION   | s_company              | company_id
+ s_category_company_id_fkey                      | FOREIGN KEY     | s_category                  | company_id     | NO            | NO                 | NONE       | NO ACTION | NO ACTION   | s_company              | company_id
+ s_branch_company_id_fkey                        | FOREIGN KEY     | s_branch                    | company_id     | NO            | NO                 | NONE       | NO ACTION | NO ACTION   | s_company              | company_id
+ s_user_permission_table_company_id_fkey         | FOREIGN KEY     | s_user_permission_table     | company_id     | NO            | NO                 | NONE       | NO ACTION | NO ACTION   | s_company              | company_id
+ s_business_transaction_branch_id_fkey           | FOREIGN KEY     | s_business_transaction      | branch_id      | NO            | NO                 | NONE       | NO ACTION | NO ACTION   | s_branch               | branch_id
+ s_branch_item_branch_id_fkey                    | FOREIGN KEY     | s_branch_item               | branch_id      | NO            | NO                 | NONE       | NO ACTION | NO ACTION   | s_branch               | branch_id
+ s_branch_category_branch_id_fkey                | FOREIGN KEY     | s_branch_category           | branch_id      | NO            | NO                 | NONE       | NO ACTION | NO ACTION   | s_branch               | branch_id
+ s_inventory_item_category_id_fkey               | FOREIGN KEY     | s_inventory_item            | category_id    | NO            | NO                 | NONE       | NO ACTION | SET DEFAULT | s_category             | category_id
+ s_branch_category_category_id_fkey              | FOREIGN KEY     | s_branch_category           | category_id    | NO            | NO                 | NONE       | NO ACTION | NO ACTION   | s_category             | category_id
+ s_category_parent_id_fkey                       | FOREIGN KEY     | s_category                  | parent_id      | NO            | NO                 | NONE       | NO ACTION | NO ACTION   | s_category             | category_id
+ s_business_transaction_item_item_id_fkey        | FOREIGN KEY     | s_business_transaction_item | item_id        | NO            | NO                 | NONE       | NO ACTION | NO ACTION   | s_inventory_item       | item_id
+ s_branch_item_item_id_fkey                      | FOREIGN KEY     | s_branch_item               | item_id        | NO            | NO                 | NONE       | NO ACTION | NO ACTION   | s_inventory_item       | item_id
+ s_business_transaction_item_transaction_id_fkey | FOREIGN KEY     | s_business_transaction_item | transaction_id | NO            | NO                 | NONE       | NO ACTION | NO ACTION   | s_business_transaction | transaction_id
+ t_br_item_item_id_fkey                          | FOREIGN KEY     | t_br_item                   | item_id        | NO            | NO                 | NONE       | NO ACTION | NO ACTION   | t_item                 | id
+ t_br_item_br_id_fkey                            | FOREIGN KEY     | t_br_item                   | br_id          | NO            | NO                 | NONE       | NO ACTION | NO ACTION   | t_branch               | id
+(22 rows)
+
