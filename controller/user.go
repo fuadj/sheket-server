@@ -31,13 +31,15 @@ func UserSignupHandler(c *gin.Context) {
 		return
 	}
 
-	invalid_user_name := "111_invalid"
+	invalid_user_name := ""
 
 	username := data.Get(JSON_KEY_USERNAME).MustString(invalid_user_name)
 	if strings.Compare(invalid_user_name, username) == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{ERROR_MSG: err.Error()})
 		return
 	}
+
+	username = strings.ToLower(username)
 
 	password := data.Get(JSON_KEY_PASSWORD).MustString()
 	if len(password) == 0 {
@@ -95,6 +97,8 @@ func UserLoginHandler(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{ERROR_MSG: err.Error()})
 		return
 	}
+
+	username = strings.ToLower(username)
 
 	user := &models.User{Username: username, HashedPassword: auth.HashPassword(password)}
 	auth_user, err := auth.AuthenticateUser(user, password)
