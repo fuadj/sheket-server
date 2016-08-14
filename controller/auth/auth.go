@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/gorilla/securecookie"
 	"github.com/gorilla/sessions"
-	"golang.org/x/crypto/bcrypt"
 	"net/http"
 	"sheket/server/models"
 	"github.com/gin-gonic/gin"
@@ -16,13 +15,6 @@ const (
 	invalid_user_id = -1
 
 	SESSION_COOKIE_LEN = 64
-
-	loginRedirect = "redirect_url"
-
-	// If user is prompted to login, a flash message will be saved
-	// in a session that will redirect the user to the original page
-	// they were session after login.
-	REDIRECT_FLASH = "redirect_flash"
 )
 
 var (
@@ -30,54 +22,20 @@ var (
 
 	SessionStore = sessions.NewCookieStore([]byte(securecookie.GenerateRandomKey(SESSION_COOKIE_LEN)))
 
-	// b/c the keys are randomly generated, the user will be logged out
-	// if the server restarts, there by generating new keys and making the previous
-	// cookie indecipherable.
 	/*
+	// TODO: use the randomly generated keys, and force user to re-loggin on the app!!!
+	// TODO: stop using cookies altogether and just use sessions, and store user_id inside it
 	   cookieHandler = securecookie.New(
 	   	securecookie.GenerateRandomKey(64),
 	   	securecookie.GenerateRandomKey(32))
 	*/
 	cookieHandler = securecookie.New(
-		GenerateDummyKey("abcd", 64),
-		GenerateDummyKey("kkk", 32),
+		generateDummyKey("abcd", 64),
+		generateDummyKey("kkk", 32),
 	)
-
-	// This handler will be called when the user isn't logged-in
-	// for handlers that require a logged-in user.
-	// This is exposed for testing(mocking) purposes.
-	NotLoggedInHandler = func(w http.ResponseWriter, r *http.Request) {
-		// Send the user to the login page is the DEFAULT action.
-		//http.Redirect(w, r, r_login, http.StatusFound)
-	}
 )
 
-func RequireLogin(h gin.HandlerFunc) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		if !IsLoggedIn(c.Request) {
-			_, err := GetCurrentUser(c.Request)
-			if err != nil {
-				fmt.Printf("Invalid login %v", err.Error())
-			}
-			c.String(http.StatusNonAuthoritativeInfo,
-				fmt.Sprintf("%s requires a logged-in user", c.Request.URL.Path))
-			return
-		}
-		h(c)
-	}
-}
-
-func HashPassword(s string) string {
-	var hashed []byte
-	hashed, _ = bcrypt.GenerateFromPassword([]byte(s), bcrypt.DefaultCost)
-	return string(hashed)
-}
-
-func CompareHashAndPassword(hashed string, password string) bool {
-	return bcrypt.CompareHashAndPassword([]byte(hashed), []byte(password)) == nil
-}
-
-func GenerateDummyKey(s string, length int) []byte {
+func generateDummyKey(s string, length int) []byte {
 	k := make([]byte, length)
 
 	for i := 0; i < length; i++ {
@@ -86,44 +44,20 @@ func GenerateDummyKey(s string, length int) []byte {
 	return k
 }
 
-func IsLoggedIn(r *http.Request) bool {
-	_, err := GetCurrentUser(r)
+func IsUserLoggedIn(r *http.Request) bool {
+	_, err := GetCurrentUserId(r)
 	return err == nil
 }
 
-// Checks if the user has required credentials
-// Returns err if invalid
-// If err is nil, the passed in {@link User} will
-// have all its fields populated
-func AuthenticateUser(u *models.User, password string) (*models.User, error) {
-	var err error
-
-	found, err := Store.FindUserByName(u.Username)
-	if err != nil {
-		return nil, err
-	}
-
-	if !CompareHashAndPassword(found.HashedPassword, password) {
-		return nil, fmt.Errorf("invalid password")
-	}
-
-	return found, nil
-}
-
-// This gets the URL that was saved in a cookie when the user
-// was forced to login from another page. It is the page url they were
-// on initially on before they were redirected to the login page.
-func GetRedirectURL(r *http.Request) string {
-	var redirectURL string = ""
-
-	session, err := SessionStore.Get(r, loginRedirect)
-	if err == nil {
-		if flashes := session.Flashes(REDIRECT_FLASH); len(flashes) > 0 {
-			redirectURL = flashes[0].(string)
+func RequireLogin(h gin.HandlerFunc) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if !IsUserLoggedIn(c.Request) {
+			c.String(http.StatusNonAuthoritativeInfo,
+				fmt.Sprintf("%s requires a logged-in user", c.Request.URL.Path))
+			return
 		}
+		h(c)
 	}
-
-	return redirectURL
 }
 
 func LoginUser(u *models.User, w http.ResponseWriter) {
@@ -151,18 +85,21 @@ func LogoutUser(w http.ResponseWriter) {
 }
 
 func GetCurrentUser(r *http.Request) (*models.User, error) {
-	var user_id int64 = invalid_user_id
+	if user_id, err := GetCurrentUserId(r); err == nil {
+		return Store.FindUserById(user_id)
+	}
+	return nil, fmt.Errorf("Can't find User")
+}
 
+func GetCurrentUserId(r *http.Request) (int64, error) {
 	if cookie, err := r.Cookie(login_cookie); err == nil {
 		decoded := make(map[string]int64)
 		if err = cookieHandler.Decode(login_cookie, cookie.Value, &decoded); err == nil {
-			user_id = decoded[key_user_id]
+			return decoded[key_user_id], nil
 		} else {
-			return nil, err
+			return invalid_user_id, err
 		}
 	} else {
-		return nil, fmt.Errorf("invalid login cookie")
+		return invalid_user_id, fmt.Errorf("invalid login cookie")
 	}
-
-	return Store.FindUserById(user_id)
 }
