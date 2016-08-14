@@ -1,0 +1,17 @@
+// remove the unique constraint on the username
+// multiple providers can have the same username
+// now it is unique(provider, username), we only enforce it for
+// a given provider
+alter table s_user_table drop constraint s_user_table_username_key;
+
+// remove the hash password column
+alter table s_user_table drop column hashpass ;
+
+// we can't set a "not null" constraint here b/c that column is empty 
+// now, so just add the column and update the table. After that,
+// set the "not null" constraint.
+alter table s_user_table add column provider_id integer;
+
+update s_user_table set provider_id = 1;
+
+
