@@ -23,8 +23,10 @@ func main() {
 	router.Use(gin.Logger())
 	router.Use(gin.Recovery())
 
-	router.POST("/api/v1/signup", c.UserSignupHandler)
-	router.POST("/api/v1/signin", c.UserLoginHandler)
+	// users will sign-in to this route. If the user doesn't already exist,
+	// it will be added to the database. If all is successful, the user will
+	// be signed-in with a cookie.
+	router.POST("/api/v1/signin/facebook", c.UserSignInHandler)
 
 	router.POST("/api/v1/company/create", auth.RequireLogin(c.CompanyCreateHandler))
 	// lists companies a user belongs in

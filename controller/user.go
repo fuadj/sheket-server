@@ -1,9 +1,9 @@
 package controller
 
 import (
-	"fmt"
 	"github.com/bitly/go-simplejson"
 	"github.com/gin-gonic/gin"
+	fb "github.com/huandu/facebook"
 	"net/http"
 	"sheket/server/controller/auth"
 	"sheket/server/models"
@@ -11,8 +11,8 @@ import (
 )
 
 const (
-	JSON_KEY_USERNAME = "username"
-	JSON_KEY_PASSWORD = "password"
+	JSON_KEY_USERNAME   = "username"
+	JSON_KEY_USER_TOKEN = "token"
 
 	JSON_KEY_USER_ID   = "user_id"
 	JSON_KEY_MEMBER_ID = "user_id"
@@ -22,8 +22,8 @@ const (
 	JSON_KEY_USER_PERMISSION = "user_permission"
 )
 
-func UserSignupHandler(c *gin.Context) {
-	defer trace("UserSignupHandler")()
+func UserSignInHandler(c *gin.Context) {
+	defer trace("UserSignInHandler")()
 
 	data, err := simplejson.NewFromReader(c.Request.Body)
 	if err != nil {
@@ -31,84 +31,95 @@ func UserSignupHandler(c *gin.Context) {
 		return
 	}
 
-	invalid_user_name := ""
+	user_token := strings.TrimSpace(data.Get(JSON_KEY_USER_TOKEN).MustString())
+	if len(user_token) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{ERROR_MSG: "User token missing"})
+		return
+	}
 
-	username := data.Get(JSON_KEY_USERNAME).MustString(invalid_user_name)
-	if strings.Compare(invalid_user_name, username) == 0 {
+	app_id := "313445519010095"
+	app_secret := "c01e7696a4dc07ac4e2be87f867c9348"
+
+	app := fb.New(app_id, app_secret)
+
+	// exchange the short-term token to a long lived token(this synchronously calls facebook!!!)
+	app_token, _, err := app.ExchangeToken(user_token)
+	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{ERROR_MSG: err.Error()})
 		return
 	}
 
-	username = strings.ToLower(username)
+	res, err := fb.Get("me", fb.Params{
+		"access_token": app_token,
+	})
 
-	password := data.Get(JSON_KEY_PASSWORD).MustString()
-	if len(password) == 0 {
+	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{ERROR_MSG: err.Error()})
 		return
 	}
+
+	var username, fb_id string
+	var v interface{}
+	var ok bool
+
+	if v, ok = res["name"]; ok {
+		username, ok = v.(string)
+	}
+	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{ERROR_MSG: "error facebook response: username field missing"})
+		return
+	}
+
+	if v, ok = res["id"]; ok {
+		fb_id, ok = v.(string)
+	}
+	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{ERROR_MSG: "error facebook response: facebook_id field missing"})
+		return
+	}
+
+	username = strings.TrimSpace(username)
+	fb_id = strings.TrimSpace(fb_id)
 
 	tnx, err := Store.GetDataStore().Begin()
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{ERROR_MSG: err.Error()})
 		return
 	}
+	defer func() {
+		if err != nil && tnx != nil {
+			tnx.Rollback()
+		}
+	}()
 
-	if _, err = Store.FindUserByNameInTx(tnx, username); err == nil {
-		// this means a previous user was found
-		c.JSON(http.StatusBadRequest, gin.H{ERROR_MSG: fmt.Sprintf("%s already exists", username)})
-		return
-	} else if err != nil && (err != models.ErrNoData) {
-		c.JSON(http.StatusBadRequest, gin.H{ERROR_MSG: err.Error()})
-		return
+	var user *models.User
+	if user, err = Store.FindUserWithProviderIdInTx(tnx,
+		models.AUTH_PROVIDER_FACEBOOK, fb_id); err != nil {
+		if err != models.ErrNoData {
+			c.JSON(http.StatusBadRequest, gin.H{ERROR_MSG: err.Error()})
+			return
+		} else {
+			// the user doesn't exist, so try inserting the user
+			new_user := &models.User{Username: username,
+				ProviderID:     models.AUTH_PROVIDER_FACEBOOK,
+				UserProviderID: fb_id}
+			user, err = Store.CreateUserInTx(tnx, new_user)
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{ERROR_MSG: err.Error()})
+				return
+			}
+			tnx.Commit()
+			tnx = nil
+		}
 	}
-
-	user := &models.User{Username: username,
-		HashedPassword: auth.HashPassword(password)}
-	created, err := Store.CreateUserInTx(tnx, user)
-	if err != nil {
-		tnx.Rollback()
-		c.JSON(http.StatusBadRequest, gin.H{ERROR_MSG: err.Error()})
-		return
-	}
-	tnx.Commit()
+	tnx = nil
 
 	// log-in the user for subsequent requests
-	auth.LoginUser(created, c.Writer)
+	auth.LoginUser(user, c.Writer)
 
 	c.JSON(http.StatusOK, map[string]interface{}{
 		JSON_KEY_USERNAME: username,
-		JSON_KEY_USER_ID:  created.UserId,
-	})
-}
-
-func UserLoginHandler(c *gin.Context) {
-	defer trace("UserLoginHandler")()
-
-	data, err := simplejson.NewFromReader(c.Request.Body)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{ERROR_MSG: err.Error()})
-		return
-	}
-
-	username := data.Get(JSON_KEY_USERNAME).MustString()
-	password := data.Get(JSON_KEY_PASSWORD).MustString()
-	if len(username) == 0 ||
-		len(password) == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{ERROR_MSG: err.Error()})
-		return
-	}
-
-	username = strings.ToLower(username)
-
-	user := &models.User{Username: username, HashedPassword: auth.HashPassword(password)}
-	auth_user, err := auth.AuthenticateUser(user, password)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{ERROR_MSG: "Incorrect username password combination!"})
-		return
-	}
-	auth.LoginUser(auth_user, c.Writer)
-	c.JSON(http.StatusOK, map[string]interface{}{
-		JSON_KEY_USER_ID: auth_user.UserId,
+		JSON_KEY_USER_ID:  user.UserId,
 	})
 }
 

@@ -86,7 +86,8 @@ func _queryUser(s *shStore, err_msg string, where_stmt string, args ...interface
 		row = s.QueryRow(query)
 	}
 
-	err := row.Scan(&u.UserId, &u.Username, &u.ProviderID, &u.UserProviderID)
+	err := _parseColumns(row, u)
+
 	return _checkUserError(u, err, err_msg)
 }
 
@@ -101,6 +102,24 @@ func _queryUserTnx(tnx *sql.Tx, err_msg string, where_stmt string, args ...inter
 		row = tnx.QueryRow(query)
 	}
 
-	err := row.Scan(&u.UserId, &u.Username, &u.ProviderID, &u.UserProviderID)
+	err := _parseColumns(row, u)
+
 	return _checkUserError(u, err, err_msg)
+}
+
+func _parseColumns(row *sql.Row, user *User) error {
+	var _username, _user_provider_id sql.NullString
+	var _user_id, _provider_id sql.NullInt64
+
+	err := row.Scan(&_user_id, &_username, &_provider_id, &_user_provider_id)
+	if err != nil {
+		return err
+	}
+
+	user.UserId = _user_id.Int64
+	user.ProviderID = _provider_id.Int64
+	user.Username = _username.String
+	user.UserProviderID = _user_provider_id.String
+
+	return nil
 }
