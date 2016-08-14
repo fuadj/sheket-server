@@ -100,10 +100,17 @@ func ConnectDbStore() (*dbStore, error) {
 
 	exec(fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s ( "+
 		// user-table
-		"user_id		SERIAL PRIMARY KEY, "+
-		"username		TEXT NOT NULL, "+
-		"hashpass 		TEXT NOT NULL, "+
-		"UNIQUE(username));", TABLE_USER))
+		"user_id				SERIAL PRIMARY KEY, "+
+		"username				TEXT NOT NULL, "+
+
+		// id identifying who is the provider(can support multiple. fb, google, ...)
+		"provider_id			INTEGER	NOT NULL, "+
+
+		// the unique id returned by the provider of the user in their db
+		"user_provider_id		TEXT NOT NULL, "+
+
+		// the username should be unique for a particular provider
+		"UNIQUE(username, provider_id));", TABLE_USER))
 
 	exec(fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s ( "+
 		// company-table
@@ -142,13 +149,13 @@ func ConnectDbStore() (*dbStore, error) {
 		return nil, err
 	}
 
-	exec(fmt.Sprintf("create table if not exists %s ( " +
+	exec(fmt.Sprintf("create table if not exists %s ( "+
 		// branch-category table
-		"company_id		integer references %s(company_id), " +
-		"branch_id		integer references %s(branch_id), " +
+		"company_id		integer references %s(company_id), "+
+		"branch_id		integer references %s(branch_id), "+
 
 		// removing the category also removes its branchCategories
-		"category_id	integer references %s(category_id) ON DELETE CASCADE, " +
+		"category_id	integer references %s(category_id) ON DELETE CASCADE, "+
 		"unique(branch_id, category_id));",
 		TABLE_BRANCH_CATEGORY,
 		TABLE_COMPANY, TABLE_BRANCH, TABLE_CATEGORY))
@@ -158,8 +165,8 @@ func ConnectDbStore() (*dbStore, error) {
 		_db_item_client_uuid+" uuid, "+
 		_db_item_company_id+" INTEGER REFERENCES %s(company_id), "+
 		_db_item_category_id+" INTEGER DEFAULT %d REFERENCES %s(category_id) ON DELETE SET DEFAULT, "+
-		_db_item_code + " TEXT, "+
-		_db_item_name + " TEXT not null, "+
+		_db_item_code+" TEXT, "+
+		_db_item_name+" TEXT not null, "+
 
 		_db_item_units+" integer not null, "+
 		_db_item_has_derived_unit+" bool not null, "+
@@ -177,7 +184,7 @@ func ConnectDbStore() (*dbStore, error) {
 		// branch-item table
 		"company_id		INTEGER REFERENCES %s(company_id), "+
 		"branch_id		INTEGER REFERENCES %s(branch_id), "+
-		"item_id		INTEGER references %s(" + _db_item_id + "), "+
+		"item_id		INTEGER references %s("+_db_item_id+"), "+
 		"quantity		REAL NOT NULL, "+
 		"item_location		TEXT, "+
 		"unique(branch_id, item_id));",
@@ -192,7 +199,7 @@ func ConnectDbStore() (*dbStore, error) {
 		"company_id				INTEGER REFERENCES %s(company_id), "+
 		"branch_id				INTEGER REFERENCES %s(branch_id), "+
 		"user_id				INTEGER REFERENCES %s(user_id), "+
-		"t_date 				INTEGER, " +
+		"t_date 				INTEGER, "+
 		"trans_note				TEXT);",
 		TABLE_TRANSACTION, TABLE_COMPANY, TABLE_BRANCH, TABLE_USER))
 
@@ -224,7 +231,7 @@ func ConnectDbStore() (*dbStore, error) {
 		"trans_type			INTEGER NOT NULL, "+
 		"item_id			INTEGER REFERENCES %s(item_id), "+
 		"other_branch_id 	INTEGER, "+
-		"quantity 			REAL NOT NULL, " +
+		"quantity 			REAL NOT NULL, "+
 		"item_note	 		TEXT);",
 		TABLE_TRANSACTION_ITEM, TABLE_COMPANY, TABLE_TRANSACTION, TABLE_INVENTORY_ITEM))
 

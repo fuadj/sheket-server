@@ -5,10 +5,19 @@ import (
 	"fmt"
 )
 
+const (
+	AUTH_PROVIDER_FACEBOOK int64 = 1
+	AUTH_PROVIDER_GOOGLE   int64 = 2
+)
+
 type User struct {
-	UserId         int64
-	Username       string
-	HashedPassword string
+	// This is the id in our database
+	UserId   int64
+	Username string
+
+	// these will be the id of the provider which gave us the user's info (like: facebook, ...)
+	ProviderID     int64
+	UserProviderID string
 }
 
 func _checkUserError(u *User, err error, err_msg string) (*User, error) {
@@ -25,37 +34,13 @@ func _checkUserError(u *User, err error, err_msg string) (*User, error) {
 	}
 }
 
-func (b *shStore) CreateUser(u *User) (*User, error) {
-	tnx, err := b.Begin()
-	if err != nil {
-		return nil, fmt.Errorf("User create error '%v'", err)
-	}
-	defer func() {
-		if err != nil {
-			tnx.Rollback()
-		}
-	}()
-
-	user, err := b.CreateUserInTx(tnx, u)
-	if err != nil {
-		return nil, err
-	}
-
-	tnx.Commit()
-	return user, nil
-}
-
 func (b *shStore) CreateUserInTx(tnx *sql.Tx, u *User) (*User, error) {
-	prev_user, err := _queryUserTnx(tnx, "query user error", "where username = $1", u.Username)
-	if prev_user != nil {
-		return nil, fmt.Errorf("username '%s' already exists", u.Username)
-	}
-
-	err = tnx.QueryRow(
+	err := tnx.QueryRow(
 		fmt.Sprintf("insert into %s "+
-			"(username, hashpass) values "+
-			"($1, $2) returning user_id", TABLE_USER),
-		u.Username, u.HashedPassword).Scan(&u.UserId)
+			"(username, provider_id, user_provider_id) values "+
+			"($1, $2, $3) returning user_id", TABLE_USER),
+		u.Username, u.ProviderID, u.UserProviderID).
+		Scan(&u.UserId)
 	return _checkUserError(u, err, "")
 }
 
@@ -74,17 +59,25 @@ func (b *shStore) FindUserByNameInTx(tnx *sql.Tx, username string) (*User, error
 }
 
 func (b *shStore) FindUserById(id int64) (*User, error) {
-	msg := fmt.Sprintf("no user with id:%d", id)
-	user, err := _queryUser(b, msg, "where user_id = $1", id)
+	user, err := _queryUser(b,
+		fmt.Sprintf("no user with id:%d", id),
+		"where user_id = $1", id)
 	if err != nil {
 		return nil, err
 	}
 	return user, nil
 }
 
+func (b *shStore) FindUserWithProviderIdInTx(tnx *sql.Tx, provider_id int64, provider_user_id string) (*User, error) {
+	return _queryUserTnx(tnx,
+		fmt.Sprintf("no user with id:%s in provider:%d", provider_user_id, provider_id),
+		"where provider_id = $1 AND user_provider_id = $2",
+		provider_id, provider_user_id)
+}
+
 func _queryUser(s *shStore, err_msg string, where_stmt string, args ...interface{}) (*User, error) {
 	u := new(User)
-	query := fmt.Sprintf("select user_id, username, hashpass from %s", TABLE_USER)
+	query := fmt.Sprintf("select user_id, username, provider_id, user_provider_id from %s", TABLE_USER)
 
 	var row *sql.Row
 	if len(where_stmt) > 0 {
@@ -93,13 +86,13 @@ func _queryUser(s *shStore, err_msg string, where_stmt string, args ...interface
 		row = s.QueryRow(query)
 	}
 
-	err := row.Scan(&u.UserId, &u.Username, &u.HashedPassword)
+	err := row.Scan(&u.UserId, &u.Username, &u.ProviderID, &u.UserProviderID)
 	return _checkUserError(u, err, err_msg)
 }
 
 func _queryUserTnx(tnx *sql.Tx, err_msg string, where_stmt string, args ...interface{}) (*User, error) {
 	u := new(User)
-	query := fmt.Sprintf("select user_id, username, hashpass from %s", TABLE_USER)
+	query := fmt.Sprintf("select user_id, username, provider_id, user_provider_id from %s", TABLE_USER)
 
 	var row *sql.Row
 	if len(where_stmt) > 0 {
@@ -108,6 +101,6 @@ func _queryUserTnx(tnx *sql.Tx, err_msg string, where_stmt string, args ...inter
 		row = tnx.QueryRow(query)
 	}
 
-	err := row.Scan(&u.UserId, &u.Username, &u.HashedPassword)
+	err := row.Scan(&u.UserId, &u.Username, &u.ProviderID, &u.UserProviderID)
 	return _checkUserError(u, err, err_msg)
 }

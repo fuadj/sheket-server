@@ -65,13 +65,12 @@ type CompanyStore interface {
 }
 
 type UserStore interface {
-	CreateUser(u *User) (*User, error)
 	CreateUserInTx(tnx *sql.Tx, u *User) (*User, error)
 
-	FindUserByName(string) (*User, error)
 	FindUserById(int64) (*User, error)
 
-	FindUserByNameInTx(*sql.Tx, string) (*User, error)
+	// searches for the user by the unique id given to the user by the provider
+	FindUserWithProviderIdInTx(tnx *sql.Tx, provider_id int64, provider_user_id string) (*User, error)
 
 	/**
 	 * Permission is given to a user on a company basis.
