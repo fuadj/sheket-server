@@ -2,11 +2,11 @@ package auth
 
 import (
 	"fmt"
+	"github.com/gin-gonic/gin"
 	"github.com/gorilla/securecookie"
 	"github.com/gorilla/sessions"
 	"net/http"
 	"sheket/server/models"
-	"github.com/gin-gonic/gin"
 )
 
 const (
@@ -22,27 +22,10 @@ var (
 
 	SessionStore = sessions.NewCookieStore([]byte(securecookie.GenerateRandomKey(SESSION_COOKIE_LEN)))
 
-	/*
-	// TODO: use the randomly generated keys, and force user to re-loggin on the app!!!
-	// TODO: stop using cookies altogether and just use sessions, and store user_id inside it
-	   cookieHandler = securecookie.New(
-	   	securecookie.GenerateRandomKey(64),
-	   	securecookie.GenerateRandomKey(32))
-	*/
 	cookieHandler = securecookie.New(
-		generateDummyKey("abcd", 64),
-		generateDummyKey("kkk", 32),
-	)
+		securecookie.GenerateRandomKey(64),
+		securecookie.GenerateRandomKey(32))
 )
-
-func generateDummyKey(s string, length int) []byte {
-	k := make([]byte, length)
-
-	for i := 0; i < length; i++ {
-		k[i] = byte(s[i%len(s)])
-	}
-	return k
-}
 
 func IsUserLoggedIn(r *http.Request) bool {
 	_, err := GetCurrentUserId(r)

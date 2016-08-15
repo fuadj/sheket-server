@@ -38,6 +38,7 @@ func UserSignInHandler(c *gin.Context) {
 	}
 
 	app_id := "313445519010095"
+	// TODO: store this in a more secure place, don't hardcode it here
 	app_secret := "c01e7696a4dc07ac4e2be87f867c9348"
 
 	app := fb.New(app_id, app_secret)
