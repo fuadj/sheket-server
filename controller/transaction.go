@@ -321,19 +321,19 @@ func TransactionSyncHandler(c *gin.Context) {
 
 	company_id := GetCurrentCompanyId(c.Request)
 	if company_id == INVALID_COMPANY_ID {
-		c.JSON(http.StatusUnauthorized, gin.H{ERROR_MSG: "Invalid company id"})
+		c.JSON(http.StatusBadRequest, gin.H{ERROR_MSG: "Invalid company id"})
 		return
 	}
 
 	user, err := currentUserGetter(c.Request)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{ERROR_MSG: err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{ERROR_MSG: err.Error()})
 		return
 	}
 
 	permission, err := Store.GetUserPermission(user, company_id)
 	if err != nil { // the user doesn't have permission to post
-		c.JSON(http.StatusUnauthorized, gin.H{ERROR_MSG: err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{ERROR_MSG: err.Error()})
 		return
 	}
 

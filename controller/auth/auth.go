@@ -52,7 +52,7 @@ func IsUserLoggedIn(r *http.Request) bool {
 func RequireLogin(h gin.HandlerFunc) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if !IsUserLoggedIn(c.Request) {
-			c.String(http.StatusNonAuthoritativeInfo,
+			c.String(http.StatusUnauthorized,
 				fmt.Sprintf("%s requires a logged-in user", c.Request.URL.Path))
 			return
 		}

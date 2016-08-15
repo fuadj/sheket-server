@@ -82,7 +82,7 @@ func EntitySyncHandler(c *gin.Context) {
 
 	info, err := GetIdentityInfo(c.Request)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{ERROR_MSG: err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{ERROR_MSG: err.Error()})
 		return
 	}
 
