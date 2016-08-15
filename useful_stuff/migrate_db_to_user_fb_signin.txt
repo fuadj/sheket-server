@@ -10,8 +10,12 @@ alter table s_user_table drop column hashpass ;
 // we can't set a "not null" constraint here b/c that column is empty 
 // now, so just add the column and update the table. After that,
 // set the "not null" constraint.
+
 alter table s_user_table add column provider_id integer;
-
 update s_user_table set provider_id = 1;
+alter table s_user_table alter COLUMN provider_id set not null;
 
+alter table s_user_table add column user_provider_id text;
+update s_user_table set user_provider_id = ''';
+alter table s_user_table alter COLUMN user_provider_id set not null;
 
