@@ -3,14 +3,39 @@ package models
 import (
 	"database/sql"
 	"fmt"
+	"strings"
+	"strconv"
 )
 
 type Company struct {
-	CompanyId   int64
-	CompanyName string
-	Contact     string
+	CompanyId      int64
+	CompanyName    string
+	Contact        string
 	EncodedPayment string
 }
+
+const (
+	PAYMENT_CONTRACT_TYPE_NONE = 1
+	PAYMENT_CONTRACT_TYPE_SINGLE_USE = 2
+	PAYMENT_CONTRACT_TYPE_FIRST_LEVEL = 3
+	PAYMENT_CONTRACT_TYPE_SECOND_LEVEL = 4
+)
+
+// can be used in either {employee | branch | item} to signal no limits
+const LIMIT_NONE = -1
+
+type PaymentInfo struct {
+	// it is a milli-second interval since the epoch
+	IssuedDate int64
+
+	DurationInDays int64
+	ContractType   int64
+
+	EmployeeLimit int64
+	BranchLimit   int64
+	ItemLimit     int64
+}
+
 
 func (b *shStore) CreateCompany(u *User, c *Company) (*Company, error) {
 	tnx, err := b.Begin()
@@ -93,3 +118,55 @@ func _queryCompany(s *shStore, err_msg string, where_stmt string, args ...interf
 	}
 	return result, nil
 }
+const (
+	_p_s_issued_date = "issued_date"
+	_p_s_duration = "duration"
+	_p_s_contract_type = "contract_type"
+	_p_s_employee_limit = "employee_limit"
+	_p_s_branch_limit = "branch_limit"
+	_p_s_item_limit = "item_limit"
+)
+
+const _C_D = ":%d"
+const _C_D_S = _C_D + ";"
+
+func (p PaymentInfo) Encode() string {
+	return fmt.Sprintf(
+		_p_s_issued_date + _C_D_S +
+		_p_s_duration + _C_D_S +
+		_p_s_contract_type + _C_D_S +
+		_p_s_employee_limit + _C_D_S +
+		_p_s_branch_limit + _C_D_S +
+		_p_s_item_limit + _C_D,
+
+		p.IssuedDate, p.DurationInDays, p.ContractType,
+		p.EmployeeLimit, p.BranchLimit, p.ItemLimit)
+}
+
+func DecodePayment(s string) PaymentInfo {
+	p := PaymentInfo{}
+	subs := strings.Split(s, ";")
+
+	if len(subs) != 6 {
+		return p
+	}
+
+	p.IssuedDate = _atoi(subs[0])
+	p.DurationInDays = _atoi(subs[1])
+	p.ContractType = _atoi(subs[2], PAYMENT_CONTRACT_TYPE_NONE)
+	p.EmployeeLimit = _atoi(subs[3])
+	p.BranchLimit = _atoi(subs[4])
+	p.ItemLimit = _atoi(subs[5])
+
+	return p
+}
+
+func _atoi(s string, def_val ...[]int64) int64 {
+	i, err := strconv.Atoi(s)
+	if err != nil && len(def_val) != 0 {
+		return def_val[0]
+	}
+
+	return int64(i)
+}
+
