@@ -9,6 +9,7 @@ type Company struct {
 	CompanyId   int64
 	CompanyName string
 	Contact     string
+	EncodedPayment string
 }
 
 func (b *shStore) CreateCompany(u *User, c *Company) (*Company, error) {
@@ -35,9 +36,9 @@ func (b *shStore) CreateCompany(u *User, c *Company) (*Company, error) {
 func (b *shStore) CreateCompanyInTx(tnx *sql.Tx, u *User, c *Company) (*Company, error) {
 	err := tnx.QueryRow(
 		fmt.Sprintf("insert into %s "+
-			"(company_name, contact) values "+
-			"($1, $2) returning company_id;", TABLE_COMPANY),
-		c.CompanyName, c.Contact).Scan(&c.CompanyId)
+			"(company_name, contact, encoded_payment) values "+
+			"($1, $2, $3) returning company_id;", TABLE_COMPANY),
+		c.CompanyName, c.Contact, c.EncodedPayment).Scan(&c.CompanyId)
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +58,7 @@ func (b *shStore) GetCompanyById(id int64) (*Company, error) {
 func _queryCompany(s *shStore, err_msg string, where_stmt string, args ...interface{}) ([]*Company, error) {
 	var result []*Company
 
-	query := fmt.Sprintf("select company_id, company_name, contact from %s", TABLE_COMPANY)
+	query := fmt.Sprintf("select company_id, company_name, contact, encoded_payment from %s", TABLE_COMPANY)
 	sort_by := " ORDER BY company_id desc"
 
 	var rows *sql.Rows
@@ -78,6 +79,7 @@ func _queryCompany(s *shStore, err_msg string, where_stmt string, args ...interf
 			&c.CompanyId,
 			&c.CompanyName,
 			&c.Contact,
+			&c.EncodedPayment,
 		); err == sql.ErrNoRows {
 			// no-op
 		} else if err != nil {
