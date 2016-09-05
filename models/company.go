@@ -15,6 +15,15 @@ type Company struct {
 }
 
 const (
+	PAYMENT_JSON_ISSUED_DATE = "issued_date"
+	PAYMENT_JSON_CONTRACT_TYPE = "contract_type"
+	PAYMENT_JSON_DURATION = "duration"
+	PAYMENT_JSON_LIMIT_EMPLOYEE = "employee_limit"
+	PAYMENT_JSON_LIMIT_BRANCH = "branch_limit"
+	PAYMENT_JSON_LIMIT_ITEM = "item_limit"
+)
+
+const (
 	PAYMENT_CONTRACT_TYPE_NONE = 1
 	PAYMENT_CONTRACT_TYPE_SINGLE_USE = 2
 	PAYMENT_CONTRACT_TYPE_FIRST_LEVEL = 3
@@ -25,11 +34,11 @@ const (
 const LIMIT_NONE = -1
 
 type PaymentInfo struct {
-	// it is a milli-second interval since the epoch
+	// value returned from time.Now().Unix(), time since the epoch. It is easier to store and "transport"
 	IssuedDate int64
 
-	DurationInDays int64
 	ContractType   int64
+	DurationInDays int64
 
 	EmployeeLimit int64
 	BranchLimit   int64
