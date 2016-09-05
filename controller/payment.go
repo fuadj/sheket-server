@@ -10,6 +10,11 @@ import (
 )
 
 const (
+	JSON_PAYMENT_DESCRIPTION = "payment_desc"
+	JSON_PAYMENT_CONTRACT = "payment_contract"
+)
+
+const (
 	CLIENT_NO_LIMIT int64 = -1
 )
 
@@ -97,12 +102,11 @@ func IssuePaymentHandler(c *gin.Context) {
 
 	c.JSON(http.StatusOK, map[string]interface{}{
 		JSON_KEY_COMPANY_ID: company_id,
-		"payment": fmt.Sprintf("Successful payment for %d days", payment_info.DurationInDays),
+		JSON_PAYMENT_DESCRIPTION: fmt.Sprintf("Successful payment for %d days", payment_info.DurationInDays),
 	})
 }
 
-/**
- * In the current implementation, users aren't allowed to make payment directly due to the
+/** * In the current implementation, users aren't allowed to make payment directly due to the
  * non-integration with payment services like HelloCash and M-Birr.
  * Payment happens through "agents". After an agent has issued a payment request for a user's
  * company, then the user needs to verify the payment has been made to continue using the app.
