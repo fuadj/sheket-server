@@ -15,6 +15,7 @@ type Company struct {
 }
 
 const (
+	PAYMENT_JSON_COMPANY_ID = "company_id"
 	PAYMENT_JSON_ISSUED_DATE = "issued_date"
 	PAYMENT_JSON_CONTRACT_TYPE = "contract_type"
 	PAYMENT_JSON_DURATION = "duration"
