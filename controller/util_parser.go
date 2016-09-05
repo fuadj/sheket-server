@@ -13,7 +13,9 @@ func get_string(key string, check_map map[string]interface{}, fields map[string]
 		if !ok {
 			return "", false
 		}
-		fields[key] = true
+		if fields != nil {
+			fields[key] = true
+		}
 		return s, true
 	}
 	return "", false
@@ -25,7 +27,9 @@ func get_bool(key string, check_map map[string]interface{}, fields map[string]bo
 		if !ok {
 			return false, false
 		}
-		fields[key] = true
+		if fields != nil {
+			fields[key] = true
+		}
 		return b, true
 	}
 	return false, false
@@ -41,7 +45,9 @@ func get_int64(key string, check_map map[string]interface{}, fields map[string]b
 		if err != nil {
 			return -1, false
 		}
-		fields[key] = true
+		if fields != nil {
+			fields[key] = true
+		}
 		return int_val, true
 	}
 	return -1, false
@@ -57,7 +63,9 @@ func get_float64(key string, check_map map[string]interface{}, fields map[string
 		if err != nil {
 			return -1, false
 		}
-		fields[key] = true
+		if fields != nil {
+			fields[key] = true
+		}
 		return float_val, true
 	}
 	return -1, false
