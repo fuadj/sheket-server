@@ -32,7 +32,7 @@ const (
 )
 
 // can be used in either {employee | branch | item} to signal no limits
-const LIMIT_NONE = -1
+const PAYMENT_LIMIT_NONE = -1
 
 type PaymentInfo struct {
 	// value returned from time.Now().Unix(), time since the epoch. It is easier to store and "transport"

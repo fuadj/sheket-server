@@ -63,6 +63,16 @@ func IssuePaymentHandler(c *gin.Context) {
 		return
 	}
 
+	if payment_info.EmployeeLimit == CLIENT_NO_LIMIT {
+		payment_info.EmployeeLimit = models.PAYMENT_LIMIT_NONE
+	}
+	if payment_info.BranchLimit == CLIENT_NO_LIMIT {
+		payment_info.BranchLimit = models.PAYMENT_LIMIT_NONE
+	}
+	if payment_info.ItemLimit == CLIENT_NO_LIMIT {
+		payment_info.ItemLimit = models.PAYMENT_LIMIT_NONE
+	}
+
 	payment_info.IssuedDate = time.Now().Unix()
 
 	company, err := Store.GetCompanyById(company_id)
