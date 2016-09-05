@@ -37,6 +37,8 @@ func main() {
 	router.POST("/api/v1/sync/entity", auth.RequireLogin(c.EntitySyncHandler))
 	router.POST("/api/v1/sync/transaction", auth.RequireLogin(c.TransactionSyncHandler))
 
+	router.POST("/api/v1/payment/issue", auth.RequireLogin(c.IssuePaymentHandler))
+
 	router.LoadHTMLGlob("templates/*.tmpl.html")
 	router.Static("/static", "static")
 
