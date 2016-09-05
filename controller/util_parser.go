@@ -7,35 +7,35 @@ import (
 	"encoding/json"
 )
 
-func get_string(key string, check_map map[string]interface{}, fields map[string]bool) (string, bool) {
+func get_string(key string, check_map map[string]interface{}, does_exist map[string]bool) (string, bool) {
 	if val, ok := check_map[key]; ok {
 		s, ok := val.(string)
 		if !ok {
 			return "", false
 		}
-		if fields != nil {
-			fields[key] = true
+		if does_exist != nil {
+			does_exist[key] = true
 		}
 		return s, true
 	}
 	return "", false
 }
 
-func get_bool(key string, check_map map[string]interface{}, fields map[string]bool) (bool, bool) {
+func get_bool(key string, check_map map[string]interface{}, does_exist map[string]bool) (bool, bool) {
 	if val, ok := check_map[key]; ok {
 		b, ok := val.(bool)
 		if !ok {
 			return false, false
 		}
-		if fields != nil {
-			fields[key] = true
+		if does_exist != nil {
+			does_exist[key] = true
 		}
 		return b, true
 	}
 	return false, false
 }
 
-func get_int64(key string, check_map map[string]interface{}, fields map[string]bool) (int64, bool) {
+func get_int64(key string, check_map map[string]interface{}, does_exist map[string]bool) (int64, bool) {
 	if val, ok := check_map[key]; ok {
 		number, ok := val.(json.Number)
 		if !ok {
@@ -45,15 +45,15 @@ func get_int64(key string, check_map map[string]interface{}, fields map[string]b
 		if err != nil {
 			return -1, false
 		}
-		if fields != nil {
-			fields[key] = true
+		if does_exist != nil {
+			does_exist[key] = true
 		}
 		return int_val, true
 	}
 	return -1, false
 }
 
-func get_float64(key string, check_map map[string]interface{}, fields map[string]bool) (float64, bool) {
+func get_float64(key string, check_map map[string]interface{}, does_exist map[string]bool) (float64, bool) {
 	if val, ok := check_map[key]; ok {
 		number, ok := val.(json.Number)
 		if !ok {
@@ -63,8 +63,8 @@ func get_float64(key string, check_map map[string]interface{}, fields map[string
 		if err != nil {
 			return -1, false
 		}
-		if fields != nil {
-			fields[key] = true
+		if does_exist != nil {
+			does_exist[key] = true
 		}
 		return float_val, true
 	}
