@@ -62,6 +62,8 @@ type CompanyStore interface {
 	// The CALLER needs to rollback the transaction if error occurs
 	CreateCompanyInTx(*sql.Tx, *User, *Company) (*Company, error)
 	GetCompanyById(int64) (*Company, error)
+
+	UpdateCompanyInTx(*sql.Tx, *Company) (*Company, error)
 }
 
 type UserStore interface {
