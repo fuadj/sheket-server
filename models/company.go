@@ -140,7 +140,7 @@ const (
 const _C_D = ":%d"
 const _C_D_S = _C_D + ";"
 
-func (p PaymentInfo) Encode() string {
+func (p *PaymentInfo) Encode() string {
 	return fmt.Sprintf(
 		_p_s_issued_date + _C_D_S +
 		_p_s_duration + _C_D_S +
@@ -153,22 +153,25 @@ func (p PaymentInfo) Encode() string {
 		p.EmployeeLimit, p.BranchLimit, p.ItemLimit)
 }
 
-func DecodePayment(s string) PaymentInfo {
-	p := PaymentInfo{}
+func DecodePayment(s string) (*PaymentInfo, error) {
+	p := &PaymentInfo{}
 	subs := strings.Split(s, ";")
 
 	if len(subs) != 6 {
-		return p
+		return nil, fmt.Errorf("Invalid payment info encoding '%s'", s)
 	}
 
 	p.IssuedDate = _atoi(subs[0])
 	p.DurationInDays = _atoi(subs[1])
 	p.ContractType = _atoi(subs[2], PAYMENT_CONTRACT_TYPE_NONE)
+	if p.ContractType == PAYMENT_CONTRACT_TYPE_NONE {
+		return nil, fmt.Errorf("invalid contract type '%d'", p.ContractType)
+	}
 	p.EmployeeLimit = _atoi(subs[3])
 	p.BranchLimit = _atoi(subs[4])
 	p.ItemLimit = _atoi(subs[5])
 
-	return p
+	return p, nil
 }
 
 func _atoi(s string, def_val ...[]int64) int64 {
