@@ -7,6 +7,7 @@ import (
 	"github.com/gorilla/sessions"
 	"net/http"
 	"sheket/server/models"
+	"sheket/server/controller/easy_error"
 )
 
 const (
@@ -32,14 +33,14 @@ func IsUserLoggedIn(r *http.Request) bool {
 	return err == nil
 }
 
-func RequireLogin(h gin.HandlerFunc) gin.HandlerFunc {
+func RequireLogin(h easy_error.SheketHandler) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if !IsUserLoggedIn(c.Request) {
 			c.String(http.StatusUnauthorized,
 				fmt.Sprintf("%s requires a logged-in user", c.Request.URL.Path))
 			return
 		}
-		h(c)
+		easy_error.HandleError(h)()
 	}
 }
 
