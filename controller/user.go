@@ -9,6 +9,8 @@ import (
 	sh "sheket/server/controller/sheket_handler"
 	"sheket/server/models"
 	"strings"
+	"os"
+	"log"
 )
 
 const (
@@ -22,6 +24,14 @@ const (
 	JSON_KEY_COMPANY_CONTACT = "company_contact"
 	JSON_KEY_USER_PERMISSION = "user_permission"
 )
+
+var fb_app_secret string
+
+func init() {
+	if fb_app_secret = os.Getenv("FB_APP_SECRET"); fb_app_secret == "" {
+		log.Fatal("$FB_APP_SECRET must be set")
+	}
+}
 
 func UserSignInHandler(c *gin.Context) *sh.SheketError {
 	defer trace("UserSignInHandler")()
@@ -37,10 +47,8 @@ func UserSignInHandler(c *gin.Context) *sh.SheketError {
 	}
 
 	app_id := "313445519010095"
-	// TODO: store this in a more secure place, don't hardcode it here
-	app_secret := "c01e7696a4dc07ac4e2be87f867c9348"
 
-	app := fb.New(app_id, app_secret)
+	app := fb.New(app_id, fb_app_secret)
 
 	// exchange the short-term token to a long lived token(this synchronously calls facebook!!!)
 	app_token, _, err := app.ExchangeToken(user_token)
