@@ -2,31 +2,26 @@ package controller
 
 import (
 	"github.com/bitly/go-simplejson"
+	"github.com/gin-gonic/gin"
 	"net/http"
 	"sheket/server/controller/auth"
+	sh "sheket/server/controller/sheket_handler"
 	"sheket/server/models"
 	"strings"
-	"github.com/gin-gonic/gin"
 )
 
-func AddCompanyMember(c *gin.Context) {
+func AddCompanyMember(c *gin.Context) *sh.SheketError {
 	defer trace("AddCompanyMember")()
 
-	company_id := GetCurrentCompanyId(c.Request)
-	if company_id == INVALID_COMPANY_ID {
-		c.String(http.StatusUnauthorized, "")
-		return
+	info, err := GetIdentityInfo(c.Request)
+	if err != nil {
+		return &sh.SheketError{Code: http.StatusBadRequest, Error: err.Error()}
 	}
-
-	if _, err := currentUserGetter(c.Request); err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{ERROR_MSG:err.Error()})
-		return
-	}
+	company_id := info.CompanyId
 
 	data, err := simplejson.NewFromReader(c.Request.Body)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{ERROR_MSG:err.Error()})
-		return
+		return &sh.SheketError{Code: http.StatusBadRequest, Error: err.Error()}
 	}
 
 	invalid_id := int64(-1)
@@ -35,8 +30,7 @@ func AddCompanyMember(c *gin.Context) {
 
 	if member_id == invalid_id ||
 		len(encoded_permission) == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{ERROR_MSG:"error parsing member id"})
-		return
+		return &sh.SheketError{Code: http.StatusBadRequest, Error: "error parsing member id"}
 	}
 
 	p := &models.UserPermission{}
@@ -47,20 +41,17 @@ func AddCompanyMember(c *gin.Context) {
 
 	member, err := Store.FindUserById(member_id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG:"Couldn't find member: " + err.Error()})
-		return
+		return &sh.SheketError{Code: http.StatusInternalServerError, Error: "Couldn't find member: '" + err.Error() + "'"}
 	}
 
 	tnx, err := Store.Begin()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG:""})
-		return
+		return &sh.SheketError{Code: http.StatusInternalServerError, Error: err.Error()}
 	}
 
 	_, err = Store.SetUserPermissionInTx(tnx, p)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG:"setting user permission"})
-		return
+		return &sh.SheketError{Code: http.StatusInternalServerError, Error: err.Error()}
 	}
 
 	rev := &models.ShEntityRevision{
@@ -73,8 +64,7 @@ func AddCompanyMember(c *gin.Context) {
 
 	_, err = Store.AddEntityRevisionInTx(tnx, rev)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG:"updating member table"})
-		return
+		return &sh.SheketError{Code: http.StatusInternalServerError, Error: err.Error()}
 	}
 	tnx.Commit()
 
@@ -82,27 +72,26 @@ func AddCompanyMember(c *gin.Context) {
 		JSON_KEY_MEMBER_ID: member_id,
 		JSON_KEY_USERNAME:  member.Username,
 	})
+
+	return nil
 }
 
-func CompanyCreateHandler(c *gin.Context) {
+func CompanyCreateHandler(c *gin.Context) *sh.SheketError {
 	defer trace("CompanyCreateHandler")()
 
 	current_user, err := auth.GetCurrentUser(c.Request)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{ERROR_MSG:""})
-		return
+		return &sh.SheketError{Code: http.StatusBadRequest, Error: err.Error()}
 	}
 
 	data, err := simplejson.NewFromReader(c.Request.Body)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{ERROR_MSG:err.Error()})
-		return
+		return &sh.SheketError{Code: http.StatusBadRequest, Error: err.Error()}
 	}
 
 	company_name := data.Get(JSON_KEY_COMPANY_NAME).MustString()
 	if len(company_name) == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{ERROR_MSG:"Empty company name"})
-		return
+		return &sh.SheketError{Code: http.StatusBadRequest, Error: "Empty company name"}
 	}
 	contact := data.Get(JSON_KEY_COMPANY_CONTACT).MustString()
 
@@ -110,14 +99,12 @@ func CompanyCreateHandler(c *gin.Context) {
 
 	tnx, err := Store.GetDataStore().Begin()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG:err.Error()})
-		return
+		return &sh.SheketError{Code: http.StatusInternalServerError, Error: err.Error()}
 	}
 	created, err := Store.CreateCompanyInTx(tnx, current_user, company)
 	if err != nil {
 		tnx.Rollback()
-		c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG:err.Error()})
-		return
+		return &sh.SheketError{Code: http.StatusInternalServerError, Error: err.Error()}
 	}
 
 	result := make(map[string]interface{}, 10)
@@ -135,10 +122,10 @@ func CompanyCreateHandler(c *gin.Context) {
 	_, err = Store.SetUserPermissionInTx(tnx, p)
 	if err != nil {
 		tnx.Rollback()
-		c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG:err.Error()})
-		return
+		return &sh.SheketError{Code: http.StatusInternalServerError, Error: err.Error()}
 	}
 	tnx.Commit()
 
 	c.JSON(http.StatusOK, result)
+	return nil
 }
