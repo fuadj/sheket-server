@@ -25,10 +25,10 @@ const (
 )
 
 const (
-	PAYMENT_CONTRACT_TYPE_NONE = 1
-	PAYMENT_CONTRACT_TYPE_SINGLE_USE = 2
-	PAYMENT_CONTRACT_TYPE_FIRST_LEVEL = 3
-	PAYMENT_CONTRACT_TYPE_SECOND_LEVEL = 4
+	PAYMENT_CONTRACT_TYPE_NONE int64 = 1
+	PAYMENT_CONTRACT_TYPE_SINGLE_USE int64 = 2
+	PAYMENT_CONTRACT_TYPE_FIRST_LEVEL int64 = 3
+	PAYMENT_CONTRACT_TYPE_SECOND_LEVEL int64 = 4
 )
 
 // can be used in either {employee | branch | item} to signal no limits
@@ -174,7 +174,7 @@ func DecodePayment(s string) (*PaymentInfo, error) {
 	return p, nil
 }
 
-func _atoi(s string, def_val ...[]int64) int64 {
+func _atoi(s string, def_val ...int64) int64 {
 	i, err := strconv.Atoi(s)
 	if err != nil && len(def_val) != 0 {
 		return def_val[0]
