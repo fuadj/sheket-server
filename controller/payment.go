@@ -205,11 +205,9 @@ func VerifyPaymentHandler(c *gin.Context) *sh.SheketError {
 		return &sh.SheketError{Code: http.StatusInternalServerError, err.Error()}
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		{JSON_PAYMENT_HAS_LICENSE: true,
-			JSON_PAYMENT_CONTRACT_SIGNATURE: fmt.Sprintf("%s_||_%s", contract, signed)},
-	})
-
+	c.JSON(http.StatusOK,
+		gin.H{JSON_PAYMENT_HAS_LICENSE: true,
+			JSON_PAYMENT_CONTRACT_SIGNATURE: fmt.Sprintf("%s_||_%s", contract, signed)})
 	return nil
 }
 
