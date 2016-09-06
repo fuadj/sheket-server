@@ -10,6 +10,8 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"os"
+	"log"
 )
 
 /*
@@ -30,8 +32,12 @@ var private_key *rsa.PrivateKey
 
 func init() {
 	var err error
-	if private_key, err = loadPrivateKey("./private_key.pem"); err != nil {
-		panic(fmt.Errorf("Can't load private key '%s'", err.Error()))
+	path_private_kay := os.Getenv("PRIVATE_KEY_PATH")
+	if path_private_kay == "" {
+		log.Fatal("$PRIVATE_KEY_PATH must be set")
+	}
+	if private_key, err = loadPrivateKey(path_private_kay); err != nil {
+		log.Fatalf("Can't load private key '%s'", err.Error())
 	}
 }
 
