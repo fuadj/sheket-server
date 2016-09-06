@@ -29,17 +29,17 @@ func main() {
 	// be signed-in with a cookie.
 	router.POST("/api/v1/signin/facebook", c.UserSignInHandler)
 
-	router.POST("/api/v1/company/create", auth.RequireLogin(c.CompanyCreateHandler))
+	router.POST("/api/v1/company/create", auth.RequireLogin(sh.SheketHandler(c.CompanyCreateHandler)))
 	// lists companies a user belongs in
-	router.POST("/api/v1/company/list", auth.RequireLogin(c.UserCompanyListHandler))
+	router.POST("/api/v1/company/list", auth.RequireLogin(sh.SheketHandler(c.UserCompanyListHandler)))
 
-	router.POST("/api/v1/member/add", auth.RequireLogin(c.AddCompanyMember))
+	router.POST("/api/v1/member/add", auth.RequireLogin(sh.SheketHandler(c.AddCompanyMember)))
 
 	router.POST("/api/v1/sync/entity", auth.RequireLogin(sh.SheketHandler(c.EntitySyncHandler)))
 	router.POST("/api/v1/sync/transaction", auth.RequireLogin(sh.SheketHandler(c.TransactionSyncHandler)))
 
-	router.POST("/api/v1/payment/issue", auth.RequireLogin(c.IssuePaymentHandler))
-	router.POST("/api/v1/payment/verify", auth.RequireLogin(c.VerifyPaymentHandler))
+	router.POST("/api/v1/payment/issue", auth.RequireLogin(sh.SheketHandler(c.IssuePaymentHandler)))
+	router.POST("/api/v1/payment/verify", auth.RequireLogin(sh.SheketHandler(c.VerifyPaymentHandler)))
 
 	router.LoadHTMLGlob("templates/*.tmpl.html")
 	router.Static("/static", "static")
