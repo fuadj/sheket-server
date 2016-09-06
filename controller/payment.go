@@ -138,21 +138,21 @@ func VerifyPaymentHandler(c *gin.Context) *sh.SheketError {
 	user_local_time := data.Get(JSON_PAYMENT_LOCAL_USER_TIME).MustString("")
 
 	if device_id == "" || user_local_time == "" {
-		return &sh.SheketError{Code: http.StatusBadRequest, "missing user attribute fields"}
+		return &sh.SheketError{Code: http.StatusBadRequest, Error:"missing user attribute fields"}
 	}
 
 	company, err := Store.GetCompanyById(info.CompanyId)
 	if err != nil {
-		return &sh.SheketError{Code: http.StatusInternalServerError, err.Error()}
+		return &sh.SheketError{Code: http.StatusInternalServerError, Error:err.Error()}
 	}
 
 	payment_info, err := models.DecodePayment(company.EncodedPayment)
 	if err != nil {
 		r_err := revokeCompanyLicense(info.CompanyId)
 		if r_err != nil {
-			return &sh.SheketError{Code: http.StatusInternalServerError, err.Error() + ":" + r_err.Error()}
+			return &sh.SheketError{Code: http.StatusInternalServerError, Error:err.Error() + ":" + r_err.Error()}
 		}
-		return &sh.SheketError{Code: http.StatusPaymentRequired, "license expired"}
+		return &sh.SheketError{Code: http.StatusPaymentRequired, Error: "license expired"}
 	}
 
 	current_date := time.Now().Unix()
@@ -175,9 +175,9 @@ func VerifyPaymentHandler(c *gin.Context) *sh.SheketError {
 	if payment_expired {
 		r_err := revokeCompanyLicense(info.CompanyId)
 		if r_err != nil {
-			return &sh.SheketError{Code: http.StatusInternalServerError, r_err.Error()}
+			return &sh.SheketError{Code: http.StatusInternalServerError, Error:r_err.Error()}
 		}
-		return &sh.SheketError{Code: http.StatusPaymentRequired, "license expired"}
+		return &sh.SheketError{Code: http.StatusPaymentRequired, Error:"license expired"}
 	}
 
 	// if we've reached here, it means the user has valid remaining payment
@@ -202,7 +202,7 @@ func VerifyPaymentHandler(c *gin.Context) *sh.SheketError {
 
 	signed, err := signature.SignBase64EncodeMessage(contract)
 	if err != nil {
-		return &sh.SheketError{Code: http.StatusInternalServerError, err.Error()}
+		return &sh.SheketError{Code: http.StatusInternalServerError, Error:err.Error()}
 	}
 
 	c.JSON(http.StatusOK,
