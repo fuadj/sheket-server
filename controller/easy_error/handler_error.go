@@ -4,12 +4,12 @@ import "github.com/gin-gonic/gin"
 
 const ERROR_MSG = "error_message"
 
-type AppError struct {
+type SheketError struct {
 	Error interface{}
 	Code  int
 }
 
-type SheketHandler func(c *gin.Context) *AppError
+type SheketHandler func(c *gin.Context) *SheketError
 
 func HandleError(h SheketHandler) gin.HandlerFunc {
 	return func(c *gin.Context) {
