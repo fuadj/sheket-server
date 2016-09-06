@@ -1,4 +1,4 @@
-package easy_error
+package sheket_handler
 
 import "github.com/gin-gonic/gin"
 
