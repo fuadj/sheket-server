@@ -220,10 +220,9 @@ func VerifyPaymentHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		{JSON_PAYMENT_HAS_LICENSE: true,
-			JSON_PAYMENT_CONTRACT_SIGNATURE: fmt.Sprintf("%s_||_%s", contract, signed)},
-	})
+	c.JSON(http.StatusOK,
+		gin.H{JSON_PAYMENT_HAS_LICENSE: true,
+			JSON_PAYMENT_CONTRACT_SIGNATURE: fmt.Sprintf("%s_||_%s", contract, signed)})
 }
 
 func revokeCompanyLicense(company_id int64) error {
