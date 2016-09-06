@@ -388,6 +388,17 @@ func (_mr *_MockCompanyStoreRecorder) GetCompanyById(arg0 interface{}) *gomock.C
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetCompanyById", arg0)
 }
 
+func (_m *MockCompanyStore) UpdateCompanyInTx(_param0 *sql.Tx, _param1 *Company) (*Company, error) {
+	ret := _m.ctrl.Call(_m, "UpdateCompanyInTx", _param0, _param1)
+	ret0, _ := ret[0].(*Company)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (_mr *_MockCompanyStoreRecorder) UpdateCompanyInTx(arg0, arg1 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "UpdateCompanyInTx", arg0, arg1)
+}
+
 // Mock of UserStore interface
 type MockUserStore struct {
 	ctrl     *gomock.Controller
@@ -1135,6 +1146,17 @@ func (_m *MockShStore) GetCompanyById(_param0 int64) (*Company, error) {
 
 func (_mr *_MockShStoreRecorder) GetCompanyById(arg0 interface{}) *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetCompanyById", arg0)
+}
+
+func (_m *MockShStore) UpdateCompanyInTx(_param0 *sql.Tx, _param1 *Company) (*Company, error) {
+	ret := _m.ctrl.Call(_m, "UpdateCompanyInTx", _param0, _param1)
+	ret0, _ := ret[0].(*Company)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (_mr *_MockShStoreRecorder) UpdateCompanyInTx(arg0, arg1 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "UpdateCompanyInTx", arg0, arg1)
 }
 
 func (_m *MockShStore) CreateUserInTx(tnx *sql.Tx, u *User) (*User, error) {

@@ -81,6 +81,16 @@ func (b *shStore) CreateCompanyInTx(tnx *sql.Tx, u *User, c *Company) (*Company,
 	return c, err
 }
 
+func (b *shStore) UpdateCompanyInTx(tnx *sql.Tx, c *Company) (*Company, error) {
+	_, err := tnx.Exec(
+		fmt.Sprintf("update %s set "+
+		" company_name = $1, contact = $2, encoded_payment = $3 "+
+		" where company_id = $4 ", TABLE_COMPANY),
+		c.CompanyName, c.Contact, c.EncodedPayment,
+		c.CompanyId)
+	return c, err
+}
+
 func (b *shStore) GetCompanyById(id int64) (*Company, error) {
 	msg := fmt.Sprintf("no company with id %d", id)
 	companies, err := _queryCompany(b, msg, "where company_id = $1", id)
