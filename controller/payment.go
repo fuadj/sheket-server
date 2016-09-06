@@ -5,6 +5,7 @@ import (
 	"github.com/bitly/go-simplejson"
 	"github.com/gin-gonic/gin"
 	"net/http"
+	sh "sheket/server/controller/sheket_handler"
 	"sheket/server/controller/signature"
 	"sheket/server/models"
 	"time"
@@ -47,17 +48,15 @@ func _to_client_limit(val int64) int64 {
  * TODO: currently it overwrites the payment, in the future "see" what has already
  * been paid and do {extend | upgrade}
  */
-func IssuePaymentHandler(c *gin.Context) {
+func IssuePaymentHandler(c *gin.Context) *sh.SheketError {
 	data, err := simplejson.NewFromReader(c.Request.Body)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{ERROR_MSG: err.Error()})
-		return
+		return &sh.SheketError{Code: http.StatusBadRequest, Error: err.Error()}
 	}
 
 	values, err := data.Map()
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{ERROR_MSG: err.Error()})
-		return
+		return &sh.SheketError{Code: http.StatusBadRequest, Error: err.Error()}
 	}
 
 	payment_info := &models.PaymentInfo{}
@@ -84,8 +83,7 @@ func IssuePaymentHandler(c *gin.Context) {
 
 	// we can check here if the above was successful or not
 	if not_ok {
-		c.JSON(http.StatusBadRequest, gin.H{ERROR_MSG: fmt.Sprintf("missing: %s", missing_field)})
-		return
+		return &sh.SheketError{Code: http.StatusBadRequest, Error: fmt.Sprintf("missing: %s", missing_field)}
 	}
 
 	payment_info.EmployeeLimit = _to_server_limit(payment_info.EmployeeLimit)
@@ -96,21 +94,18 @@ func IssuePaymentHandler(c *gin.Context) {
 
 	company, err := Store.GetCompanyById(company_id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG: err.Error()})
-		return
+		return &sh.SheketError{Code: http.StatusInternalServerError, Error: err.Error()}
 	}
 	company.EncodedPayment = payment_info.Encode()
 	tnx, err := Store.Begin()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG: err.Error()})
-		return
+		return &sh.SheketError{Code: http.StatusInternalServerError, Error: err.Error()}
 	}
 
 	company, err = Store.UpdateCompanyInTx(tnx, company)
 	if err != nil {
 		tnx.Rollback()
-		c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG: err.Error()})
-		return
+		return &sh.SheketError{Code: http.StatusInternalServerError, Error: err.Error()}
 	}
 	tnx.Commit()
 
@@ -118,6 +113,8 @@ func IssuePaymentHandler(c *gin.Context) {
 		JSON_KEY_COMPANY_ID:      company_id,
 		JSON_PAYMENT_DESCRIPTION: fmt.Sprintf("Successful payment for %d days", payment_info.DurationInDays),
 	})
+
+	return nil
 }
 
 /** * In the current implementation, users aren't allowed to make payment directly due to the
@@ -127,44 +124,35 @@ func IssuePaymentHandler(c *gin.Context) {
  * This is particularly necessary for uses that don't use the sync feature as the payment verification
  * should always happen on every sync.
  */
-func VerifyPaymentHandler(c *gin.Context) {
+func VerifyPaymentHandler(c *gin.Context) *sh.SheketError {
 	info, err := GetIdentityInfo(c.Request)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{ERROR_MSG: err.Error()})
-		return
+		return &sh.SheketError{Code: http.StatusBadRequest, Error: err.Error()}
 	}
 	data, err := simplejson.NewFromReader(c.Request.Body)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG: err.Error()})
-		return
+		return &sh.SheketError{Code: http.StatusInternalServerError, Error: err.Error()}
 	}
 
 	device_id := data.Get(JSON_PAYMENT_DEVICE_ID).MustString("")
-	if device_id == "" {
-		c.JSON(http.StatusBadRequest, gin.H{ERROR_MSG: "missing device_id"})
-		return
-	}
 	user_local_time := data.Get(JSON_PAYMENT_LOCAL_USER_TIME).MustString("")
-	if user_local_time == "" {
-		c.JSON(http.StatusBadRequest, gin.H{ERROR_MSG: "missing user_local_time"})
-		return
+
+	if device_id == "" || user_local_time == "" {
+		return &sh.SheketError{Code: http.StatusBadRequest, "missing user attribute fields"}
 	}
 
 	company, err := Store.GetCompanyById(info.CompanyId)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG: err.Error()})
-		return
+		return &sh.SheketError{Code: http.StatusInternalServerError, err.Error()}
 	}
 
 	payment_info, err := models.DecodePayment(company.EncodedPayment)
 	if err != nil {
 		r_err := revokeCompanyLicense(info.CompanyId)
 		if r_err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG: err.Error() + ":" + r_err.Error()})
-			return
+			return &sh.SheketError{Code: http.StatusInternalServerError, err.Error() + ":" + r_err.Error()}
 		}
-		// this should signal an invalid contract, b/c it won't be able to decrypt using the public key
-		c.JSON(http.StatusOK, gin.H{{JSON_PAYMENT_HAS_LICENSE: false}})
+		return &sh.SheketError{Code: http.StatusPaymentRequired, "license expired"}
 	}
 
 	current_date := time.Now().Unix()
@@ -187,11 +175,9 @@ func VerifyPaymentHandler(c *gin.Context) {
 	if payment_expired {
 		r_err := revokeCompanyLicense(info.CompanyId)
 		if r_err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG: r_err.Error()})
-			return
+			return &sh.SheketError{Code: http.StatusInternalServerError, r_err.Error()}
 		}
-		c.JSON(http.StatusPaymentRequired, gin.H{{ERROR_MSG: "license has expired"}})
-		return
+		return &sh.SheketError{Code: http.StatusPaymentRequired, "license expired"}
 	}
 
 	// if we've reached here, it means the user has valid remaining payment
@@ -216,14 +202,15 @@ func VerifyPaymentHandler(c *gin.Context) {
 
 	signed, err := signature.SignBase64EncodeMessage(contract)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG: err.Error()})
-		return
+		return &sh.SheketError{Code: http.StatusInternalServerError, err.Error()}
 	}
 
 	c.JSON(http.StatusOK, gin.H{
 		{JSON_PAYMENT_HAS_LICENSE: true,
 			JSON_PAYMENT_CONTRACT_SIGNATURE: fmt.Sprintf("%s_||_%s", contract, signed)},
 	})
+
+	return nil
 }
 
 func revokeCompanyLicense(company_id int64) error {
