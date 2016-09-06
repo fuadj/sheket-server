@@ -169,7 +169,7 @@ func VerifyPaymentHandler(c *gin.Context) {
 
 	current_date := time.Now().Unix()
 	end_date := time.Unix(payment_info.IssuedDate, 0).
-		AddDate(0, 0, payment_info.DurationInDays).Unix()
+		AddDate(0, 0, int(payment_info.DurationInDays)).Unix()
 
 	var remaining_days int64
 
