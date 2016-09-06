@@ -40,7 +40,7 @@ func RequireLogin(h sheket_handler.SheketHandler) gin.HandlerFunc {
 				fmt.Sprintf("%s requires a logged-in user", c.Request.URL.Path))
 			return
 		}
-		sheket_handler.HandleError(h)()
+		sheket_handler.HandleError(h)(c)
 	}
 }
 
