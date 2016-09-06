@@ -11,6 +11,7 @@ import (
 	c "sheket/server/controller"
 	"sheket/server/controller/auth"
 	"sheket/server/models"
+	sh "sheket/server/controller/sheket_handler"
 )
 
 func main() {
@@ -34,8 +35,8 @@ func main() {
 
 	router.POST("/api/v1/member/add", auth.RequireLogin(c.AddCompanyMember))
 
-	router.POST("/api/v1/sync/entity", auth.RequireLogin(c.EntitySyncHandler))
-	router.POST("/api/v1/sync/transaction", auth.RequireLogin(c.TransactionSyncHandler))
+	router.POST("/api/v1/sync/entity", auth.RequireLogin(sh.SheketHandler(c.EntitySyncHandler)))
+	router.POST("/api/v1/sync/transaction", auth.RequireLogin(sh.SheketHandler(c.TransactionSyncHandler)))
 
 	router.POST("/api/v1/payment/issue", auth.RequireLogin(c.IssuePaymentHandler))
 	router.POST("/api/v1/payment/verify", auth.RequireLogin(c.VerifyPaymentHandler))

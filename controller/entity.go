@@ -6,6 +6,7 @@ import (
 	"net/http"
 	_ "net/http/httputil"
 	"sheket/server/models"
+	sh "sheket/server/controller/sheket_handler"
 )
 
 const (
@@ -70,7 +71,7 @@ type EntityResult struct {
 	NewlyCreatedBranchIds   map[int64]bool
 }
 
-func EntitySyncHandler(c *gin.Context) {
+func EntitySyncHandler(c *gin.Context) *sh.SheketError {
 	defer trace("EntitySyncHandler")()
 
 	/*
@@ -82,27 +83,23 @@ func EntitySyncHandler(c *gin.Context) {
 
 	info, err := GetIdentityInfo(c.Request)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{ERROR_MSG: err.Error()})
-		return
+		return &sh.SheketError{Code:http.StatusBadRequest, Error:err.Error()}
 	}
 
 	posted_data, err := parseEntityPost(c.Request.Body, parsers, info)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{ERROR_MSG: err.Error()})
-		return
+		return &sh.SheketError{Code:http.StatusBadRequest, Error:err.Error()}
 	}
 
 	tnx, err := Store.Begin()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG: err.Error()})
-		return
+		return &sh.SheketError{Code:http.StatusInternalServerError, Error:err.Error()}
 	}
 
 	result, err := applyEntityOperations(tnx, posted_data, info)
 	if err != nil {
 		tnx.Rollback()
-		c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG: err.Error()})
-		return
+		return &sh.SheketError{Code:http.StatusInternalServerError, Error:err.Error()}
 	}
 	tnx.Commit()
 
@@ -110,16 +107,16 @@ func EntitySyncHandler(c *gin.Context) {
 	response[JSON_KEY_COMPANY_ID] = info.CompanyId
 
 	if err = syncNewEntities(response, result); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG: err.Error()})
-		return
+		return &sh.SheketError{Code:http.StatusInternalServerError, Error:err.Error()}
 	}
 
 	if err = syncModifiedEntities(response, posted_data, result, info); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG: err.Error()})
-		return
+		return &sh.SheketError{Code:http.StatusInternalServerError, Error:err.Error()}
 	}
 
 	c.JSON(http.StatusOK, response)
+
+	return nil
 }
 
 func syncNewEntities(sync_response map[string]interface{}, sync_result *EntityResult) error {

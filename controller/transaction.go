@@ -10,6 +10,7 @@ import (
 	_ "net/http/httputil"
 	"sheket/server/controller/auth"
 	"sheket/server/models"
+	sh "sheket/server/controller/sheket_handler"
 )
 
 const (
@@ -309,7 +310,7 @@ func updateBranchItems(tnx *sql.Tx, cached_branch_items map[Pair_BranchItem]*Cac
 // used in testing
 var currentUserGetter = auth.GetCurrentUser
 
-func TransactionSyncHandler(c *gin.Context) {
+func TransactionSyncHandler(c *gin.Context) *sh.SheketError {
 	defer trace("TransactionSyncHandler")()
 
 	/*
@@ -321,27 +322,23 @@ func TransactionSyncHandler(c *gin.Context) {
 
 	company_id := GetCurrentCompanyId(c.Request)
 	if company_id == INVALID_COMPANY_ID {
-		c.JSON(http.StatusBadRequest, gin.H{ERROR_MSG: "Invalid company id"})
-		return
+		return &sh.SheketError{Code:http.StatusBadRequest, Error:"invalid company"}
 	}
 
 	user, err := currentUserGetter(c.Request)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{ERROR_MSG: err.Error()})
-		return
+		return &sh.SheketError{Code:http.StatusBadRequest, Error:err.Error()}
 	}
 
 	permission, err := Store.GetUserPermission(user, company_id)
 	if err != nil { // the user doesn't have permission to post
-		c.JSON(http.StatusBadRequest, gin.H{ERROR_MSG: err.Error()})
-		return
+		return &sh.SheketError{Code:http.StatusBadRequest, Error:err.Error()}
 	}
 
 	info := &IdentityInfo{CompanyId: company_id, User: user, Permission: permission}
 	posted_data, err := parseTransactionPost(c.Request.Body, info)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{ERROR_MSG: err.Error()})
-		return
+		return &sh.SheketError{Code:http.StatusBadRequest, Error:err.Error()}
 	}
 
 	sync_result := make(map[string]interface{})
@@ -355,22 +352,19 @@ func TransactionSyncHandler(c *gin.Context) {
 	if len(posted_data.NewTrans) > 0 {
 		tnx, err := Store.Begin()
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG: err.Error()})
-			return
+			return &sh.SheketError{Code:http.StatusInternalServerError, Error:err.Error()}
 		}
 		add_trans_result, err := addTransactionsToDataStore(tnx, posted_data.NewTrans, company_id)
 		if err != nil {
 			tnx.Rollback()
-			c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG: err.Error()})
-			return
+			return &sh.SheketError{Code:http.StatusInternalServerError, Error:err.Error()}
 		}
 		newly_created_trans_ids = add_trans_result.NewlyCreatedIds
 
 		// update items affected by the transactions
 		if err = updateBranchItems(tnx, add_trans_result.AffectedBranchItems, company_id); err != nil {
 			tnx.Rollback()
-			c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG: err.Error()})
-			return
+			return &sh.SheketError{Code:http.StatusInternalServerError, Error:err.Error()}
 		}
 
 		tnx.Commit()
@@ -393,8 +387,7 @@ func TransactionSyncHandler(c *gin.Context) {
 		max_trans_id, trans_history, err := fetchTransactionsSince(company_id,
 			posted_data.UserTransRev, newly_created_trans_ids)
 		if err != nil && err != models.ErrNoData {
-			c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG: err.Error()})
-			return
+			return &sh.SheketError{Code:http.StatusInternalServerError, Error:err.Error()}
 		} else if len(trans_history) > 0 {
 			sync_result[key_sync_transactions] = trans_history
 		}
@@ -404,8 +397,7 @@ func TransactionSyncHandler(c *gin.Context) {
 	latest_rev, changed_branch_items, err := fetchChangedBranchItemsSinceRev(company_id,
 		posted_data.UserBranchItemRev)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{ERROR_MSG: err.Error()})
-		return
+		return &sh.SheketError{Code:http.StatusInternalServerError, Error:err.Error()}
 	}
 
 	sync_result[key_branch_item_rev] = latest_rev
@@ -415,6 +407,7 @@ func TransactionSyncHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, sync_result)
+	return nil
 }
 
 func fetchTransactionsSince(company_id, trans_rev int64, newly_created_ids map[int64]bool) (store_max_rev int64,
