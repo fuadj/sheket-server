@@ -117,8 +117,7 @@ func ConnectDbStore() (*dbStore, error) {
 		"company_id		SERIAL PRIMARY KEY, "+
 		"company_name	TEXT NOT NULL, "+
 		"contact		TEXT NOT NULL, "+
-		"encoded_payment	TEXT, " +
-		"UNIQUE(company_name));", TABLE_COMPANY))
+		"encoded_payment	TEXT); ", TABLE_COMPANY))
 
 	exec(fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s ( "+
 		// user-permission-table
