@@ -14,8 +14,7 @@ import (
 const (
 	JSON_PAYMENT_DESCRIPTION = "payment_desc"
 
-	JSON_PAYMENT_HAS_LICENSE        = "has_license"
-	JSON_PAYMENT_CONTRACT_SIGNATURE = "payment_contract_signature"
+	JSON_PAYMENT_SIGNED_LICENSE = "signed_license"
 
 	JSON_PAYMENT_DEVICE_ID       = "device_id"
 	JSON_PAYMENT_LOCAL_USER_TIME = "local_user_time"
@@ -138,19 +137,19 @@ func VerifyPaymentHandler(c *gin.Context) *sh.SheketError {
 	user_local_time := data.Get(JSON_PAYMENT_LOCAL_USER_TIME).MustString("")
 
 	if device_id == "" || user_local_time == "" {
-		return &sh.SheketError{Code: http.StatusBadRequest, Error:"missing user attribute fields"}
+		return &sh.SheketError{Code: http.StatusBadRequest, Error: "missing user attribute fields"}
 	}
 
 	company, err := Store.GetCompanyById(info.CompanyId)
 	if err != nil {
-		return &sh.SheketError{Code: http.StatusInternalServerError, Error:err.Error()}
+		return &sh.SheketError{Code: http.StatusInternalServerError, Error: err.Error()}
 	}
 
 	payment_info, err := models.DecodePayment(company.EncodedPayment)
 	if err != nil {
 		r_err := revokeCompanyLicense(info.CompanyId)
 		if r_err != nil {
-			return &sh.SheketError{Code: http.StatusInternalServerError, Error:err.Error() + ":" + r_err.Error()}
+			return &sh.SheketError{Code: http.StatusInternalServerError, Error: err.Error() + ":" + r_err.Error()}
 		}
 		return &sh.SheketError{Code: http.StatusPaymentRequired, Error: "license expired"}
 	}
@@ -162,11 +161,13 @@ func VerifyPaymentHandler(c *gin.Context) *sh.SheketError {
 	var remaining_days int64
 
 	payment_expired := false
-	// the license has expired
+
 	if current_date > end_date {
 		payment_expired = true
 	} else {
-		remaining_days = int64(time.Unix(end_date, 0).Sub(time.Unix(current_date, 0)).Hours() / 24.0)
+		remaining_days = int64(
+			time.Unix(end_date, 0).Sub(time.Unix(current_date, 0)).
+				Hours() / 24.0)
 		if remaining_days < 1 {
 			payment_expired = true
 		}
@@ -175,9 +176,9 @@ func VerifyPaymentHandler(c *gin.Context) *sh.SheketError {
 	if payment_expired {
 		r_err := revokeCompanyLicense(info.CompanyId)
 		if r_err != nil {
-			return &sh.SheketError{Code: http.StatusInternalServerError, Error:r_err.Error()}
+			return &sh.SheketError{Code: http.StatusInternalServerError, Error: r_err.Error()}
 		}
-		return &sh.SheketError{Code: http.StatusPaymentRequired, Error:"license expired"}
+		return &sh.SheketError{Code: http.StatusPaymentRequired, Error: "license expired"}
 	}
 
 	// if we've reached here, it means the user has valid remaining payment
@@ -187,7 +188,7 @@ func VerifyPaymentHandler(c *gin.Context) *sh.SheketError {
 		"company_id:%d;"+
 		"server_date_issued:%d;"+
 		"local_date_issued:%s;"+
-		"duration:%d"+
+		"duration:%d;"+
 		"contract_type:%d;"+
 		"employees:%d;"+
 		"branches:%d;"+
@@ -200,14 +201,14 @@ func VerifyPaymentHandler(c *gin.Context) *sh.SheketError {
 		_to_client_limit(payment_info.ItemLimit),
 	)
 
-	signed, err := signature.SignBase64EncodeMessage(contract)
+	signature, err := signature.SignBase64EncodeMessage(contract)
 	if err != nil {
-		return &sh.SheketError{Code: http.StatusInternalServerError, Error:err.Error()}
+		return &sh.SheketError{Code: http.StatusInternalServerError, Error: err.Error()}
 	}
 
+	license := fmt.Sprintf("%s_||_%s", contract, signature)
 	c.JSON(http.StatusOK,
-		gin.H{JSON_PAYMENT_HAS_LICENSE: true,
-			JSON_PAYMENT_CONTRACT_SIGNATURE: fmt.Sprintf("%s_||_%s", contract, signed)})
+		gin.H{JSON_PAYMENT_SIGNED_LICENSE: license})
 	return nil
 }
 
