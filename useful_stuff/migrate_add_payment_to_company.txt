@@ -1,0 +1,1 @@
+alter table s_company add column encoded_payment text;
