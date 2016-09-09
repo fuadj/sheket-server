@@ -61,27 +61,27 @@ func IssuePaymentHandler(c *gin.Context) *sh.SheketError {
 	payment_info := &models.PaymentInfo{}
 
 	var company_id int64
-	var not_ok bool
+	var ok bool
 	var missing_field string
 
 	// These cascade of if statements will only be executed of there was no problem
 	// If a problem is encountered, that if condition will be fulfilled, so the rest will basically stop
-	if company_id, not_ok = get_int64(models.PAYMENT_JSON_COMPANY_ID, values, nil); not_ok {
+	if company_id, ok = get_int64(models.PAYMENT_JSON_COMPANY_ID, values, nil); !ok {
 		missing_field = models.PAYMENT_JSON_COMPANY_ID
-	} else if payment_info.ContractType, not_ok = get_int64(models.PAYMENT_JSON_CONTRACT_TYPE, values, nil); not_ok {
+	} else if payment_info.ContractType, ok = get_int64(models.PAYMENT_JSON_CONTRACT_TYPE, values, nil); !ok {
 		missing_field = models.PAYMENT_JSON_CONTRACT_TYPE
-	} else if payment_info.DurationInDays, not_ok = get_int64(models.PAYMENT_JSON_DURATION, values, nil); not_ok {
+	} else if payment_info.DurationInDays, ok = get_int64(models.PAYMENT_JSON_DURATION, values, nil); !ok {
 		missing_field = models.PAYMENT_JSON_DURATION
-	} else if payment_info.EmployeeLimit, not_ok = get_int64(models.PAYMENT_JSON_LIMIT_EMPLOYEE, values, nil); not_ok {
+	} else if payment_info.EmployeeLimit, ok = get_int64(models.PAYMENT_JSON_LIMIT_EMPLOYEE, values, nil); !ok {
 		missing_field = models.PAYMENT_JSON_LIMIT_EMPLOYEE
-	} else if payment_info.BranchLimit, not_ok = get_int64(models.PAYMENT_JSON_LIMIT_BRANCH, values, nil); not_ok {
+	} else if payment_info.BranchLimit, ok = get_int64(models.PAYMENT_JSON_LIMIT_BRANCH, values, nil); !ok {
 		missing_field = models.PAYMENT_JSON_LIMIT_BRANCH
-	} else if payment_info.ItemLimit, not_ok = get_int64(models.PAYMENT_JSON_LIMIT_ITEM, values, nil); not_ok {
+	} else if payment_info.ItemLimit, ok = get_int64(models.PAYMENT_JSON_LIMIT_ITEM, values, nil); !ok {
 		missing_field = models.PAYMENT_JSON_LIMIT_ITEM
 	}
 
 	// we can check here if the above was successful or not
-	if not_ok {
+	if !ok {
 		return &sh.SheketError{Code: http.StatusBadRequest, Error: fmt.Sprintf("missing: %s", missing_field)}
 	}
 
@@ -137,7 +137,7 @@ func VerifyPaymentHandler(c *gin.Context) *sh.SheketError {
 	user_local_time := data.Get(JSON_PAYMENT_LOCAL_USER_TIME).MustString("")
 
 	if device_id == "" || user_local_time == "" {
-		return &sh.SheketError{Code: http.StatusBadRequest, Error: "missing user attribute fields"}
+		return &sh.SheketError{Code: http.StatusBadRequest, Error: "missing payment fields"}
 	}
 
 	company, err := Store.GetCompanyById(info.CompanyId)
