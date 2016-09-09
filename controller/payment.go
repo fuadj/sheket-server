@@ -66,7 +66,7 @@ func IssuePaymentHandler(c *gin.Context) *sh.SheketError {
 
 	// These cascade of if statements will only be executed of there was no problem
 	// If a problem is encountered, that if condition will be fulfilled, so the rest will basically stop
-	if company_id, not_ok = get_int64(models.PAYMENT_JSON_CONTRACT_TYPE, values, nil); not_ok {
+	if company_id, not_ok = get_int64(models.PAYMENT_JSON_COMPANY_ID, values, nil); not_ok {
 		missing_field = models.PAYMENT_JSON_COMPANY_ID
 	} else if payment_info.ContractType, not_ok = get_int64(models.PAYMENT_JSON_CONTRACT_TYPE, values, nil); not_ok {
 		missing_field = models.PAYMENT_JSON_CONTRACT_TYPE
