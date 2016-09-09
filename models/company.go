@@ -185,23 +185,34 @@ func DecodePayment(s string) (*PaymentInfo, error) {
 		return nil, fmt.Errorf("Invalid payment info encoding '%s'", s)
 	}
 
-	p.IssuedDate = _atoi(subs[0])
-	p.DurationInDays = _atoi(subs[1])
-	p.ContractType = _atoi(subs[2], PAYMENT_CONTRACT_TYPE_NONE)
+	p.IssuedDate = _extract_int64(subs[0])
+	p.DurationInDays = _extract_int64(subs[1])
+	p.ContractType = _extract_int64(subs[2], PAYMENT_CONTRACT_TYPE_NONE)
 	if p.ContractType == PAYMENT_CONTRACT_TYPE_NONE {
 		return nil, fmt.Errorf("invalid contract type '%d'", p.ContractType)
 	}
-	p.EmployeeLimit = _atoi(subs[3])
-	p.BranchLimit = _atoi(subs[4])
-	p.ItemLimit = _atoi(subs[5])
+	p.EmployeeLimit = _extract_int64(subs[3])
+	p.BranchLimit = _extract_int64(subs[4])
+	p.ItemLimit = _extract_int64(subs[5])
 
 	return p, nil
 }
 
-func _atoi(s string, def_val ...int64) int64 {
-	i, err := strconv.Atoi(s)
-	if err != nil && len(def_val) != 0 {
-		return def_val[0]
+func _extract_int64(s string, args ...int64) int64 {
+	var def int64
+
+	if len(args) != 0 {
+		def = args[0]
+	}
+
+	subs := strings.Split(s, ":")
+	if len(subs) != 2 {
+		return def
+	}
+
+	i, err := strconv.Atoi(subs[1])
+	if err != nil {
+		return def
 	}
 
 	return int64(i)
