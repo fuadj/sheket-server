@@ -118,18 +118,32 @@ func _queryCompany(s *shStore, err_msg string, where_stmt string, args ...interf
 	}
 
 	defer rows.Close()
+
+	/**
+	 * We need to use these Null* values and not directly scan into
+	 * the attributes as that throws an error if the value is NULL.
+	 *
+	 * See: https://github.com/go-sql-driver/mysql/issues/34
+	 */
+	var _company_id sql.NullInt64
+	var _name, _contact, _encoded_payment sql.NullString
+
 	for rows.Next() {
-		c := new(Company)
 		if err := rows.Scan(
-			&c.CompanyId,
-			&c.CompanyName,
-			&c.Contact,
-			&c.EncodedPayment,
+			&_company_id,
+			&_name,
+			&_contact,
+			&_encoded_payment,
 		); err == sql.ErrNoRows {
 			// no-op
 		} else if err != nil {
 			return nil, fmt.Errorf("%s %v", err_msg, err.Error())
 		} else {
+			c := new(Company)
+			c.CompanyId = _company_id.Int64
+			c.CompanyName = _name.String
+			c.Contact = _contact.String
+			c.EncodedPayment = _encoded_payment.String
 			result = append(result, c)
 		}
 	}
