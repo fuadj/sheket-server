@@ -16,6 +16,11 @@ import (
 const (
 	JSON_KEY_USERNAME   = "username"
 	JSON_KEY_USER_TOKEN = "token"
+	// this is an optional parameter, it should be included
+	// and its value set to true if the app is a SheketPay client.
+	// If this is set, only users who are AUTHORIZED will be
+	// given login cookie.
+	JSON_KEY_IS_SHEKET_PAY = "is_sheket_pay"
 
 	JSON_KEY_USER_ID   = "user_id"
 	JSON_KEY_MEMBER_ID = "user_id"
@@ -42,6 +47,7 @@ func UserSignInHandler(c *gin.Context) *sh.SheketError {
 	}
 
 	user_token := strings.TrimSpace(data.Get(JSON_KEY_USER_TOKEN).MustString())
+	is_sheket_pay := data.Get(JSON_KEY_IS_SHEKET_PAY).MustBool(false)
 	if len(user_token) == 0 {
 		return &sh.SheketError{Code: http.StatusBadRequest, Error: "User token missing"}
 	}
@@ -98,9 +104,9 @@ func UserSignInHandler(c *gin.Context) *sh.SheketError {
 	var user *models.User
 	if user, err = Store.FindUserWithProviderIdInTx(tnx,
 		models.AUTH_PROVIDER_FACEBOOK, fb_id); err != nil {
-		if err != models.ErrNoData {
-			return &sh.SheketError{Code: http.StatusInternalServerError, Error: err.Error()}
-		} else {
+
+		// if the user wasn't found, create it
+		if err == models.ErrNoData {
 			// the user doesn't exist, so try inserting the user
 			new_user := &models.User{Username: username,
 				ProviderID:     models.AUTH_PROVIDER_FACEBOOK,
@@ -111,9 +117,17 @@ func UserSignInHandler(c *gin.Context) *sh.SheketError {
 			}
 			tnx.Commit()
 			tnx = nil
+		} else {
+			// if there was a "true" error, abort
+			return &sh.SheketError{Code: http.StatusInternalServerError, Error: err.Error()}
 		}
 	}
 	tnx = nil
+
+	// if the request came from a SheketPay client, the user needs to be authorized before hand.
+	if is_sheket_pay && !isAuthorizedForSheketPay(user) {
+		return &sh.SheketError{Code: http.StatusUnauthorized, Error: "You are not authorized for SheketPay"}
+	}
 
 	// log-in the user for subsequent requests
 	auth.LoginUser(user, c.Writer)
@@ -123,6 +137,15 @@ func UserSignInHandler(c *gin.Context) *sh.SheketError {
 		JSON_KEY_USER_ID:  user.UserId,
 	})
 	return nil
+}
+
+func isAuthorizedForSheketPay(user *models.User) bool {
+	// TODO: do a more "rigorous" check for the future, we are now just
+	// hardcoding some predefined users.
+
+	id := user.UserId
+
+	return id == 5
 }
 
 // lists the companies this user belongs in
