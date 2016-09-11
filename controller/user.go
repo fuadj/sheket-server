@@ -195,11 +195,15 @@ func UserCompanyListHandler(c *gin.Context) *sh.SheketError {
 			Permission.EncodedPermission
 
 		license, err := GenerateCompanyLicense(company_id, user_id, encoded_payment, device_id, user_local_time)
-		// TODO: check proper error handling
-		// the error here is because the license couldn't be generated. This happens because there might be
-		// problems encoding it, the payment duration has expired. This doesn't signal a "backend" error.
-		// So, we shouldn't abort here and send an error to the user. Just give them an empty license so
-		// they might not be able to use the company
+
+		/**
+		 * TODO: check proper error handling
+		 * the error here is because the license couldn't be generated. This happens because there might be
+		 * problems encoding it, the payment duration has expired. This doesn't signal a "backend" error.
+		 * So, we shouldn't abort here and send an error to the user.
+		 *
+		 * If there were any errors, revoke the license by sending an empty license.
+		 */
 		if err != nil {
 			license = ""
 		}
