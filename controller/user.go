@@ -157,6 +157,18 @@ func UserCompanyListHandler(c *gin.Context) *sh.SheketError {
 		return &sh.SheketError{Code: http.StatusBadRequest, Error: err.Error()}
 	}
 
+	data, err := simplejson.NewFromReader(c.Request.Body)
+	if err != nil {
+		return &sh.SheketError{Code: http.StatusInternalServerError, Error: err.Error()}
+	}
+
+	device_id := data.Get(JSON_PAYMENT_DEVICE_ID).MustString("")
+	user_local_time := data.Get(JSON_PAYMENT_LOCAL_USER_TIME).MustString("")
+
+	if device_id == "" || user_local_time == "" {
+		return &sh.SheketError{Code: http.StatusBadRequest, Error: "missing payment fields"}
+	}
+
 	company_permissions, err := Store.GetUserCompanyPermissions(current_user)
 	if err != nil && err != models.ErrNoData {
 		return &sh.SheketError{Code: http.StatusInternalServerError, Error: err.Error()}
@@ -168,6 +180,11 @@ func UserCompanyListHandler(c *gin.Context) *sh.SheketError {
 	 */
 	companies := make([]interface{}, 0)
 	for i := 0; i < len(company_permissions); i++ {
+		company_id := company_permissions[i].CompanyInfo.CompanyId
+		user_id := current_user.UserId
+
+		encoded_payment := company_permissions[i].CompanyInfo.EncodedPayment
+
 		company := make(map[string]interface{})
 
 		company[JSON_KEY_COMPANY_ID] = company_permissions[i].
@@ -176,6 +193,18 @@ func UserCompanyListHandler(c *gin.Context) *sh.SheketError {
 			CompanyInfo.CompanyName
 		company[JSON_KEY_USER_PERMISSION] = company_permissions[i].
 			Permission.EncodedPermission
+
+		license, err := GenerateCompanyLicense(company_id, user_id, encoded_payment, device_id, user_local_time)
+		// TODO: check proper error handling
+		// the error here is because the license couldn't be generated. This happens because there might be
+		// problems encoding it, the payment duration has expired. This doesn't signal a "backend" error.
+		// So, we shouldn't abort here and send an error to the user. Just give them an empty license so
+		// they might not be able to use the company
+		if err != nil {
+			license = ""
+		}
+
+		company[JSON_PAYMENT_SIGNED_LICENSE] = license
 
 		companies = append(companies, company)
 	}
