@@ -139,7 +139,7 @@ func (b *shStore) GetUserPermission(u *User, company_id int64) (*UserPermission,
 func (b *shStore) GetUserCompanyPermissions(u *User) ([]*Pair_Company_UserPermission, error) {
 	var result []*Pair_Company_UserPermission
 	query := fmt.Sprintf(
-		"select c.company_id, c.company_name, c.contact, "+
+		"select c.company_id, c.company_name, c.contact, c.encoded_payment, "+
 			" p.company_id, p.user_id, p.permission "+
 			"FROM %s AS c INNER JOIN %s AS p ON (c.company_id = p.company_id) "+
 			"WHERE p.user_id = $1",
@@ -158,6 +158,7 @@ func (b *shStore) GetUserCompanyPermissions(u *User) ([]*Pair_Company_UserPermis
 			&pc.CompanyInfo.CompanyId,
 			&pc.CompanyInfo.CompanyName,
 			&pc.CompanyInfo.Contact,
+			&pc.CompanyInfo.EncodedPayment,
 
 			&pc.Permission.CompanyId,
 			&pc.Permission.UserId,
