@@ -145,13 +145,31 @@ func VerifyPaymentHandler(c *gin.Context) *sh.SheketError {
 		return &sh.SheketError{Code: http.StatusInternalServerError, Error: err.Error()}
 	}
 
-	payment_info, err := models.DecodePayment(company.EncodedPayment)
+	license, err := GenerateCompanyLicense(info.CompanyId, info.User.UserId,
+		company.EncodedPayment, device_id, user_local_time)
+
 	if err != nil {
-		r_err := revokeCompanyLicense(info.CompanyId)
-		if r_err != nil {
-			return &sh.SheketError{Code: http.StatusInternalServerError, Error: err.Error() + ":" + r_err.Error()}
+		err_msg := err.Error()
+		if err = revokeCompanyLicense(info.CompanyId); err != nil {
+			// append the revoke error
+			err_msg = err_msg + ":" + err.Error()
 		}
-		return &sh.SheketError{Code: http.StatusPaymentRequired, Error: "license expired"}
+		return &sh.SheketError{Code: http.StatusPaymentRequired, Error: err_msg}
+	}
+
+	c.JSON(http.StatusOK,
+		gin.H{JSON_PAYMENT_SIGNED_LICENSE: license})
+	return nil
+}
+
+/**
+ * Generates a signed license if there is still paid period left. This doesn't query the db, only uses
+ * the info provided.
+ */
+func GenerateCompanyLicense(company_id, user_id int64, encoded_payment, device_id, user_local_time string) (string, error) {
+	payment_info, err := models.DecodePayment(encoded_payment)
+	if err != nil {
+		return "", err
 	}
 
 	current_date := time.Now().Unix()
@@ -168,17 +186,14 @@ func VerifyPaymentHandler(c *gin.Context) *sh.SheketError {
 		remaining_days = int64(
 			time.Unix(end_date, 0).Sub(time.Unix(current_date, 0)).
 				Hours() / 24.0)
+		// if there is < 1 day of payment remaining, revoke it b/c that will be encoded as 0 when converted to int
 		if remaining_days < 1 {
 			payment_expired = true
 		}
 	}
 
 	if payment_expired {
-		r_err := revokeCompanyLicense(info.CompanyId)
-		if r_err != nil {
-			return &sh.SheketError{Code: http.StatusInternalServerError, Error: r_err.Error()}
-		}
-		return &sh.SheketError{Code: http.StatusPaymentRequired, Error: "license expired"}
+		return "", fmt.Errorf("license expired")
 	}
 
 	// if we've reached here, it means the user has valid remaining payment
@@ -193,7 +208,7 @@ func VerifyPaymentHandler(c *gin.Context) *sh.SheketError {
 		"employees:%d;"+
 		"branches:%d;"+
 		"items:%d",
-		device_id, info.User.UserId, info.CompanyId,
+		device_id, user_id, company_id,
 		current_date, user_local_time,
 		payment_info.DurationInDays, payment_info.ContractType,
 		_to_client_limit(payment_info.EmployeeLimit),
@@ -203,13 +218,11 @@ func VerifyPaymentHandler(c *gin.Context) *sh.SheketError {
 
 	signature, err := signature.SignBase64EncodeMessage(contract)
 	if err != nil {
-		return &sh.SheketError{Code: http.StatusInternalServerError, Error: err.Error()}
+		return "", err
 	}
 
 	license := fmt.Sprintf("%s_||_%s", contract, signature)
-	c.JSON(http.StatusOK,
-		gin.H{JSON_PAYMENT_SIGNED_LICENSE: license})
-	return nil
+	return license, nil
 }
 
 func revokeCompanyLicense(company_id int64) error {
