@@ -81,6 +81,8 @@ type UserStore interface {
 	 */
 	SetUserPermission(*UserPermission) (*UserPermission, error)
 
+	RemoveUserFromCompanyInTx(tnx *sql.Tx, user_id, company_id int64) (error)
+
 	// If a user is creating their own company, we need to make him/her
 	// the admin of the company, that needs to happens in a single transaction with company creation
 	// NOTE: the transaction is not rolled-back in this method

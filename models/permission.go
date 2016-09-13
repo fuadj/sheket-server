@@ -125,6 +125,13 @@ func (b *shStore) SetUserPermissionInTx(tnx *sql.Tx, p *UserPermission) (*UserPe
 	return p, nil
 }
 
+func (b *shStore) RemoveUserFromCompanyInTx(tnx *sql.Tx, user_id, company_id int64) error {
+	_, err := tnx.Exec(fmt.Sprintf("delete from %s where user_id = $1 and company_id = $2", TABLE_U_PERMISSION),
+		user_id, company_id)
+
+	return err
+}
+
 func (b *shStore) GetUserPermission(u *User, company_id int64) (*UserPermission, error) {
 	msg := fmt.Sprintf("error fetching user:'%d' permission for company:'%d'",
 		u.UserId, company_id)
@@ -232,6 +239,9 @@ func _queryUserPermission(s *shStore, err_msg string, where_stmt string, args ..
 	}
 
 	if err := row.Scan(&p.CompanyId, &p.UserId, &p.EncodedPermission); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, ErrNoData
+		}
 		return nil, fmt.Errorf("%s %s", err_msg, err)
 	}
 

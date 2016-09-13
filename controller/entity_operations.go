@@ -306,7 +306,7 @@ func applyBranchOperations(tnx *sql.Tx, posted_data *EntitySyncData, info *Ident
 	for old_branch_id := range posted_data.BranchIds[ACTION_CREATE] {
 		branch, ok := posted_data.BranchFields[old_branch_id]
 		if !ok {
-			return nil, fmt.Errorf("branch:%d doesn't have members defined")
+			return nil, fmt.Errorf("branch:%d doesn't have members defined", old_branch_id)
 		}
 		prev_branch, err := Store.GetBranchByUUIDInTx(tnx, branch.ClientUUID)
 		if err == nil {
@@ -340,7 +340,7 @@ func applyBranchOperations(tnx *sql.Tx, posted_data *EntitySyncData, info *Ident
 	for branch_id := range posted_data.BranchIds[ACTION_UPDATE] {
 		branch, ok := posted_data.BranchFields[branch_id]
 		if !ok {
-			return nil, fmt.Errorf("branch:%d doesn't have members defined")
+			return nil, fmt.Errorf("branch:%d doesn't have members defined", branch_id)
 		}
 		previous_branch, err := Store.GetBranchByIdInTx(tnx, branch_id)
 		if err != nil {
@@ -493,6 +493,41 @@ func applyMemberOperations(tnx *sql.Tx, posted_data *EntitySyncData, info *Ident
 		}
 
 		_, err := Store.AddEntityRevisionInTx(tnx, rev)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	for member_id := range posted_data.MemberIds[ACTION_DELETE] {
+		_, ok := posted_data.MemberFields[member_id]
+		if !ok {
+			return nil, fmt.Errorf("member:%d doesn't have fields defined", member_id)
+		}
+
+		user, err := Store.FindUserById(member_id)
+		if err != nil {
+			return nil, fmt.Errorf("delete member; error finding member '%s'", err.Error())
+		}
+
+		_, err = Store.GetUserPermission(user, info.CompanyId)
+		if err != nil && err != models.ErrNoData {
+			return nil, fmt.Errorf("delete member; error finding member:\"%s\" pemissions in company: %s", user.Username, err.Error())
+		}
+
+		err = Store.RemoveUserFromCompanyInTx(tnx, user.UserId, info.CompanyId)
+		if err != nil {
+			return nil, fmt.Errorf("delete member; delete error '%s'", err.Error())
+		}
+
+		rev := &models.ShEntityRevision{
+			CompanyId:        info.CompanyId,
+			EntityType:       models.REV_ENTITY_MEMBERS,
+			ActionType:       models.REV_ACTION_DELETE,
+			EntityAffectedId: member_id,
+			AdditionalInfo:   -1,
+		}
+
+		_, err = Store.AddEntityRevisionInTx(tnx, rev)
 		if err != nil {
 			return nil, err
 		}

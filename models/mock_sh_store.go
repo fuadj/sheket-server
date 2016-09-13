@@ -464,6 +464,16 @@ func (_mr *_MockUserStoreRecorder) SetUserPermission(arg0 interface{}) *gomock.C
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "SetUserPermission", arg0)
 }
 
+func (_m *MockUserStore) RemoveUserFromCompanyInTx(tnx *sql.Tx, user_id int64, company_id int64) error {
+	ret := _m.ctrl.Call(_m, "RemoveUserFromCompanyInTx", tnx, user_id, company_id)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+func (_mr *_MockUserStoreRecorder) RemoveUserFromCompanyInTx(arg0, arg1, arg2 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "RemoveUserFromCompanyInTx", arg0, arg1, arg2)
+}
+
 func (_m *MockUserStore) SetUserPermissionInTx(_param0 *sql.Tx, _param1 *UserPermission) (*UserPermission, error) {
 	ret := _m.ctrl.Call(_m, "SetUserPermissionInTx", _param0, _param1)
 	ret0, _ := ret[0].(*UserPermission)
@@ -1201,6 +1211,16 @@ func (_m *MockShStore) SetUserPermission(_param0 *UserPermission) (*UserPermissi
 
 func (_mr *_MockShStoreRecorder) SetUserPermission(arg0 interface{}) *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "SetUserPermission", arg0)
+}
+
+func (_m *MockShStore) RemoveUserFromCompanyInTx(tnx *sql.Tx, user_id int64, company_id int64) error {
+	ret := _m.ctrl.Call(_m, "RemoveUserFromCompanyInTx", tnx, user_id, company_id)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+func (_mr *_MockShStoreRecorder) RemoveUserFromCompanyInTx(arg0, arg1, arg2 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "RemoveUserFromCompanyInTx", arg0, arg1, arg2)
 }
 
 func (_m *MockShStore) SetUserPermissionInTx(_param0 *sql.Tx, _param1 *UserPermission) (*UserPermission, error) {

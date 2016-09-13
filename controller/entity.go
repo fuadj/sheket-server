@@ -5,8 +5,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"net/http"
 	_ "net/http/httputil"
-	"sheket/server/models"
 	sh "sheket/server/controller/sheket_handler"
+	"sheket/server/models"
 )
 
 const (
@@ -52,7 +52,10 @@ const (
 	// key of json holding any updated branches since last sync
 	key_sync_branches = "sync_branches"
 
-	key_sync_members = "sync_members"
+	key_sync_members         = "sync_members"
+
+	// key of json for members deleted since last sync
+	key_sync_deleted_members = "deleted_members"
 
 	// key of json holding any updated branch categories since last sync
 	key_sync_branch_categories = "sync_branch_categories"
@@ -83,23 +86,23 @@ func EntitySyncHandler(c *gin.Context) *sh.SheketError {
 
 	info, err := GetIdentityInfo(c.Request)
 	if err != nil {
-		return &sh.SheketError{Code:http.StatusBadRequest, Error:err.Error()}
+		return &sh.SheketError{Code: http.StatusBadRequest, Error: err.Error()}
 	}
 
 	posted_data, err := parseEntityPost(c.Request.Body, parsers, info)
 	if err != nil {
-		return &sh.SheketError{Code:http.StatusBadRequest, Error:err.Error()}
+		return &sh.SheketError{Code: http.StatusBadRequest, Error: err.Error()}
 	}
 
 	tnx, err := Store.Begin()
 	if err != nil {
-		return &sh.SheketError{Code:http.StatusInternalServerError, Error:err.Error()}
+		return &sh.SheketError{Code: http.StatusInternalServerError, Error: err.Error()}
 	}
 
 	result, err := applyEntityOperations(tnx, posted_data, info)
 	if err != nil {
 		tnx.Rollback()
-		return &sh.SheketError{Code:http.StatusInternalServerError, Error:err.Error()}
+		return &sh.SheketError{Code: http.StatusInternalServerError, Error: err.Error()}
 	}
 	tnx.Commit()
 
@@ -107,11 +110,11 @@ func EntitySyncHandler(c *gin.Context) *sh.SheketError {
 	response[JSON_KEY_COMPANY_ID] = info.CompanyId
 
 	if err = syncNewEntities(response, result); err != nil {
-		return &sh.SheketError{Code:http.StatusInternalServerError, Error:err.Error()}
+		return &sh.SheketError{Code: http.StatusInternalServerError, Error: err.Error()}
 	}
 
 	if err = syncModifiedEntities(response, posted_data, result, info); err != nil {
-		return &sh.SheketError{Code:http.StatusInternalServerError, Error:err.Error()}
+		return &sh.SheketError{Code: http.StatusInternalServerError, Error: err.Error()}
 	}
 
 	c.JSON(http.StatusOK, response)
@@ -222,13 +225,20 @@ func syncModifiedEntities(sync_response map[string]interface{},
 	}
 
 	if info.Permission.PermissionType <= models.PERMISSION_TYPE_BRANCH_MANAGER {
-		max_member_rev, members, err := fetchMemberSinceRev(info.CompanyId,
-			posted_data.RevisionMember)
+		max_member_rev,
+			changed_members,
+			deleted_members,
+			err :=
+			fetchMemberSinceRev(info.CompanyId,
+				posted_data.RevisionMember)
 		if err != nil {
 			return err
 		}
-		if len(members) > 0 {
-			sync_response[key_sync_members] = members
+		if len(changed_members) > 0 {
+			sync_response[key_sync_members] = changed_members
+		}
+		if len(deleted_members) > 0 {
+			sync_response[key_sync_deleted_members] = deleted_members
 		}
 		sync_response[key_member_revision] = max_member_rev
 	}
@@ -422,52 +432,75 @@ func fetchBranchesSinceRev(company_id, branch_rev int64, newly_created_branch_id
 	return max_rev, result[:i], nil
 }
 
-func fetchMemberSinceRev(company_id, member_rev int64) (latest_rev int64,
-	members_since []map[string]interface{}, err error) {
+/**
+ * fetches create/update/delete for members since revision
+ */
+func fetchMemberSinceRev(company_id, last_member_rev int64) (
 
-	max_rev, changed_member_revs, err := Store.GetRevisionsSince(
+	latest_rev int64,
+
+	changed_since []map[string]interface{},
+	deleted_since []int64,
+
+	err error) {
+
+	max_rev, member_revs, err := Store.GetRevisionsSince(
 		&models.ShEntityRevision{
 			CompanyId:      company_id,
 			EntityType:     models.REV_ENTITY_MEMBERS,
-			RevisionNumber: member_rev,
+			RevisionNumber: last_member_rev,
 		})
 	if err != nil && err != models.ErrNoData {
-		return max_rev, nil, err
+		return max_rev, nil, nil, err
 	}
 
-	result := make([]map[string]interface{}, len(changed_member_revs))
-	i := 0
-	for _, rev := range changed_member_revs {
+	changed_result := make([]map[string]interface{}, len(member_revs))
+	deleted_result := make([]int64, len(member_revs))
+
+	changed_index := 0
+	deleted_index := 0
+
+	for _, rev := range member_revs {
 		member_id := rev.EntityAffectedId
 
-		user, err := Store.FindUserById(member_id)
-		if err != nil {
-			if err != models.ErrNoData {
-				fmt.Printf("fetchChangedMemberSinceRev FindUserById error '%v'", err)
-				return max_rev, nil, err
+		switch rev.ActionType {
+		case models.REV_ACTION_CREATE, models.REV_ACTION_UPDATE:
+			user, err := Store.FindUserById(member_id)
+			if err != nil {
+				if err != models.ErrNoData {
+					return max_rev, nil, nil, err
+				}
+				continue
 			}
-			continue
-		}
 
-		permission, err := Store.GetUserPermission(user, company_id)
-		if err != nil {
-			if err != models.ErrNoData {
-				fmt.Printf("fetchChangedMemberSinceRev GetUserPermission error '%v'", err)
-				return max_rev, nil, err
+			permission, err := Store.GetUserPermission(user, company_id)
+			if err != nil {
+				if err != models.ErrNoData {
+					return max_rev, nil, nil, err
+				}
+				continue
 			}
-			continue
-		}
 
-		result[i] = map[string]interface{}{
-			models.PERMISSION_JSON_MEMBER_ID:         member_id,
-			models.PERMISSION_JSON_MEMBER_PERMISSION: permission.EncodedPermission,
-			JSON_KEY_USERNAME:                        user.Username,
-		}
+			changed_result[changed_index] = map[string]interface{}{
+				models.PERMISSION_JSON_MEMBER_ID:         member_id,
+				models.PERMISSION_JSON_MEMBER_PERMISSION: permission.EncodedPermission,
+				JSON_KEY_USERNAME:                        user.Username,
+			}
 
-		i++
+			changed_index++
+
+		case models.REV_ACTION_DELETE:
+			// we don't really need to check if the user exists, just tell the
+			// client to remove it if it has it
+			deleted_result[deleted_index] = member_id
+			deleted_index++
+		}
 	}
 
-	return max_rev, result[:i], nil
+	return max_rev,
+		changed_result[:changed_index],
+		deleted_result[:deleted_index],
+		nil
 }
 
 /**
