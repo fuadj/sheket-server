@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"sheket/server/models"
 	"strconv"
+	"sheket/server/controller/auth"
 )
 
 const (
@@ -31,6 +32,8 @@ func GetCurrentCompanyId(r *http.Request) int64 {
 	}
 	return id
 }
+// used in testing
+var currentUserGetter = auth.GetCurrentUser
 
 func GetIdentityInfo(r *http.Request) (*IdentityInfo, error) {
 	company_id := GetCurrentCompanyId(r)
