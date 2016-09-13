@@ -149,12 +149,8 @@ func VerifyPaymentHandler(c *gin.Context) *sh.SheketError {
 		company.EncodedPayment, device_id, user_local_time)
 
 	if err != nil {
-		err_msg := err.Error()
-		if err = revokeCompanyLicense(info.CompanyId); err != nil {
-			// append the revoke error
-			err_msg = err_msg + ":" + err.Error()
-		}
-		return &sh.SheketError{Code: http.StatusPaymentRequired, Error: err_msg}
+		return &sh.SheketError{Code: http.StatusPaymentRequired,
+			Error: "license expired, please renew"}
 	}
 
 	c.JSON(http.StatusOK,
