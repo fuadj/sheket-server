@@ -75,6 +75,16 @@ func (b *shStore) FindUserWithProviderIdInTx(tnx *sql.Tx, provider_id int64, pro
 		provider_id, provider_user_id)
 }
 
+func (b *shStore) UpdateUserInTx(tnx *sql.Tx, u *User) (*User, error) {
+	_, err := tnx.Exec(
+		fmt.Sprintf("update %s set "+
+		" username = $1, provider_id = $2, user_provider_id = $3 " +
+		" where user_id = $4 ", TABLE_USER),
+		u.Username, u.ProviderID, u.UserProviderID,
+		u.UserId)
+	return u, err
+}
+
 func _queryUser(s *shStore, err_msg string, where_stmt string, args ...interface{}) (*User, error) {
 	u := new(User)
 	query := fmt.Sprintf("select user_id, username, provider_id, user_provider_id from %s", TABLE_USER)

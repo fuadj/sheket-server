@@ -74,6 +74,8 @@ type UserStore interface {
 	// searches for the user by the unique id given to the user by the provider
 	FindUserWithProviderIdInTx(tnx *sql.Tx, provider_id int64, provider_user_id string) (*User, error)
 
+	UpdateUserInTx(*sql.Tx, *User) (*User, error)
+
 	/**
 	 * Permission is given to a user on a company basis.
 	 * A permission typical looks like

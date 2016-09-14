@@ -453,6 +453,17 @@ func (_mr *_MockUserStoreRecorder) FindUserWithProviderIdInTx(arg0, arg1, arg2 i
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "FindUserWithProviderIdInTx", arg0, arg1, arg2)
 }
 
+func (_m *MockUserStore) UpdateUserInTx(_param0 *sql.Tx, _param1 *User) (*User, error) {
+	ret := _m.ctrl.Call(_m, "UpdateUserInTx", _param0, _param1)
+	ret0, _ := ret[0].(*User)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (_mr *_MockUserStoreRecorder) UpdateUserInTx(arg0, arg1 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "UpdateUserInTx", arg0, arg1)
+}
+
 func (_m *MockUserStore) SetUserPermission(_param0 *UserPermission) (*UserPermission, error) {
 	ret := _m.ctrl.Call(_m, "SetUserPermission", _param0)
 	ret0, _ := ret[0].(*UserPermission)
@@ -1200,6 +1211,17 @@ func (_m *MockShStore) FindUserWithProviderIdInTx(tnx *sql.Tx, provider_id int64
 
 func (_mr *_MockShStoreRecorder) FindUserWithProviderIdInTx(arg0, arg1, arg2 interface{}) *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "FindUserWithProviderIdInTx", arg0, arg1, arg2)
+}
+
+func (_m *MockShStore) UpdateUserInTx(_param0 *sql.Tx, _param1 *User) (*User, error) {
+	ret := _m.ctrl.Call(_m, "UpdateUserInTx", _param0, _param1)
+	ret0, _ := ret[0].(*User)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (_mr *_MockShStoreRecorder) UpdateUserInTx(arg0, arg1 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "UpdateUserInTx", arg0, arg1)
 }
 
 func (_m *MockShStore) SetUserPermission(_param0 *UserPermission) (*UserPermission, error) {

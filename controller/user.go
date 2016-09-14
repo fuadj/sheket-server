@@ -28,6 +28,8 @@ const (
 	JSON_KEY_COMPANY_NAME    = "company_name"
 	JSON_KEY_COMPANY_CONTACT = "company_contact"
 	JSON_KEY_USER_PERMISSION = "user_permission"
+
+	JSON_KEY_NEW_USER_NAME = "new_user_name"
 )
 
 var fb_app_secret string
@@ -219,3 +221,43 @@ func UserCompanyListHandler(c *gin.Context) *sh.SheketError {
 
 	return nil
 }
+
+func EditUserNameHandler(c *gin.Context) *sh.SheketError {
+	defer trace("EditUserNameHandler")()
+
+	current_user, err := auth.GetCurrentUser(c.Request)
+	if err != nil {
+		return &sh.SheketError{Code: http.StatusBadRequest, Error: err.Error()}
+	}
+
+	data, err := simplejson.NewFromReader(c.Request.Body)
+	if err != nil {
+		return &sh.SheketError{Code: http.StatusInternalServerError, Error: err.Error()}
+	}
+
+	new_user_name := data.Get(JSON_KEY_NEW_USER_NAME).MustString("")
+	if new_user_name == "" {
+		return &sh.SheketError{Code: http.StatusBadRequest, Error: "invalid username"}
+	}
+
+	tnx, err := Store.Begin()
+	if err != nil {
+		return &sh.SheketError{Code: http.StatusInternalServerError, Error: err.Error()}
+	}
+
+	current_user.Username = new_user_name
+	_, err = Store.UpdateUserInTx(tnx, current_user)
+	if err != nil {
+		return &sh.SheketError{Code: http.StatusInternalServerError, Error: err.Error()}
+	}
+	err = tnx.Commit()
+	if err != nil {
+		return &sh.SheketError{Code: http.StatusInternalServerError, Error: err.Error()}
+	}
+
+	// we don't actually send any "useful" data, it is just to inform that it was successful
+	c.String(http.StatusOK, "")
+
+	return nil
+}
+
