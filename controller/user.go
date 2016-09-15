@@ -135,7 +135,7 @@ func UserSignInHandler(c *gin.Context) *sh.SheketError {
 	auth.LoginUser(user, c.Writer)
 
 	c.JSON(http.StatusOK, map[string]interface{}{
-		JSON_KEY_USERNAME: username,
+		JSON_KEY_USERNAME: user.Username,
 		JSON_KEY_USER_ID:  user.UserId,
 	})
 	return nil
