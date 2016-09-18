@@ -10,6 +10,10 @@ import (
 	"strings"
 )
 
+const (
+	JSON_KEY_NEW_COMPANY_NAME = "new_company_name"
+)
+
 func AddCompanyMember(c *gin.Context) *sh.SheketError {
 	defer trace("AddCompanyMember")()
 
@@ -127,5 +131,49 @@ func CompanyCreateHandler(c *gin.Context) *sh.SheketError {
 	tnx.Commit()
 
 	c.JSON(http.StatusOK, result)
+	return nil
+}
+
+func EditCompanyNameHandler(c *gin.Context) *sh.SheketError {
+	defer trace("EditCompanyNameHandler")()
+
+	info, err := GetIdentityInfo(c.Request)
+	if err != nil {
+		return &sh.SheketError{Code: http.StatusBadRequest, Error: err.Error()}
+	}
+
+	data, err := simplejson.NewFromReader(c.Request.Body)
+	if err != nil {
+		return &sh.SheketError{Code: http.StatusInternalServerError, Error: err.Error()}
+	}
+
+	new_company_name := data.Get(JSON_KEY_NEW_COMPANY_NAME).MustString("")
+	if new_company_name == "" {
+		return &sh.SheketError{Code: http.StatusBadRequest, Error: "invalid company name"}
+	}
+
+	company, err := Store.GetCompanyById(info.CompanyId)
+	if err != nil {
+		return &sh.SheketError{Code: http.StatusInternalServerError, Error: err.Error()}
+	}
+
+	tnx, err := Store.Begin()
+	if err != nil {
+		return &sh.SheketError{Code: http.StatusInternalServerError, Error: err.Error()}
+	}
+
+	company.CompanyName = new_company_name
+	_, err = Store.UpdateCompanyInTx(tnx, company)
+	if err != nil {
+		return &sh.SheketError{Code: http.StatusInternalServerError, Error: err.Error()}
+	}
+	err = tnx.Commit()
+	if err != nil {
+		return &sh.SheketError{Code: http.StatusInternalServerError, Error: err.Error()}
+	}
+
+	// we don't actually send any "useful" data, it is just to inform that it was successful
+	c.String(http.StatusOK, "")
+
 	return nil
 }
