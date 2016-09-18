@@ -30,6 +30,7 @@ type ShBranch struct {
 	ClientUUID string
 	Name       string
 	Location   string
+	StatusFlag int64
 }
 
 type ShBranchItem struct {
@@ -61,17 +62,17 @@ func (s *shStore) CreateBranch(b *ShBranch) (*ShBranch, error) {
 func (s *shStore) CreateBranchInTx(tnx *sql.Tx, b *ShBranch) (*ShBranch, error) {
 	err := tnx.QueryRow(
 		fmt.Sprintf("insert into %s "+
-			"(company_id, branch_name, location, client_uuid) values "+
-			"($1, $2, $3, $4) returning branch_id;", TABLE_BRANCH),
-		b.CompanyId, b.Name, b.Location, b.ClientUUID).Scan(&b.BranchId)
+			"(company_id, branch_name, location, client_uuid, %s) values "+
+			"($1, $2, $3, $4, $5) returning branch_id;", TABLE_BRANCH, _db_status_flag),
+		b.CompanyId, b.Name, b.Location, b.ClientUUID, b.StatusFlag).Scan(&b.BranchId)
 	return b, err
 }
 
 func (s *shStore) UpdateBranchInTx(tnx *sql.Tx, b *ShBranch) (*ShBranch, error) {
 	_, err := tnx.Exec(
 		fmt.Sprintf("update %s set "+
-			" branch_name = $1, location = $2 "+
-			" where branch_id = $3 ", TABLE_BRANCH),
+			" branch_name = $1, location = $2, %s = $3 "+
+			" where branch_id = $4 ", TABLE_BRANCH, _db_status_flag),
 		b.Name, b.Location, b.BranchId)
 	return b, err
 }
@@ -192,8 +193,8 @@ func (s *shStore) GetBranchItemInTx(tnx *sql.Tx, branch_id, item_id int64) (*ShB
 func _queryBranch(s *shStore, err_msg string, where_stmt string, args ...interface{}) ([]*ShBranch, error) {
 	var result []*ShBranch
 
-	query := fmt.Sprintf("select company_id, branch_id, branch_name, location, client_uuid from %s",
-		TABLE_BRANCH)
+	query := fmt.Sprintf("select company_id, branch_id, branch_name, location, client_uuid, %s from %s",
+		_db_status_flag, TABLE_BRANCH)
 	sort_by := " ORDER BY branch_id desc"
 
 	var rows *sql.Rows
@@ -216,6 +217,7 @@ func _queryBranch(s *shStore, err_msg string, where_stmt string, args ...interfa
 			&b.Name,
 			&b.Location,
 			&b.ClientUUID,
+			&b.StatusFlag,
 		); err == sql.ErrNoRows {
 			// no-op
 		} else if err != nil {
@@ -234,8 +236,8 @@ func _queryBranch(s *shStore, err_msg string, where_stmt string, args ...interfa
 func _queryBranchInTx(tnx *sql.Tx, err_msg string, where_stmt string, args ...interface{}) ([]*ShBranch, error) {
 	var result []*ShBranch
 
-	query := fmt.Sprintf("select company_id, branch_id, branch_name, location, client_uuid from %s",
-		TABLE_BRANCH)
+	query := fmt.Sprintf("select company_id, branch_id, branch_name, location, client_uuid, %s from %s",
+		_db_status_flag, TABLE_BRANCH)
 	sort_by := " ORDER BY branch_id desc"
 
 	var rows *sql.Rows
@@ -259,6 +261,7 @@ func _queryBranchInTx(tnx *sql.Tx, err_msg string, where_stmt string, args ...in
 			&b.Name,
 			&b.Location,
 			&b.ClientUUID,
+			&b.StatusFlag,
 		)
 		if err == sql.ErrNoRows {
 			// no-op
