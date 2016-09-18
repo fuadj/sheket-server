@@ -24,6 +24,8 @@ type ShItem struct {
 	PartNumber string
 	BarCode    string
 	HasBarCode bool
+
+	StatusFlag int64
 }
 
 const (
@@ -44,6 +46,16 @@ const (
 	_db_item_part_number  = " part_number "
 	_db_item_bar_code     = " bar_code "
 	_db_item_has_bar_code = " has_bar_code "
+)
+
+const (
+	// Shared across entities that can have this field. Currently used to track if is
+	// visible/invisible. This is an integer, default value is STATUS_VISIBLE.
+	_db_status_flag  = "status_flag"
+	JSON_STATUS_FLAG = "status_flag"
+
+	STATUS_VISIBLE    int64 = 1
+	STATUS_IN_VISIBLE int64 = 2
 )
 
 const (
@@ -117,12 +129,13 @@ func (s *shStore) CreateItemInTx(tnx *sql.Tx, item *ShItem) (*ShItem, error) {
 			_db_item_model_year+", "+
 			_db_item_part_number+", "+
 			_db_item_bar_code+", "+
-			_db_item_has_bar_code+") VALUES "+
-			"($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) "+
+			_db_item_has_bar_code+", "+
+			_db_status_flag+") VALUES "+
+			"($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) "+
 			"returning "+_db_item_id+";",
 		item.ClientUUID, item.CompanyId, item.CategoryId, item.Name, item.ItemCode,
 		item.UnitOfMeasurement, item.HasDerivedUnit, item.DerivedName, item.DerivedFactor, item.ReorderLevel,
-		item.ModelYear, item.PartNumber, item.BarCode, item.HasBarCode).
+		item.ModelYear, item.PartNumber, item.BarCode, item.HasBarCode, item.StatusFlag).
 		Scan(&item.ItemId)
 	return item, err
 }
@@ -132,7 +145,7 @@ func (s *shStore) UpdateItemInTx(tnx *sql.Tx, item *ShItem) (*ShItem, error) {
 		"update "+TABLE_INVENTORY_ITEM+" set "+
 			_db_item_name+" = $1, "+
 			_db_item_code+" = $2, "+
-			_db_item_category_id + " = $3, " +
+			_db_item_category_id+" = $3, "+
 
 			_db_item_units+" = $4, "+
 			_db_item_has_derived_unit+" = $5, "+
@@ -143,11 +156,12 @@ func (s *shStore) UpdateItemInTx(tnx *sql.Tx, item *ShItem) (*ShItem, error) {
 			_db_item_model_year+" = $9, "+
 			_db_item_part_number+" = $10, "+
 			_db_item_bar_code+" = $11, "+
-			_db_item_has_bar_code+" = $12 "+
-			" where "+_db_item_id+" = $13",
+			_db_item_has_bar_code+" = $12, "+
+			_db_status_flag+" = $13 "+
+			" where "+_db_item_id+" = $14",
 		item.Name, item.ItemCode, item.CategoryId,
 		item.UnitOfMeasurement, item.HasDerivedUnit, item.DerivedName, item.DerivedFactor, item.ReorderLevel,
-		item.ModelYear, item.PartNumber, item.BarCode, item.HasBarCode,
+		item.ModelYear, item.PartNumber, item.BarCode, item.HasBarCode, item.StatusFlag,
 		item.ItemId)
 	return item, err
 }
@@ -198,7 +212,9 @@ func _queryInventoryItems(s *shStore, err_msg string, where_stmt string, args ..
 				_db_item_name, _db_item_code,
 				_db_item_units, _db_item_has_derived_unit, _db_item_derived_name, _db_item_derived_factor,
 				_db_item_reorder_level,
-				_db_item_model_year, _db_item_part_number, _db_item_bar_code, _db_item_has_bar_code},
+				_db_item_model_year, _db_item_part_number, _db_item_bar_code, _db_item_has_bar_code,
+				_db_status_flag,
+			},
 			", ") +
 		"from " + TABLE_INVENTORY_ITEM
 	sort_by := " ORDER BY " + _db_item_id + " desc"
@@ -234,6 +250,7 @@ func _queryInventoryItems(s *shStore, err_msg string, where_stmt string, args ..
 			&i.PartNumber,
 			&i.BarCode,
 			&i.HasBarCode,
+			&i.StatusFlag,
 		)
 		if err != nil {
 			if err == sql.ErrNoRows {
@@ -261,7 +278,9 @@ func _queryInventoryItemsInTx(tnx *sql.Tx, err_msg string, where_stmt string, ar
 				_db_item_name, _db_item_code,
 				_db_item_units, _db_item_has_derived_unit, _db_item_derived_name, _db_item_derived_factor,
 				_db_item_reorder_level,
-				_db_item_model_year, _db_item_part_number, _db_item_bar_code, _db_item_has_bar_code},
+				_db_item_model_year, _db_item_part_number, _db_item_bar_code, _db_item_has_bar_code,
+				_db_status_flag,
+			},
 			", ") +
 		"from " + TABLE_INVENTORY_ITEM
 	sort_by := " ORDER BY " + _db_item_id + " desc"
@@ -297,6 +316,7 @@ func _queryInventoryItemsInTx(tnx *sql.Tx, err_msg string, where_stmt string, ar
 			&i.PartNumber,
 			&i.BarCode,
 			&i.HasBarCode,
+			&i.StatusFlag,
 		)
 		if err != nil {
 			if err == sql.ErrNoRows {

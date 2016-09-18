@@ -133,9 +133,10 @@ func ConnectDbStore() (*dbStore, error) {
 		"company_id		INTEGER REFERENCES %s(company_id), "+
 		"branch_name	TEXT NOT NULL, "+
 		"location 		TEXT, "+
+		_db_status_flag+" INTEGER DEFAULT %d, "+
 
 		"UNIQUE(company_id, branch_name));",
-		TABLE_BRANCH, TABLE_COMPANY))
+		TABLE_BRANCH, TABLE_COMPANY, STATUS_VISIBLE))
 
 	exec(fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s ( "+
 		// category table
@@ -177,8 +178,10 @@ func ConnectDbStore() (*dbStore, error) {
 		_db_item_model_year+" TEXT, "+
 		_db_item_part_number+" TEXT, "+
 		_db_item_bar_code+" TEXT, "+
-		_db_item_has_bar_code+" bool); ",
-		TABLE_INVENTORY_ITEM, TABLE_COMPANY, ROOT_CATEGORY_ID, TABLE_CATEGORY))
+		_db_item_has_bar_code+" bool, "+
+		_db_status_flag+" INTEGER DEFAULT %d"+
+		"); ",
+		TABLE_INVENTORY_ITEM, TABLE_COMPANY, ROOT_CATEGORY_ID, TABLE_CATEGORY, STATUS_VISIBLE))
 
 	exec(fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s ( "+
 		// branch-item table
