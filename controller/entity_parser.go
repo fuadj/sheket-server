@@ -296,6 +296,7 @@ func itemParser(sync_data *EntitySyncData, root *simplejson.Json, info *Identity
 		item.PartNumber, _ = get_string(models.ITEM_JSON_PART_NUMBER, fields, set_fields)
 		item.BarCode, _ = get_string(models.ITEM_JSON_BAR_CODE, fields, set_fields)
 		item.HasBarCode, _ = get_bool(models.ITEM_JSON_HAS_BAR_CODE, fields, set_fields)
+		item.StatusFlag, _ = get_int64(models.JSON_STATUS_FLAG, fields, set_fields)
 
 		item_id := item.ItemId
 		if sync_data.ItemIds[ACTION_CREATE][item_id] {
@@ -338,6 +339,7 @@ func branchParser(sync_data *EntitySyncData, root *simplejson.Json, info *Identi
 		branch.Name, _ = get_string(models.BRANCH_JSON_NAME, fields, set_fields)
 		branch.Location, _ = get_string(models.BRANCH_JSON_LOCATION, fields, set_fields)
 		branch.ClientUUID, _ = get_string(models.BRANCH_JSON_UUID, fields, set_fields)
+		branch.StatusFlag, _ = get_int64(models.JSON_STATUS_FLAG, fields, set_fields)
 
 		if sync_data.BranchIds[ACTION_CREATE][branch.BranchId] {
 			branch.PostType = POST_TYPE_CREATE

@@ -52,7 +52,7 @@ const (
 	// key of json holding any updated branches since last sync
 	key_sync_branches = "sync_branches"
 
-	key_sync_members         = "sync_members"
+	key_sync_members = "sync_members"
 
 	// key of json for members deleted since last sync
 	key_sync_deleted_members = "deleted_members"
@@ -383,6 +383,8 @@ func fetchItemsSinceRev(company_id, item_rev int64, newly_created_item_ids map[i
 			models.ITEM_JSON_PART_NUMBER:  item.PartNumber,
 			models.ITEM_JSON_BAR_CODE:     item.BarCode,
 			models.ITEM_JSON_HAS_BAR_CODE: item.HasBarCode,
+
+			models.JSON_STATUS_FLAG: item.StatusFlag,
 		}
 		i++
 	}
@@ -426,6 +428,7 @@ func fetchBranchesSinceRev(company_id, branch_rev int64, newly_created_branch_id
 			models.BRANCH_JSON_UUID:      branch.ClientUUID,
 			models.BRANCH_JSON_NAME:      branch.Name,
 			models.BRANCH_JSON_LOCATION:  branch.Location,
+			models.JSON_STATUS_FLAG:      branch.StatusFlag,
 		}
 		i++
 	}

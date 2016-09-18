@@ -273,6 +273,7 @@ func applyItemOperations(tnx *sql.Tx, posted_data *EntitySyncData, info *Identit
 		previous_item.PartNumber = item.PartNumber
 		previous_item.BarCode = item.BarCode
 		previous_item.HasBarCode = item.HasBarCode
+		previous_item.StatusFlag = item.StatusFlag
 
 		if _, err = Store.UpdateItemInTx(tnx, previous_item); err != nil {
 			return nil, fmt.Errorf("error updating item:%d '%v'", item_id, err.Error())
@@ -349,6 +350,7 @@ func applyBranchOperations(tnx *sql.Tx, posted_data *EntitySyncData, info *Ident
 
 		previous_branch.Name = branch.Name
 		previous_branch.Location = branch.Location
+		previous_branch.StatusFlag = branch.StatusFlag
 
 		if _, err = Store.UpdateBranchInTx(tnx, previous_branch); err != nil {
 			return nil, fmt.Errorf("error updating branch:%d '%v'", branch_id, err.Error())
