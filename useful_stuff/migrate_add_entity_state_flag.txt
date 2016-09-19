@@ -1,0 +1,11 @@
+// add the status_flag column
+alter table s_branch add column status_flag integer;
+alter table s_inventory_item add column status_flag integer;
+
+// set its default value to be models.STATUS_VISIBLE
+alter table s_branch alter COLUMN status_flag set default 1;
+alter table s_inventory_item alter COLUMN status_flag set default 1;
+
+// update previously existing rows to models.STATUS_VISIBLE status
+update s_branch set status_flag = 1;
+update s_inventory_item set status_flag = 1;
