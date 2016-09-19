@@ -73,7 +73,7 @@ func (s *shStore) UpdateBranchInTx(tnx *sql.Tx, b *ShBranch) (*ShBranch, error) 
 		fmt.Sprintf("update %s set "+
 			" branch_name = $1, location = $2, %s = $3 "+
 			" where branch_id = $4 ", TABLE_BRANCH, _db_status_flag),
-		b.Name, b.Location, b.BranchId)
+		b.Name, b.Location, b.StatusFlag, b.BranchId)
 	return b, err
 }
 
