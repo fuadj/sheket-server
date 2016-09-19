@@ -51,7 +51,7 @@ const (
 const (
 	// Shared across entities that can have this field. Currently used to track if is
 	// visible/invisible. This is an integer, default value is STATUS_VISIBLE.
-	_db_status_flag  = "status_flag"
+	_db_status_flag  = " status_flag "
 	JSON_STATUS_FLAG = "status_flag"
 
 	STATUS_VISIBLE    int64 = 1
@@ -202,10 +202,12 @@ func (s *shStore) GetItemByIdInTx(tnx *sql.Tx, id int64) (*ShItem, error) {
 	return items[0], nil
 }
 
-func _queryInventoryItems(s *shStore, err_msg string, where_stmt string, args ...interface{}) ([]*ShItem, error) {
-	var result []*ShItem
+func _get_item_columns() string {
+	return fmt.Sprintf(
+		// we need to add padding to left and right so it won't get mixed up with
+		// anything we write after it
+		" %s ",
 
-	query := "select " +
 		strings.Join(
 			[]string{
 				_db_item_id, _db_item_client_uuid, _db_item_company_id, _db_item_category_id,
@@ -215,8 +217,14 @@ func _queryInventoryItems(s *shStore, err_msg string, where_stmt string, args ..
 				_db_item_model_year, _db_item_part_number, _db_item_bar_code, _db_item_has_bar_code,
 				_db_status_flag,
 			},
-			", ") +
-		"from " + TABLE_INVENTORY_ITEM
+			", "),
+	)
+}
+
+func _queryInventoryItems(s *shStore, err_msg string, where_stmt string, args ...interface{}) ([]*ShItem, error) {
+	var result []*ShItem
+
+	query := "select " + _get_item_columns() + " from " + TABLE_INVENTORY_ITEM
 	sort_by := " ORDER BY " + _db_item_id + " desc"
 
 	var rows *sql.Rows
@@ -271,18 +279,7 @@ func _queryInventoryItems(s *shStore, err_msg string, where_stmt string, args ..
 func _queryInventoryItemsInTx(tnx *sql.Tx, err_msg string, where_stmt string, args ...interface{}) ([]*ShItem, error) {
 	var result []*ShItem
 
-	query := "select " +
-		strings.Join(
-			[]string{
-				_db_item_id, _db_item_client_uuid, _db_item_company_id, _db_item_category_id,
-				_db_item_name, _db_item_code,
-				_db_item_units, _db_item_has_derived_unit, _db_item_derived_name, _db_item_derived_factor,
-				_db_item_reorder_level,
-				_db_item_model_year, _db_item_part_number, _db_item_bar_code, _db_item_has_bar_code,
-				_db_status_flag,
-			},
-			", ") +
-		"from " + TABLE_INVENTORY_ITEM
+	query := "select " + _get_item_columns() + " from " + TABLE_INVENTORY_ITEM
 	sort_by := " ORDER BY " + _db_item_id + " desc"
 
 	var rows *sql.Rows
