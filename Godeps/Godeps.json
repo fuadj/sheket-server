@@ -36,6 +36,10 @@
 			"Rev": "bd3c8e81be01eef76d4b503f5e687d2d1354d2d9"
 		},
 		{
+			"ImportPath": "github.com/golang/protobuf/proto",
+			"Rev": "1f49d83d9aa00e6ce4fc8258c71cc7786aec968a"
+		},
+		{
 			"ImportPath": "github.com/gorilla/context",
 			"Comment": "v1.1-2-ga8d44e7",
 			"Rev": "a8d44e7d8e4d532b6a27a02dd82abb31cc1b01bd"
@@ -91,7 +95,76 @@
 		},
 		{
 			"ImportPath": "golang.org/x/net/context",
-			"Rev": "d9558e5c97f85372afee28cf2b6059d7d3818919"
+			"Rev": "6d3beaea10370160dea67f5c9327ed791afd5389"
+		},
+		{
+			"ImportPath": "golang.org/x/net/http2",
+			"Rev": "6d3beaea10370160dea67f5c9327ed791afd5389"
+		},
+		{
+			"ImportPath": "golang.org/x/net/http2/hpack",
+			"Rev": "6d3beaea10370160dea67f5c9327ed791afd5389"
+		},
+		{
+			"ImportPath": "golang.org/x/net/idna",
+			"Rev": "6d3beaea10370160dea67f5c9327ed791afd5389"
+		},
+		{
+			"ImportPath": "golang.org/x/net/internal/timeseries",
+			"Rev": "6d3beaea10370160dea67f5c9327ed791afd5389"
+		},
+		{
+			"ImportPath": "golang.org/x/net/lex/httplex",
+			"Rev": "6d3beaea10370160dea67f5c9327ed791afd5389"
+		},
+		{
+			"ImportPath": "golang.org/x/net/trace",
+			"Rev": "6d3beaea10370160dea67f5c9327ed791afd5389"
+		},
+		{
+			"ImportPath": "google.golang.org/grpc",
+			"Comment": "v1.0.1-GA-55-g71d2ea4",
+			"Rev": "71d2ea4f75286a63b606aca2422cd17ff37fd5b8"
+		},
+		{
+			"ImportPath": "google.golang.org/grpc/codes",
+			"Comment": "v1.0.1-GA-55-g71d2ea4",
+			"Rev": "71d2ea4f75286a63b606aca2422cd17ff37fd5b8"
+		},
+		{
+			"ImportPath": "google.golang.org/grpc/credentials",
+			"Comment": "v1.0.1-GA-55-g71d2ea4",
+			"Rev": "71d2ea4f75286a63b606aca2422cd17ff37fd5b8"
+		},
+		{
+			"ImportPath": "google.golang.org/grpc/grpclog",
+			"Comment": "v1.0.1-GA-55-g71d2ea4",
+			"Rev": "71d2ea4f75286a63b606aca2422cd17ff37fd5b8"
+		},
+		{
+			"ImportPath": "google.golang.org/grpc/internal",
+			"Comment": "v1.0.1-GA-55-g71d2ea4",
+			"Rev": "71d2ea4f75286a63b606aca2422cd17ff37fd5b8"
+		},
+		{
+			"ImportPath": "google.golang.org/grpc/metadata",
+			"Comment": "v1.0.1-GA-55-g71d2ea4",
+			"Rev": "71d2ea4f75286a63b606aca2422cd17ff37fd5b8"
+		},
+		{
+			"ImportPath": "google.golang.org/grpc/naming",
+			"Comment": "v1.0.1-GA-55-g71d2ea4",
+			"Rev": "71d2ea4f75286a63b606aca2422cd17ff37fd5b8"
+		},
+		{
+			"ImportPath": "google.golang.org/grpc/peer",
+			"Comment": "v1.0.1-GA-55-g71d2ea4",
+			"Rev": "71d2ea4f75286a63b606aca2422cd17ff37fd5b8"
+		},
+		{
+			"ImportPath": "google.golang.org/grpc/transport",
+			"Comment": "v1.0.1-GA-55-g71d2ea4",
+			"Rev": "71d2ea4f75286a63b606aca2422cd17ff37fd5b8"
 		},
 		{
 			"ImportPath": "gopkg.in/bluesuncorp/validator.v5",
