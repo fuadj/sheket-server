@@ -9,7 +9,7 @@ package sheketproto;
 service SheketService {
     rpc UserSignup (SingupRequest) returns (SignupResponse);
 
-    rpc SyncUser (SyncUserRequest) returns (CompanyList);
+    rpc SyncCompanies (SyncCompanyRequest) returns (CompanyList);
     rpc EditUserName (EditUserNameRequest) returns (EmptyResponse);
 
     rpc CreateCompany (NewCompanyRequest) returns (Company);
@@ -55,7 +55,7 @@ message SignupResponse {
     string login_cookie = 3;
 }
 
-message SyncUserRequest {
+message SyncCompanyRequest {
     SheketAuth auth = 1;
     int64 user_rev = 2;
     string device_id = 3;
