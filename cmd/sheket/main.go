@@ -1,17 +1,19 @@
 package main
 
 import (
-	"fmt"
-	"github.com/gin-gonic/gin"
 	_ "github.com/gorilla/securecookie"
 	_ "github.com/lib/pq"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/grpclog"
 	"log"
-	"net/http"
+	"net"
 	"os"
 	c "sheket/server/controller"
 	"sheket/server/controller/auth"
 	"sheket/server/models"
-	sh "sheket/server/controller/sheket_handler"
+	sh_service "sheket/server/sheketproto"
+	panic_handler "github.com/kazegusuri/grpc-panic-handler"
+	"fmt"
 )
 
 func main() {
@@ -20,39 +22,21 @@ func main() {
 		log.Fatal("$PORT must be set")
 	}
 
-	router := gin.New()
-	router.Use(gin.Logger())
-	router.Use(gin.Recovery())
+	conn, err := net.Listen("tcp", ":"+port)
+	if err != nil {
+		grpclog.Fatalf("failed to listen: %v", err)
+	}
 
-	// users will sign-in to this route. If the user doesn't already exist,
-	// it will be added to the database. If all is successful, the user will
-	// be signed-in with a cookie.
-	router.POST("/api/v1/signin/facebook", sh.HandleError(c.UserSignInHandler))
+	uIntOpt := grpc.UnaryInterceptor(panic_handler.UnaryPanicHandler)
+	sIntOpt := grpc.StreamInterceptor(panic_handler.StreamPanicHandler)
 
-	router.POST("/api/v1/company/create", auth.RequireLogin(c.CompanyCreateHandler))
-	// lists companies a user belongs in
-	router.POST("/api/v1/company/list", auth.RequireLogin(c.UserCompanyListHandler))
-	router.POST("/api/v1/company/edit/name", auth.RequireLogin(c.EditCompanyNameHandler))
-
-	router.POST("/api/v1/user/edit/name", auth.RequireLogin(c.EditUserNameHandler))
-
-	router.POST("/api/v1/member/add", auth.RequireLogin(c.AddCompanyMember))
-
-	router.POST("/api/v1/sync/entity", auth.RequireLogin(c.EntitySyncHandler))
-	router.POST("/api/v1/sync/transaction", auth.RequireLogin(c.TransactionSyncHandler))
-
-	router.POST("/api/v1/payment/issue", auth.RequireLogin(c.IssuePaymentHandler))
-	router.POST("/api/v1/payment/verify", auth.RequireLogin(c.VerifyPaymentHandler))
-
-	router.LoadHTMLGlob("templates/*.tmpl.html")
-	router.Static("/static", "static")
-
-	router.NoRoute(func(c *gin.Context) {
-		c.HTML(http.StatusOK, "index.tmpl.html", nil)
+	panic_handler.InstallPanicHandler(func(r interface{}) {
+		fmt.Printf("panic happened: %v", r)
 	})
 
-	fmt.Println("Running!!!")
-	log.Fatal(http.ListenAndServe(":"+port, router))
+	grpcServer := grpc.NewServer(uIntOpt, sIntOpt)
+	sh_service.RegisterSheketServiceServer(grpcServer, new(c.SheketController))
+	grpcServer.Serve(conn)
 }
 
 func init() {
