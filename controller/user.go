@@ -4,13 +4,16 @@ import (
 	"github.com/bitly/go-simplejson"
 	"github.com/gin-gonic/gin"
 	fb "github.com/huandu/facebook"
+	"golang.org/x/net/context"
+	"log"
 	"net/http"
+	"os"
 	"sheket/server/controller/auth"
 	sh "sheket/server/controller/sheket_handler"
 	"sheket/server/models"
+	sp "sheket/server/sheketproto"
 	"strings"
-	"os"
-	"log"
+	"fmt"
 )
 
 const (
@@ -40,20 +43,9 @@ func init() {
 	}
 }
 
-func UserSignInHandler(c *gin.Context) *sh.SheketError {
-	defer trace("UserSignInHandler")()
-
-	data, err := simplejson.NewFromReader(c.Request.Body)
-	if err != nil {
-		return &sh.SheketError{Code: http.StatusBadRequest, Error: err.Error()}
-	}
-
-	user_token := strings.TrimSpace(data.Get(JSON_KEY_USER_TOKEN).MustString())
-	is_sheket_pay := data.Get(JSON_KEY_IS_SHEKET_PAY).MustBool(false)
-	if len(user_token) == 0 {
-		return &sh.SheketError{Code: http.StatusBadRequest, Error: "User token missing"}
-	}
-
+func (s *SheketController) UserSignup(c context.Context, request *sp.SingupRequest) (response *sp.SignupResponse, err error) {
+	defer trace("UserSignup")()
+	user_token := request.Token
 	app_id := "313445519010095"
 
 	app := fb.New(app_id, fb_app_secret)
@@ -61,15 +53,14 @@ func UserSignInHandler(c *gin.Context) *sh.SheketError {
 	// exchange the short-term token to a long lived token(this synchronously calls facebook!!!)
 	app_token, _, err := app.ExchangeToken(user_token)
 	if err != nil {
-		return &sh.SheketError{Code: http.StatusBadRequest, Error: err.Error()}
+		return nil, err
 	}
 
 	res, err := fb.Get("me", fb.Params{
 		"access_token": app_token,
 	})
-
 	if err != nil {
-		return &sh.SheketError{Code: http.StatusBadRequest, Error: err.Error()}
+		return nil, err
 	}
 
 	var username, fb_id string
@@ -80,14 +71,14 @@ func UserSignInHandler(c *gin.Context) *sh.SheketError {
 		username, ok = v.(string)
 	}
 	if !ok {
-		return &sh.SheketError{Code: http.StatusBadRequest, Error: "error facebook response: username field missing"}
+		return nil, fmt.Errorf("error facebook response: username field missing")
 	}
 
 	if v, ok = res["id"]; ok {
 		fb_id, ok = v.(string)
 	}
 	if !ok {
-		return &sh.SheketError{Code: http.StatusBadRequest, Error: "error facebook response: facebook_id field missing"}
+		return nil, fmt.Errorf("error facebook response: facebook_id field missing")
 	}
 
 	username = strings.TrimSpace(username)
@@ -95,7 +86,7 @@ func UserSignInHandler(c *gin.Context) *sh.SheketError {
 
 	tnx, err := Store.GetDataStore().Begin()
 	if err != nil {
-		return &sh.SheketError{Code: http.StatusInternalServerError, Error: err.Error()}
+		return nil, err
 	}
 	defer func() {
 		if err != nil && tnx != nil {
@@ -107,119 +98,71 @@ func UserSignInHandler(c *gin.Context) *sh.SheketError {
 	if user, err = Store.FindUserWithProviderIdInTx(tnx,
 		models.AUTH_PROVIDER_FACEBOOK, fb_id); err != nil {
 
-		// if the user wasn't found, create it
-		if err == models.ErrNoData {
-			// the user doesn't exist, so try inserting the user
+		if err != models.ErrNoData {
+			return nil, err
+		} else { // err == models.ErrNoData( which means user doesn't exist), create it
 			new_user := &models.User{Username: username,
 				ProviderID:     models.AUTH_PROVIDER_FACEBOOK,
 				UserProviderID: fb_id}
 			user, err = Store.CreateUserInTx(tnx, new_user)
 			if err != nil {
-				return &sh.SheketError{Code: http.StatusInternalServerError, Error: err.Error()}
+				return nil, err
 			}
 			tnx.Commit()
 			tnx = nil
-		} else {
-			// if there was a "true" error, abort
-			return &sh.SheketError{Code: http.StatusInternalServerError, Error: err.Error()}
 		}
 	}
 	tnx = nil
 
-	// if the request came from a SheketPay client, the user needs to be authorized before hand.
-	if is_sheket_pay && !isAuthorizedForSheketPay(user) {
-		return &sh.SheketError{Code: http.StatusUnauthorized, Error: "You are not authorized for SheketPay"}
+	response = new(sp.SignupResponse)
+	response.LoginCookie, err = auth.GenerateLoginCookie(user)
+	if err != nil {
+		return nil, err
 	}
 
-	// log-in the user for subsequent requests
-	auth.LoginUser(user, c.Writer)
+	response.Username = user.Username
 
-	c.JSON(http.StatusOK, map[string]interface{}{
-		JSON_KEY_USERNAME: user.Username,
-		JSON_KEY_USER_ID:  user.UserId,
-	})
-	return nil
+	return response, nil
 }
 
-func isAuthorizedForSheketPay(user *models.User) bool {
-	// TODO: do a more "rigorous" check for the future, we are now just
-	// hardcoding some predefined users.
+func (s *SheketController) SyncCompanies(c context.Context, request *sp.SyncCompanyRequest) (response *sp.CompanyList, err error) {
+	defer trace("SyncCompanies")()
 
-	id := user.UserId
-
-	return id == 5
-}
-
-// lists the companies this user belongs in
-func UserCompanyListHandler(c *gin.Context) *sh.SheketError {
-	defer trace("UserCompanyListHandler")()
-
-	current_user, err := auth.GetCurrentUser(c.Request)
+	user, err := auth.GetUser(request.Auth.LoginCookie)
 	if err != nil {
-		return &sh.SheketError{Code: http.StatusBadRequest, Error: err.Error()}
+		return nil, err
 	}
 
-	data, err := simplejson.NewFromReader(c.Request.Body)
-	if err != nil {
-		return &sh.SheketError{Code: http.StatusInternalServerError, Error: err.Error()}
-	}
-
-	device_id := data.Get(JSON_PAYMENT_DEVICE_ID).MustString("")
-	user_local_time := data.Get(JSON_PAYMENT_LOCAL_USER_TIME).MustString("")
-
-	if device_id == "" || user_local_time == "" {
-		return &sh.SheketError{Code: http.StatusBadRequest, Error: "missing payment fields"}
-	}
-
-	company_permissions, err := Store.GetUserCompanyPermissions(current_user)
+	company_permissions, err := Store.GetUserCompanyPermissions(user)
 	if err != nil && err != models.ErrNoData {
-		return &sh.SheketError{Code: http.StatusInternalServerError, Error: err.Error()}
+		return nil, err
 	}
 
-	/**
-	 * See link why we don't do {@code var companies []interface{})
-	 * https://danott.co/posts/json-marshalling-empty-slices-to-empty-arrays-in-go.html
-	 */
-	companies := make([]interface{}, 0)
+	user_companies := new(sp.CompanyList)
+
 	for i := 0; i < len(company_permissions); i++ {
-		company_id := company_permissions[i].CompanyInfo.CompanyId
-		user_id := current_user.UserId
+		company := new(sp.Company)
 
-		encoded_payment := company_permissions[i].CompanyInfo.EncodedPayment
+		company.CompanyId = company_permissions[i].CompanyInfo.CompanyId
+		company.CompanyName = company_permissions[i].CompanyInfo.CompanyName
+		company.Permission = company_permissions[i].Permission.EncodedPermission
 
-		company := make(map[string]interface{})
+		license, err := GenerateCompanyLicense(
+			company_permissions[i].CompanyInfo.CompanyId,
+			user.UserId,
+			company_permissions[i].CompanyInfo.EncodedPayment,
+			request.DeviceId, request.LocalUserTime)
 
-		company[JSON_KEY_COMPANY_ID] = company_permissions[i].
-			CompanyInfo.CompanyId
-		company[JSON_KEY_COMPANY_NAME] = company_permissions[i].
-			CompanyInfo.CompanyName
-		company[JSON_KEY_USER_PERMISSION] = company_permissions[i].
-			Permission.EncodedPermission
-
-		license, err := GenerateCompanyLicense(company_id, user_id, encoded_payment, device_id, user_local_time)
-
-		/**
-		 * TODO: check proper error handling
-		 * the error here is because the license couldn't be generated. This happens because there might be
-		 * problems encoding it, the payment duration has expired. This doesn't signal a "backend" error.
-		 * So, we shouldn't abort here and send an error to the user.
-		 *
-		 * If there were any errors, revoke the license by sending an empty license.
-		 */
 		if err != nil {
 			license = ""
 		}
 
-		company[JSON_PAYMENT_SIGNED_LICENSE] = license
+		company.SignedLicense = license
 
-		companies = append(companies, company)
+		user_companies.Companies = append(user_companies.Companies, company)
 	}
 
-	c.JSON(http.StatusOK, map[string]interface{}{
-		"companies": companies,
-	})
-
-	return nil
+	return user_companies, nil
 }
 
 func EditUserNameHandler(c *gin.Context) *sh.SheketError {
