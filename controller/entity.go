@@ -1,308 +1,107 @@
 package controller
 
 import (
-	"fmt"
-	"github.com/gin-gonic/gin"
-	"net/http"
+	"golang.org/x/net/context"
 	_ "net/http/httputil"
-	sh "sheket/server/controller/sheket_handler"
 	"sheket/server/models"
+	sp "sheket/server/sheketproto"
 )
 
 const (
-	key_item_revision            = "item_rev"
-	key_branch_revision          = "branch_rev"
-	key_member_revision          = "member_rev"
-	key_category_revision        = "category_rev"
-	key_branch_category_revision = "branch_category_rev"
-
-	key_types = "types"
-
-	key_created = "create"
-	key_updated = "update"
-	key_deleted = "delete"
-
-	key_fields = "fields"
-
-	type_categories        = "category"
-	type_items             = "item"
-	type_branches          = "branch"
-	type_branch_items      = "branch_item"
-	type_members           = "member"
-	type_branch_categories = "branch_category"
-
-	// used in the response to hold the newly updated category ids
-	key_updated_category_ids = "updated_category_ids"
-
-	// used in the response json to hold the newly updated item ids
-	key_updated_item_ids = "updated_item_ids"
-
-	// used in the response json to hold the newly updated branch ids
-	key_updated_branch_ids = "updated_branch_ids"
-
-	// key of json holding any updated categories since last sync
-	key_sync_categories = "sync_categories"
-
-	// key of json for categories deleted since last sync
-	key_sync_deleted_categories = "deleted_categories"
-
-	// key of json holding any updated items since last sync
-	key_sync_items = "sync_items"
-
-	// key of json holding any updated branches since last sync
-	key_sync_branches = "sync_branches"
-
-	key_sync_members = "sync_members"
-
-	// key of json for members deleted since last sync
-	key_sync_deleted_members = "deleted_members"
-
-	// key of json holding any updated branch categories since last sync
-	key_sync_branch_categories = "sync_branch_categories"
-
-	// key of json for branch categories that have been deleted since last sync
-	key_sync_deleted_branch_categories = "deleted_branch_categories"
+	CLIENT_ROOT_CATEGORY_ID int64 = -1
 )
 
-type EntityResult struct {
-	OldId2New_Categories map[int64]int64
-	OldId2New_Items      map[int64]int64
-	OldId2New_Branches   map[int64]int64
+func (s *SheketController) SyncEntity(c context.Context, request *sp.EntityRequest) (response *sp.EntityResponse, err error) {
+	defer trace("SyncEntity")()
 
-	NewlyCreatedCategoryIds map[int64]bool
-	NewlyCreatedItemIds     map[int64]bool
-	NewlyCreatedBranchIds   map[int64]bool
-}
-
-func EntitySyncHandler(c *gin.Context) *sh.SheketError {
-	defer trace("EntitySyncHandler")()
-
-	/*
-		d, err := httputil.DumpRequest(c.Request, true)
-		if err == nil {
-			fmt.Printf("Request %s\n", string(d))
-		}
-	*/
-
-	info, err := GetIdentityInfo(c.Request)
+	user_info, err := GetUserWithCompanyPermission(request.CompanyAuth)
 	if err != nil {
-		return &sh.SheketError{Code: http.StatusBadRequest, Error: err.Error()}
-	}
-
-	posted_data, err := parseEntityPost(c.Request.Body, parsers, info)
-	if err != nil {
-		return &sh.SheketError{Code: http.StatusBadRequest, Error: err.Error()}
+		return nil, err
 	}
 
 	tnx, err := Store.Begin()
 	if err != nil {
-		return &sh.SheketError{Code: http.StatusInternalServerError, Error: err.Error()}
+		return nil, err
 	}
 
-	result, err := applyEntityOperations(tnx, posted_data, info)
-	if err != nil {
+	response = new(sp.EntityResponse)
+
+	response.CompanyId.CompanyId = user_info.CompanyId
+
+	if err = applyEntityOperations(tnx, request, response, user_info); err != nil {
 		tnx.Rollback()
-		return &sh.SheketError{Code: http.StatusInternalServerError, Error: err.Error()}
+		return nil, err
 	}
 	tnx.Commit()
 
-	response := make(map[string]interface{})
-	response[JSON_KEY_COMPANY_ID] = info.CompanyId
-
-	if err = syncNewEntities(response, result); err != nil {
-		return &sh.SheketError{Code: http.StatusInternalServerError, Error: err.Error()}
+	if err = syncModifiedEntities(request, response, user_info); err != nil {
+		return nil, err
 	}
 
-	if err = syncModifiedEntities(response, posted_data, result, info); err != nil {
-		return &sh.SheketError{Code: http.StatusInternalServerError, Error: err.Error()}
-	}
-
-	c.JSON(http.StatusOK, response)
-
-	return nil
-}
-
-func syncNewEntities(sync_response map[string]interface{}, sync_result *EntityResult) error {
-	if len(sync_result.OldId2New_Categories) > 0 {
-		i := int64(0)
-		updated_ids := make([]map[string]int64, len(sync_result.OldId2New_Categories))
-		for old_id, new_id := range sync_result.OldId2New_Categories {
-			updated_ids[i] = map[string]int64{
-				KEY_JSON_ID_OLD: old_id,
-				KEY_JSON_ID_NEW: new_id,
-			}
-			i++
-		}
-
-		sync_response[key_updated_category_ids] = updated_ids
-	}
-
-	if len(sync_result.OldId2New_Items) > 0 {
-		i := int64(0)
-		updated_ids := make([]map[string]int64, len(sync_result.OldId2New_Items))
-		for old_id, new_id := range sync_result.OldId2New_Items {
-			updated_ids[i] = map[string]int64{
-				KEY_JSON_ID_OLD: old_id,
-				KEY_JSON_ID_NEW: new_id,
-			}
-			i++
-		}
-
-		sync_response[key_updated_item_ids] = updated_ids
-	}
-	if len(sync_result.OldId2New_Branches) > 0 {
-		i := int64(0)
-		updated_ids := make([]map[string]int64, len(sync_result.OldId2New_Branches))
-		for old_id, new_id := range sync_result.OldId2New_Branches {
-			updated_ids[i] = map[string]int64{
-				KEY_JSON_ID_OLD: old_id,
-				KEY_JSON_ID_NEW: new_id,
-			}
-			i++
-		}
-
-		sync_response[key_updated_branch_ids] = updated_ids
-	}
-	return nil
-}
-
-func syncModifiedEntities(sync_response map[string]interface{},
-	posted_data *EntitySyncData, sync_result *EntityResult,
-	info *IdentityInfo) error {
-
-	latest_category_rev,
-		changed_categories, deleted_categories,
-		err :=
-		fetchCategoriesSinceRev(info.CompanyId,
-			posted_data.RevisionCategory,
-			sync_result.NewlyCreatedCategoryIds)
-	if err != nil {
-		return err
-	}
-	sync_response[key_category_revision] = latest_category_rev
-	if len(changed_categories) > 0 {
-		sync_response[key_sync_categories] = changed_categories
-	}
-	if len(deleted_categories) > 0 {
-		sync_response[key_sync_deleted_categories] = deleted_categories
-	}
-
-	latest_item_rev, changed_items, err := fetchItemsSinceRev(info.CompanyId,
-		posted_data.RevisionItem, sync_result.NewlyCreatedItemIds)
-	if err != nil {
-		return err
-	}
-	sync_response[key_item_revision] = latest_item_rev
-	if len(changed_items) > 0 {
-		sync_response[key_sync_items] = changed_items
-	}
-
-	latest_branch_rev, changed_branches, err := fetchBranchesSinceRev(info.CompanyId,
-		posted_data.RevisionBranch, sync_result.NewlyCreatedBranchIds)
-	if err != nil {
-		return err
-	}
-	sync_response[key_branch_revision] = latest_branch_rev
-	if len(changed_branches) > 0 {
-		sync_response[key_sync_branches] = changed_branches
-	}
-
-	latest_branch_category_rev,
-		changed_branch_categories,
-		deleted_branch_categories,
-		err :=
-		fetchBranchCategoriesSinceRev(info.CompanyId,
-			posted_data.RevisionBranch_Category)
-	if err != nil {
-		return err
-	}
-	sync_response[key_branch_category_revision] = latest_branch_category_rev
-	if len(changed_branch_categories) > 0 {
-		sync_response[key_sync_branch_categories] = changed_branch_categories
-	}
-	if len(deleted_categories) > 0 {
-		sync_response[key_sync_deleted_branch_categories] = deleted_branch_categories
-	}
-
-	if info.Permission.PermissionType <= models.PERMISSION_TYPE_BRANCH_MANAGER {
-		max_member_rev,
-			changed_members,
-			deleted_members,
-			err :=
-			fetchMemberSinceRev(info.CompanyId,
-				posted_data.RevisionMember)
-		if err != nil {
-			return err
-		}
-		if len(changed_members) > 0 {
-			sync_response[key_sync_members] = changed_members
-		}
-		if len(deleted_members) > 0 {
-			sync_response[key_sync_deleted_members] = deleted_members
-		}
-		sync_response[key_member_revision] = max_member_rev
-	}
-	return nil
+	return response, nil
 }
 
 /**
- * fetches creates/updates/deletes of categories since revision. Both the updates/deletes can be made
- * by the current user.
- *
- * @return:
- * 		latest_rev			the latest category revision
- *
- *		changes_since		the created/updated categories since last rev
- *		deleted_since		the deleted since last rev
+ * Writes to the response any entities that have been (inserted/updated/deleted) since their
+ * last respective revision. (e.g: it will sync any changes on branch_items that have occurred
+ * since user's last branch_item revision).
  */
-func fetchCategoriesSinceRev(company_id,
-	last_category_rev int64,
-	newly_created_category_ids map[int64]bool) (
+func syncModifiedEntities(request *sp.EntityRequest,
+	response *sp.EntityResponse,
+	user_info *UserCompanyPermission) error {
 
-	latest_rev int64,
+	if err := fetchCategoriesSinceLastRev(request, response, user_info.CompanyId); err != nil {
+		return err
+	}
 
-	changed_since []map[string]interface{},
-	deleted_since []int64,
+	if err := fetchItemsSinceLastRev(request, response, user_info.CompanyId); err != nil {
+		return err
+	}
 
-	err error,
-) {
+	if err := fetchBranchesSinceLastRev(request, response, user_info.CompanyId); err != nil {
+		return nil
+	}
+
+	if err := fetchBranchCategoriesSinceLastRev(request, response, user_info.CompanyId); err != nil {
+		return err
+	}
+
+	if user_info.Permission.PermissionType <= models.PERMISSION_TYPE_BRANCH_MANAGER {
+		if err := fetchMembersSinceLastRev(request, response, user_info.CompanyId); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func fetchCategoriesSinceLastRev(request *sp.EntityRequest,
+	response *sp.EntityResponse,
+	company_id int64) error {
 
 	max_rev, category_revs, err := Store.GetRevisionsSince(
 		&models.ShEntityRevision{
 			CompanyId:      company_id,
 			EntityType:     models.REV_ENTITY_CATEGORY,
-			RevisionNumber: last_category_rev,
+			RevisionNumber: request.OldCategoryRev,
 		})
 	if err != nil && err != models.ErrNoData {
-		return max_rev, nil, nil, err
+		return err
 	}
 
-	// we don't know which ones are create-update/delete,
-	// so we need to allocate BOTH arrays for worst case(to possibly hold all revisions since)
-	changed_result := make([]map[string]interface{}, len(category_revs))
-	deleted_result := make([]int64, len(category_revs))
-
-	changed_index := 0
-	deleted_index := 0
+	response.NewCategoryRev = max_rev
 
 	for _, rev := range category_revs {
 		category_id := rev.EntityAffectedId
-		// the category was created in this sync "round", we already have it
-		if newly_created_category_ids[category_id] {
-			continue
-		}
+		// TODO: check if it is newly created, don't re-fetch the category
 
 		switch rev.ActionType {
 		case models.REV_ACTION_CREATE, models.REV_ACTION_UPDATE:
-
 			category, err := Store.GetCategoryById(category_id)
-			// it can be ErrNoData if the category has been deleted since
 			if err != nil {
 				if err == models.ErrNoData {
 					continue
 				} else {
-					fmt.Printf("GetCategoryById error '%s'", err.Error())
-					return max_rev, nil, nil, err
+					return err
 				}
 			}
 
@@ -311,157 +110,141 @@ func fetchCategoriesSinceRev(company_id,
 				category.ParentId = CLIENT_ROOT_CATEGORY_ID
 			}
 
-			changed_result[changed_index] = map[string]interface{}{
-				models.CATEGORY_JSON_CATEGORY_ID: category.CategoryId,
-				models.CATEGORY_JSON_NAME:        category.Name,
-				models.CATEGORY_JSON_PARENT_ID:   category.ParentId,
-				models.CATEGORY_JSON_UUID:        category.ClientUUID,
-			}
-			changed_index++
+			response.Categories = append(response.Categories,
+				&sp.EntityResponse_SyncCategory{
+					Category: &sp.Category{
+						CategoryId: category.CategoryId,
+						Name:       category.Name,
+						ParentId:   category.ParentId,
+						UUID:       category.ClientUUID,
+
+						// TODO: check if we support "hiding" categories
+						StatusFlag: models.STATUS_VISIBLE,
+					},
+				})
 
 		case models.REV_ACTION_DELETE:
-			deleted_result[deleted_index] = category_id
-			deleted_index++
+			response.Categories = append(response.Categories,
+				&sp.EntityResponse_SyncCategory{
+					Category: &sp.Category{
+						CategoryId: category_id,
+					},
+					State: sp.EntityResponse_REMOVED,
+				})
 		}
 	}
 
-	return max_rev,
-		changed_result[:changed_index],
-		deleted_result[:deleted_index],
-		nil
+	return nil
 }
 
-func fetchItemsSinceRev(company_id, item_rev int64, newly_created_item_ids map[int64]bool) (latest_rev int64,
-	items_since []map[string]interface{}, err error) {
+func fetchItemsSinceLastRev(request *sp.EntityRequest,
+	response *sp.EntityResponse,
+	company_id int64) error {
 
 	max_rev, changed_item_revs, err := Store.GetRevisionsSince(
 		&models.ShEntityRevision{
 			CompanyId:      company_id,
 			EntityType:     models.REV_ENTITY_ITEM,
-			RevisionNumber: item_rev,
+			RevisionNumber: request.OldItemRev,
 		})
 	if err != nil && err != models.ErrNoData {
-		return max_rev, nil, err
+		return err
 	}
 
-	result := make([]map[string]interface{}, len(changed_item_revs))
-	i := 0
+	response.NewItemRev = max_rev
+
 	for _, item_rev := range changed_item_revs {
 		item_id := item_rev.EntityAffectedId
-		if newly_created_item_ids[item_id] {
-			continue
-		}
 
 		item, err := Store.GetItemById(item_id)
-		// it can be ErrNoData if the item has been deleted since
 		if err != nil {
-			if err != models.ErrNoData {
-				fmt.Printf("GetItemById error '%v'", err.Error())
-				return max_rev, nil, err
+			if err == models.ErrNoData {
+				continue
+			} else {
+				return err
 			}
-			continue
 		}
 
 		if item.CategoryId == models.ROOT_CATEGORY_ID {
 			item.CategoryId = CLIENT_ROOT_CATEGORY_ID
 		}
 
-		result[i] = map[string]interface{}{
-			models.ITEM_JSON_ITEM_ID:     item.ItemId,
-			models.ITEM_JSON_UUID:        item.ClientUUID,
-			models.ITEM_JSON_ITEM_NAME:   item.Name,
-			models.ITEM_JSON_ITEM_CODE:   item.ItemCode,
-			models.ITEM_JSON_CATEGORY_ID: item.CategoryId,
-
-			models.ITEM_JSON_UNIT_OF_MEASUREMENT: item.UnitOfMeasurement,
-			models.ITEM_JSON_HAS_DERIVED_UNIT:    item.HasDerivedUnit,
-			models.ITEM_JSON_DERIVED_NAME:        item.DerivedName,
-			models.ITEM_JSON_DERIVED_FACTOR:      item.DerivedFactor,
-			models.ITEM_JSON_REORDER_LEVEL:       item.ReorderLevel,
-
-			models.ITEM_JSON_MODEL_YEAR:   item.ModelYear,
-			models.ITEM_JSON_PART_NUMBER:  item.PartNumber,
-			models.ITEM_JSON_BAR_CODE:     item.BarCode,
-			models.ITEM_JSON_HAS_BAR_CODE: item.HasBarCode,
-
-			models.JSON_STATUS_FLAG: item.StatusFlag,
-		}
-		i++
+		response.Items = append(response.Items,
+			&sp.EntityResponse_SyncItem{
+				Item: &sp.Item{
+					ItemId:            item.ItemId,
+					UUID:              item.ClientUUID,
+					Name:              item.Name,
+					Code:              item.ItemCode,
+					CategoryId:        item.CategoryId,
+					UnitOfMeasurement: item.UnitOfMeasurement,
+					HasDerivedUnit:    item.HasDerivedUnit,
+					DerivedName:       item.DerivedName,
+					DerivedFactor:     item.DerivedFactor,
+					StatusFlag:        item.StatusFlag,
+				},
+			})
 	}
-	return max_rev, result[:i], nil
+	return nil
 }
 
-func fetchBranchesSinceRev(company_id, branch_rev int64, newly_created_branch_ids map[int64]bool) (latest_rev int64,
-	branches_since []map[string]interface{}, err error) {
+func fetchBranchesSinceLastRev(request *sp.EntityRequest,
+	response *sp.EntityResponse, company_id int64) error {
 
 	max_rev, new_branch_revs, err := Store.GetRevisionsSince(
 		&models.ShEntityRevision{
 			CompanyId:      company_id,
 			EntityType:     models.REV_ENTITY_BRANCH,
-			RevisionNumber: branch_rev,
+			RevisionNumber: request.OldBranchRev,
 		})
 	if err != nil && err != models.ErrNoData {
-		return max_rev, nil, err
+		return err
 	}
-	result := make([]map[string]interface{}, len(new_branch_revs))
 
-	i := 0
-	for _, item_rev := range new_branch_revs {
-		branch_id := item_rev.EntityAffectedId
-		if newly_created_branch_ids[branch_id] {
-			continue
-		}
+	response.NewBranchRev = max_rev
+
+	for _, branch_rev := range new_branch_revs {
+		branch_id := branch_rev.EntityAffectedId
 
 		branch, err := Store.GetBranchById(branch_id)
 
 		// it can be ErrNoData if the branch has been deleted since
 		if err != nil {
-			if err != models.ErrNoData {
-				fmt.Printf("GetBranchById Error '%v'", err.Error())
-				return max_rev, nil, err
+			if err == models.ErrNoData {
+				continue
+			} else {
+				return err
 			}
-			continue
 		}
 
-		result[i] = map[string]interface{}{
-			models.BRANCH_JSON_BRANCH_ID: branch.BranchId,
-			models.BRANCH_JSON_UUID:      branch.ClientUUID,
-			models.BRANCH_JSON_NAME:      branch.Name,
-			models.BRANCH_JSON_LOCATION:  branch.Location,
-			models.JSON_STATUS_FLAG:      branch.StatusFlag,
-		}
-		i++
+		response.Branches = append(response.Branches,
+			&sp.EntityResponse_SyncBranch{
+				Branch: &sp.Branch{
+					BranchId:   branch_id,
+					UUID:       branch.ClientUUID,
+					Name:       branch.Name,
+					StatusFlag: branch.StatusFlag,
+				},
+			})
 	}
-	return max_rev, result[:i], nil
+	return nil
 }
 
-/**
- * fetches create/update/delete for members since revision
- */
-func fetchMemberSinceRev(company_id, last_member_rev int64) (
-
-	latest_rev int64,
-
-	changed_since []map[string]interface{},
-	deleted_since []int64,
-
-	err error) {
+func fetchMembersSinceLastRev(request *sp.EntityRequest,
+	response *sp.EntityResponse,
+	company_id int64) error {
 
 	max_rev, member_revs, err := Store.GetRevisionsSince(
 		&models.ShEntityRevision{
 			CompanyId:      company_id,
 			EntityType:     models.REV_ENTITY_MEMBERS,
-			RevisionNumber: last_member_rev,
+			RevisionNumber: request.OldMemberRev,
 		})
 	if err != nil && err != models.ErrNoData {
-		return max_rev, nil, nil, err
+		return err
 	}
 
-	changed_result := make([]map[string]interface{}, len(member_revs))
-	deleted_result := make([]int64, len(member_revs))
-
-	changed_index := 0
-	deleted_index := 0
+	response.NewMemberRev = max_rev
 
 	for _, rev := range member_revs {
 		member_id := rev.EntityAffectedId
@@ -471,7 +254,7 @@ func fetchMemberSinceRev(company_id, last_member_rev int64) (
 			user, err := Store.FindUserById(member_id)
 			if err != nil {
 				if err != models.ErrNoData {
-					return max_rev, nil, nil, err
+					return err
 				}
 				continue
 			}
@@ -479,63 +262,50 @@ func fetchMemberSinceRev(company_id, last_member_rev int64) (
 			permission, err := Store.GetUserPermission(user, company_id)
 			if err != nil {
 				if err != models.ErrNoData {
-					return max_rev, nil, nil, err
+					return err
 				}
 				continue
 			}
 
-			changed_result[changed_index] = map[string]interface{}{
-				models.PERMISSION_JSON_MEMBER_ID:         member_id,
-				models.PERMISSION_JSON_MEMBER_PERMISSION: permission.EncodedPermission,
-				JSON_KEY_USERNAME:                        user.Username,
-			}
-
-			changed_index++
+			response.Employees = append(response.Employees,
+				&sp.EntityResponse_SyncEmployee{
+					Employee: &sp.Employee{
+						EmployeeId: member_id,
+						Permission: permission.EncodedPermission,
+						Name:       user.Username,
+					},
+				})
 
 		case models.REV_ACTION_DELETE:
-			// we don't really need to check if the user exists, just tell the
-			// client to remove it if it has it
-			deleted_result[deleted_index] = member_id
-			deleted_index++
+			response.Employees = append(response.Employees,
+				&sp.EntityResponse_SyncEmployee{
+					Employee: &sp.Employee{
+						EmployeeId: member_id,
+					},
+					State: sp.EntityResponse_REMOVED,
+				})
 		}
 	}
 
-	return max_rev,
-		changed_result[:changed_index],
-		deleted_result[:deleted_index],
-		nil
+	return nil
 }
 
-/**
- * fetches creates/updates/deletes of branch categories since revision.
- */
-func fetchBranchCategoriesSinceRev(company_id,
-	last_branch_category_rev int64) (
-
-	latest_rev int64,
-
-	changed_since []map[string]interface{},
-	deleted_since []string,
-
-	err error) {
+func fetchBranchCategoriesSinceLastRev(
+	request *sp.EntityRequest,
+	response *sp.EntityResponse,
+	company_id int64) error {
 
 	max_rev, branch_category_revs, err := Store.GetRevisionsSince(
 		&models.ShEntityRevision{
 			CompanyId:      company_id,
 			EntityType:     models.REV_ENTITY_BRANCH_CATEGORY,
-			RevisionNumber: last_branch_category_rev,
+			RevisionNumber: request.OldBranchCategoryRev,
 		})
 	if err != nil && err != models.ErrNoData {
-		return max_rev, nil, nil, err
+		return err
 	}
 
-	// we don't know which ones are create-update/delete,
-	// so we need to allocate BOTH arrays for worst case(to possibly hold all revisions since)
-	changed_result := make([]map[string]interface{}, len(branch_category_revs))
-	deleted_result := make([]string, len(branch_category_revs))
-
-	changed_index := 0
-	deleted_index := 0
+	response.NewBranchCategoryRev = max_rev
 
 	for _, rev := range branch_category_revs {
 		branch_id := rev.EntityAffectedId
@@ -543,28 +313,31 @@ func fetchBranchCategoriesSinceRev(company_id,
 
 		switch rev.ActionType {
 		case models.REV_ACTION_CREATE, models.REV_ACTION_UPDATE:
-			branch_category, err := Store.GetBranchCategory(branch_id, category_id)
-			if err != nil {
-				if err != models.ErrNoData {
-					fmt.Printf("fetching changed branch categoires, GetBranchCategory error '%s'", err.Error())
-					return max_rev, nil, nil, err
+			if _, err := Store.GetBranchCategory(branch_id, category_id); err != nil {
+				if err == models.ErrNoData {
+					continue
 				}
-				continue
+				return err
 			}
 
-			changed_result[changed_index] = map[string]interface{}{
-				models.BRANCH_CATEGORY_JSON_BRANCH_ID:   branch_category.BranchId,
-				models.BRANCH_CATEGORY_JSON_CATEGORY_ID: branch_category.CategoryId,
-			}
-			changed_index++
+			response.BranchCategories = append(response.BranchCategories,
+				&sp.EntityResponse_SyncBranchCategory{
+					BranchCategory: &sp.BranchCategory{
+						BranchId:   branch_id,
+						CategoryId: category_id,
+					},
+				})
 		case models.REV_ACTION_DELETE:
-			deleted_result[deleted_index] = fmt.Sprintf("%d:%d", branch_id, category_id)
-			deleted_index++
+			response.BranchCategories = append(response.BranchCategories,
+				&sp.EntityResponse_SyncBranchCategory{
+					BranchCategory: &sp.BranchCategory{
+						BranchId:   branch_id,
+						CategoryId: category_id,
+					},
+					State: sp.EntityResponse_REMOVED,
+				})
 		}
 	}
 
-	return max_rev,
-		changed_result[:changed_index],
-		deleted_result[:deleted_index],
-		nil
+	return nil
 }

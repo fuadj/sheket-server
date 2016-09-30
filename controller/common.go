@@ -26,6 +26,12 @@ const (
 
 var Store models.ShStore
 
+type UserCompanyPermission struct {
+	CompanyId  int64
+	User       *models.User
+	Permission *models.UserPermission
+}
+
 func GetCurrentCompanyId(r *http.Request) int64 {
 	id, err := strconv.ParseInt(r.Header.Get(JSON_KEY_COMPANY_ID), 10, 64)
 	if err != nil {
@@ -63,13 +69,13 @@ func GetUserWithCompanyPermission(companyAuth *sheketproto.CompanyAuth) (*UserCo
 		return nil, err
 	}
 
-	permission, err := Store.GetUserPermission(user, companyAuth.CompanyId)
+	permission, err := Store.GetUserPermission(user, companyAuth.CompanyId.CompanyId)
 	if err != nil {
 		return nil, err
 	}
 
 	return &UserCompanyPermission{
-		CompanyId:  companyAuth.CompanyId,
+		CompanyId:  companyAuth.CompanyId.CompanyId,
 		User:       user,
 		Permission: permission}, nil
 }
