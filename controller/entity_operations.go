@@ -113,7 +113,7 @@ func insertCreatedCategories(tnx *sql.Tx,
 
 	for _, _category := range posted_categories {
 		if _category.Action == sp.EntityRequest_CREATE {
-			category := _to_sh_category(_category)
+			category := _to_sh_category(_category.Category)
 			category.CompanyId = company_id
 
 			categories[category.CategoryId] = category
@@ -466,7 +466,7 @@ func applyBranchItemOperations(tnx *sql.Tx,
 	company_id int64) error {
 
 	for _, _p_branch_item := range posted_branch_items {
-		b_item := _to_sh_branch_item(_p_branch_item)
+		b_item := _to_sh_branch_item(_p_branch_item.BranchItem)
 		b_item.CompanyId = company_id
 
 		switch _p_branch_item.Action {
@@ -561,7 +561,7 @@ func applyEmployeeOperations(tnx *sql.Tx,
 	company_id int64) error {
 
 	for _, _p_employee := range posted_employees {
-		employee := _to_sh_user_permission(_p_employee)
+		employee := _to_sh_user_permission(_p_employee.Employee)
 		employee.CompanyId = company_id
 
 		switch _p_employee.Action {
@@ -637,7 +637,7 @@ func applyBranchCategoryOperations(tnx *sql.Tx,
 	company_id int64) error {
 
 	for _, _p_branch_category := range posted_branch_categories {
-		branch_category := _to_sh_branch_category(_p_branch_category)
+		branch_category := _to_sh_branch_category(_p_branch_category.BranchCategory)
 		branch_category.CompanyId = company_id
 
 		switch _p_branch_category.Action {
