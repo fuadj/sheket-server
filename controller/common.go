@@ -3,9 +3,10 @@ package controller
 import (
 	"fmt"
 	"net/http"
-	"sheket/server/models"
-	"strconv"
 	"sheket/server/controller/auth"
+	"sheket/server/models"
+	"sheket/server/sheketproto"
+	"strconv"
 )
 
 const (
@@ -32,10 +33,11 @@ func GetCurrentCompanyId(r *http.Request) int64 {
 	}
 	return id
 }
+
 // used in testing
 var currentUserGetter = auth.GetCurrentUser
 
-func GetIdentityInfo(r *http.Request) (*IdentityInfo, error) {
+func GetIdentityInfo(r *http.Request) (*UserCompanyPermission, error) {
 	company_id := GetCurrentCompanyId(r)
 	if company_id == INVALID_COMPANY_ID {
 		return nil, fmt.Errorf("Invalid company id")
@@ -51,6 +53,23 @@ func GetIdentityInfo(r *http.Request) (*IdentityInfo, error) {
 		return nil, fmt.Errorf("User doesn't have permission, %s", err.Error())
 	}
 
-	info := &IdentityInfo{CompanyId: company_id, User: user, Permission: permission}
+	info := &UserCompanyPermission{CompanyId: company_id, User: user, Permission: permission}
 	return info, nil
+}
+
+func GetUserWithCompanyPermission(companyAuth *sheketproto.CompanyAuth) (*UserCompanyPermission, error) {
+	user, err := auth.GetUser(companyAuth.SheketAuth.LoginCookie)
+	if err != nil {
+		return nil, err
+	}
+
+	permission, err := Store.GetUserPermission(user, companyAuth.CompanyId)
+	if err != nil {
+		return nil, err
+	}
+
+	return &UserCompanyPermission{
+		CompanyId:  companyAuth.CompanyId,
+		User:       user,
+		Permission: permission}, nil
 }
