@@ -100,8 +100,14 @@ func _to_sh_category(sp_category *sp.Category) *models.ShCategory {
 }
 
 /**
- * handles categories of type {@code sp.EntityRequest_UPDATE}. Those need to be handled differently
- * b/c categories have dependency trees(i.e: a child category can't exist without its parent existing first).
+ * Since some categories have their parent categories which still have not been created,
+ * we need to create a dependency tree where a category can't be created until its parent
+ * is created.
+ *
+ * We solve that by creating a stack of categories. We pop a category and see if
+ * its dependency has been fulfilled. It it has, we go ahead and create it.
+ * Otherwise we push back the category to the stack and add its
+ * dependency(its parent) on top of it so its parent can be added first.
  */
 func insertCreatedCategories(tnx *sql.Tx,
 	posted_categories []*sp.EntityRequest_RequestCategory,
@@ -121,21 +127,7 @@ func insertCreatedCategories(tnx *sql.Tx,
 		}
 	}
 
-	if category_stack.Len() == 0 {
-		return nil
-	}
-
-	/**
-	 * Since some categories have their parent categories which still have not been created,
-	 * it creates a dependency tree where a category can't be created until its parent
-	 * is created.
-	 *
-	 * We solve that by creating a stack of categories. We pop a category and see if
-	 * its dependency has been fulfilled. It it has, we go ahead and create it.
-	 * Otherwise we push back the category to the stack and add its
-	 * dependency(its parent) on top of it so it can be handled in the next round.
-	 */
-	for category_stack.Len() >= 0 {
+	for category_stack.Len() > 0 {
 		category_id, _ := category_stack.Back().Value.(int64)
 		category := categories[category_id]
 
