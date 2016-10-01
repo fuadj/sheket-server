@@ -127,11 +127,19 @@ func insertCreatedCategories(tnx *sql.Tx,
 		}
 	}
 
+	created_categories := make(map[int64]bool)
+
 	for category_stack.Len() > 0 {
 		category_id, _ := category_stack.Back().Value.(int64)
 		category := categories[category_id]
 
-		// Check if the category has already been created
+		if created_categories[category_id] {
+			// pop-off the stack
+			category_stack.Remove(category_stack.Back())
+			continue
+		}
+
+		// Check if the category already exists
 		if prev_category, err := Store.GetCategoryByUUIDInTx(tnx, category.ClientUUID); err == nil {
 			old_2_new.getType(_TYPE_CATEGORY)[category.CategoryId] = prev_category.CategoryId
 
@@ -155,27 +163,31 @@ func insertCreatedCategories(tnx *sql.Tx,
 			continue
 		}
 
-		created_category, err := Store.CreateCategoryInTx(tnx, category)
-		if err != nil {
+		var new_category_id int64
+		if category, err := Store.CreateCategoryInTx(tnx, category); err == nil {
+			new_category_id = category.CategoryId
+		} else {
 			return fmt.Errorf("error creating category %s", err.Error())
 		}
-
-		// pop-off the stack
-		category_stack.Remove(category_stack.Back())
-
-		old_2_new.getType(_TYPE_CATEGORY)[category.CategoryId] = created_category.CategoryId
 
 		rev := &models.ShEntityRevision{
 			CompanyId:        company_id,
 			EntityType:       models.REV_ENTITY_CATEGORY,
 			ActionType:       models.REV_ACTION_CREATE,
-			EntityAffectedId: created_category.CategoryId,
+			EntityAffectedId: new_category_id,
 			AdditionalInfo:   -1,
 		}
 
-		if _, err = Store.AddEntityRevisionInTx(tnx, rev); err != nil {
+		if _, err := Store.AddEntityRevisionInTx(tnx, rev); err != nil {
 			return err
 		}
+
+		created_categories[category_id] = true
+
+		old_2_new.getType(_TYPE_CATEGORY)[category.CategoryId] = new_category_id
+
+		// pop-off the stack
+		category_stack.Remove(category_stack.Back())
 	}
 
 	return nil
