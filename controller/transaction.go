@@ -152,6 +152,7 @@ func addTransactions(tnx *sql.Tx,
 		trans.BranchId = posted_trans.BranchId
 		trans.Date = posted_trans.DateTime
 		trans.TransNote = posted_trans.TransNote
+		trans.ClientUUID = posted_trans.UUID
 
 		for _, _item := range posted_trans.TransactionItems {
 			trans.TransItems = append(trans.TransItems,
