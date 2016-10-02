@@ -32,7 +32,6 @@ func (old_2_new OLD_ID_2_NEW) getType(id_type _ID_TYPE) map[int64]int64 {
 
 func applyEntityOperations(tnx *sql.Tx,
 	request *sp.EntityRequest,
-	response *sp.EntityResponse,
 	user_info *UserCompanyPermission) (old_2_new OLD_ID_2_NEW, err error) {
 
 	old_2_new = new_Old_2_New()

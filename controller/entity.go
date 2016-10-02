@@ -40,15 +40,15 @@ func (s *SheketController) SyncEntity(c context.Context, request *sp.EntityReque
 		return nil, err
 	}
 
-	response = new(sp.EntityResponse)
-
 	var old_2_new OLD_ID_2_NEW
 
-	if old_2_new, err = applyEntityOperations(tnx, request, response, user_info); err != nil {
+	if old_2_new, err = applyEntityOperations(tnx, request, user_info); err != nil {
 		tnx.Rollback()
 		return nil, err
 	}
 	tnx.Commit()
+
+	response = new(sp.EntityResponse)
 
 	if err = fetchModifiedEntities(request, response, old_2_new, user_info); err != nil {
 		return nil, err
