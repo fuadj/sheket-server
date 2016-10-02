@@ -42,14 +42,35 @@ func (s *SheketController) SyncEntity(c context.Context, request *sp.EntityReque
 
 	response = new(sp.EntityResponse)
 
-	if err = applyEntityOperations(tnx, request, response, user_info); err != nil {
+	var old_2_new OLD_ID_2_NEW
+
+	if old_2_new, err = applyEntityOperations(tnx, request, response, user_info); err != nil {
 		tnx.Rollback()
 		return nil, err
 	}
 	tnx.Commit()
 
-	if err = syncModifiedEntities(request, response, user_info); err != nil {
+	if err = fetchModifiedEntities(request, response, old_2_new, user_info); err != nil {
 		return nil, err
+	}
+
+	for old_id, new_id := range old_2_new.getType(_TYPE_ITEM) {
+		updated := new(sp.EntityResponse_UpdatedId)
+		updated.OldId = old_id
+		updated.NewId = new_id
+		response.UpdatedItemIds = append(response.UpdatedItemIds, updated)
+	}
+	for old_id, new_id := range old_2_new.getType(_TYPE_BRANCH) {
+		updated := new(sp.EntityResponse_UpdatedId)
+		updated.OldId = old_id
+		updated.NewId = new_id
+		response.UpdatedBranchIds = append(response.UpdatedBranchIds, updated)
+	}
+	for old_id, new_id := range old_2_new.getType(_TYPE_CATEGORY) {
+		updated := new(sp.EntityResponse_UpdatedId)
+		updated.OldId = old_id
+		updated.NewId = new_id
+		response.UpdatedCategoryIds = append(response.UpdatedCategoryIds, updated)
 	}
 
 	return response, nil
@@ -60,8 +81,9 @@ func (s *SheketController) SyncEntity(c context.Context, request *sp.EntityReque
  * last respective revision. (e.g: it will sync any changes on branch_items that have occurred
  * since user's last branch_item revision).
  */
-func syncModifiedEntities(request *sp.EntityRequest,
+func fetchModifiedEntities(request *sp.EntityRequest,
 	response *sp.EntityResponse,
+	old_2_new OLD_ID_2_NEW,
 	user_info *UserCompanyPermission) error {
 
 	if err := fetchCategoriesSinceLastRev(request, response, user_info.CompanyId); err != nil {

@@ -33,59 +33,41 @@ func (old_2_new OLD_ID_2_NEW) getType(id_type _ID_TYPE) map[int64]int64 {
 func applyEntityOperations(tnx *sql.Tx,
 	request *sp.EntityRequest,
 	response *sp.EntityResponse,
-	user_info *UserCompanyPermission) error {
+	user_info *UserCompanyPermission) (old_2_new OLD_ID_2_NEW, err error) {
 
-	old_2_new := new_Old_2_New()
+	old_2_new = new_Old_2_New()
 
 	company_id := user_info.CompanyId
 
 	var err error
 	if err = applyCategoryOperations(tnx, request.Categories, old_2_new, company_id); err != nil {
-		return err
+		return nil, err
 	}
 
 	if err = applyItemOperations(tnx, request.Items, old_2_new, company_id); err != nil {
-		return err
+		return nil, err
 	}
 
 	if err = applyBranchOperations(tnx, request.Branches, old_2_new, company_id); err != nil {
-		return err
+		return nil, err
 	}
 
 	if err = applyBranchItemOperations(tnx, request.BranchItems, old_2_new, company_id); err != nil {
-		return err
+		return nil, err
 	}
 
 	if err = applyBranchCategoryOperations(tnx, request.BranchCategories, old_2_new, company_id); err != nil {
-		return err
+		return nil, err
 	}
 
 	if user_info.Permission.PermissionType <= models.PERMISSION_TYPE_MANAGER {
 		if err = applyEmployeeOperations(tnx, request.Employees, company_id); err != nil {
-			return err
+			return nil, err
 		}
 	}
 
-	for old_id, new_id := range old_2_new.getType(_TYPE_ITEM) {
-		updated := new(sp.EntityResponse_UpdatedId)
-		updated.OldId = old_id
-		updated.NewId = new_id
-		response.UpdatedItemIds = append(response.UpdatedItemIds, updated)
-	}
-	for old_id, new_id := range old_2_new.getType(_TYPE_BRANCH) {
-		updated := new(sp.EntityResponse_UpdatedId)
-		updated.OldId = old_id
-		updated.NewId = new_id
-		response.UpdatedBranchIds = append(response.UpdatedBranchIds, updated)
-	}
-	for old_id, new_id := range old_2_new.getType(_TYPE_CATEGORY) {
-		updated := new(sp.EntityResponse_UpdatedId)
-		updated.OldId = old_id
-		updated.NewId = new_id
-		response.UpdatedCategoryIds = append(response.UpdatedCategoryIds, updated)
-	}
 
-	return nil
+	return old_2_new, nil
 }
 
 func _to_sh_category(sp_category *sp.Category) *models.ShCategory {
