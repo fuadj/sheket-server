@@ -14,6 +14,7 @@ const (
 	_TYPE_ITEM _ID_TYPE = 0 + iota
 	_TYPE_BRANCH
 	_TYPE_CATEGORY
+	_TYPE_TRANSACTION
 )
 
 type OLD_ID_2_NEW map[_ID_TYPE]map[int64]int64
@@ -23,6 +24,7 @@ func new_Old_2_New() OLD_ID_2_NEW {
 	old_2_new[_TYPE_ITEM] = make(map[int64]int64)
 	old_2_new[_TYPE_BRANCH] = make(map[int64]int64)
 	old_2_new[_TYPE_CATEGORY] = make(map[int64]int64)
+	old_2_new[_TYPE_TRANSACTION] = make(map[int64]int64)
 	return old_2_new
 }
 
@@ -38,7 +40,6 @@ func applyEntityOperations(tnx *sql.Tx,
 
 	company_id := user_info.CompanyId
 
-	var err error
 	if err = applyCategoryOperations(tnx, request.Categories, old_2_new, company_id); err != nil {
 		return nil, err
 	}
