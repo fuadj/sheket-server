@@ -42,10 +42,6 @@ func (s *SheketController) SyncEntity(c context.Context, request *sp.EntityReque
 
 	response = new(sp.EntityResponse)
 
-	response.CompanyId = &sp.CompanyID{
-		CompanyId:user_info.CompanyId,
-	}
-
 	if err = applyEntityOperations(tnx, request, response, user_info); err != nil {
 		tnx.Rollback()
 		return nil, err
