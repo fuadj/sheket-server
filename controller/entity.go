@@ -8,8 +8,24 @@ import (
 )
 
 const (
-	CLIENT_ROOT_CATEGORY_ID int64 = -1
+	CLIENT_ROOT_CATEGORY_ID int64 = -3
 )
+
+func To_Server_Category_Id(category_id int64) int64 {
+	if (category_id == CLIENT_ROOT_CATEGORY_ID) {
+		return models.SERVER_ROOT_CATEGORY_ID
+	} else {
+		return category_id
+	}
+}
+
+func To_Client_Category_Id(category_id int64) int64 {
+	if (category_id == models.SERVER_ROOT_CATEGORY_ID) {
+		return CLIENT_ROOT_CATEGORY_ID
+	} else {
+		return category_id
+	}
+}
 
 func (s *SheketController) SyncEntity(c context.Context, request *sp.EntityRequest) (response *sp.EntityResponse, err error) {
 	defer trace("SyncEntity")()
@@ -26,7 +42,9 @@ func (s *SheketController) SyncEntity(c context.Context, request *sp.EntityReque
 
 	response = new(sp.EntityResponse)
 
-	response.CompanyId.CompanyId = user_info.CompanyId
+	response.CompanyId = &sp.CompanyID{
+		CompanyId:user_info.CompanyId,
+	}
 
 	if err = applyEntityOperations(tnx, request, response, user_info); err != nil {
 		tnx.Rollback()
@@ -105,10 +123,7 @@ func fetchCategoriesSinceLastRev(request *sp.EntityRequest,
 				}
 			}
 
-			// convert back to client root category id
-			if category.ParentId == models.ROOT_CATEGORY_ID {
-				category.ParentId = CLIENT_ROOT_CATEGORY_ID
-			}
+			category.ParentId = To_Client_Category_Id(category.ParentId)
 
 			response.Categories = append(response.Categories,
 				&sp.EntityResponse_SyncCategory{
@@ -165,9 +180,7 @@ func fetchItemsSinceLastRev(request *sp.EntityRequest,
 			}
 		}
 
-		if item.CategoryId == models.ROOT_CATEGORY_ID {
-			item.CategoryId = CLIENT_ROOT_CATEGORY_ID
-		}
+		item.CategoryId = To_Client_Category_Id(item.CategoryId)
 
 		response.Items = append(response.Items,
 			&sp.EntityResponse_SyncItem{
@@ -324,7 +337,7 @@ func fetchBranchCategoriesSinceLastRev(
 				&sp.EntityResponse_SyncBranchCategory{
 					BranchCategory: &sp.BranchCategory{
 						BranchId:   branch_id,
-						CategoryId: category_id,
+						CategoryId: To_Client_Category_Id(category_id),
 					},
 				})
 		case models.REV_ACTION_DELETE:
@@ -332,7 +345,7 @@ func fetchBranchCategoriesSinceLastRev(
 				&sp.EntityResponse_SyncBranchCategory{
 					BranchCategory: &sp.BranchCategory{
 						BranchId:   branch_id,
-						CategoryId: category_id,
+						CategoryId: To_Client_Category_Id(category_id),
 					},
 					State: sp.EntityResponse_REMOVED,
 				})

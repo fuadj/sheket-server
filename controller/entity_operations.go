@@ -122,6 +122,8 @@ func insertCreatedCategories(tnx *sql.Tx,
 			category := _to_sh_category(_category.Category)
 			category.CompanyId = company_id
 
+			category.ParentId = To_Server_Category_Id(category.ParentId)
+
 			categories[category.CategoryId] = category
 			category_stack.PushBack(category.CategoryId)
 		}
@@ -155,7 +157,7 @@ func insertCreatedCategories(tnx *sql.Tx,
 		if new_parent_id, ok := old_2_new.getType(_TYPE_CATEGORY)[category.ParentId]; ok {
 			category.ParentId = new_parent_id
 		} else if (category.ParentId < 0) &&
-			(category.ParentId != models.ROOT_CATEGORY_ID) {
+			(category.ParentId != models.SERVER_ROOT_CATEGORY_ID) {
 
 			// if the parent hasn't been created and it is not ROOT,
 			// add the parent to the top of the stack so it is visited next
@@ -205,6 +207,8 @@ func applyCategoryOperations(tnx *sql.Tx,
 	for _, _p_category := range posted_categories {
 		category := _to_sh_category(_p_category.Category)
 		category.CompanyId = company_id
+
+		category.ParentId = To_Server_Category_Id(category.ParentId)
 
 		switch _p_category.Action {
 		case sp.EntityRequest_UPDATE:
@@ -288,6 +292,7 @@ func applyItemOperations(tnx *sql.Tx,
 	for _, _p_item := range posted_items {
 		item := _to_sh_item(_p_item.Item)
 		item.CompanyId = company_id
+		item.CategoryId = To_Server_Category_Id(item.CategoryId)
 
 		switch _p_item.Action {
 		case sp.EntityRequest_CREATE:
@@ -643,6 +648,8 @@ func applyBranchCategoryOperations(tnx *sql.Tx,
 	for _, _p_branch_category := range posted_branch_categories {
 		branch_category := _to_sh_branch_category(_p_branch_category.BranchCategory)
 		branch_category.CompanyId = company_id
+
+		branch_category.CategoryId = To_Server_Category_Id(branch_category.CategoryId)
 
 		switch _p_branch_category.Action {
 		case sp.EntityRequest_CREATE:

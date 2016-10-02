@@ -6,22 +6,7 @@ import (
 )
 
 const (
-	CATEGORY_JSON_CATEGORY_ID = "category_id"
-	CATEGORY_JSON_UUID        = "client_uuid"
-	CATEGORY_JSON_PARENT_ID   = "parent_id"
-	CATEGORY_JSON_NAME        = "name"
-)
-
-const (
-	// branch category constants
-	BRANCH_CATEGORY_JSON_ID = "branch_category_id"
-
-	BRANCH_CATEGORY_JSON_BRANCH_ID   = "branch_id"
-	BRANCH_CATEGORY_JSON_CATEGORY_ID = "category_id"
-)
-
-const (
-	ROOT_CATEGORY_ID   = 1
+	SERVER_ROOT_CATEGORY_ID = 1
 	ROOT_CATEGORY_NAME = "__root category__"
 )
 

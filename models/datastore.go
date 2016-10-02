@@ -181,7 +181,7 @@ func ConnectDbStore() (*dbStore, error) {
 		_db_item_has_bar_code+" bool, "+
 		_db_status_flag+" INTEGER DEFAULT %d"+
 		"); ",
-		TABLE_INVENTORY_ITEM, TABLE_COMPANY, ROOT_CATEGORY_ID, TABLE_CATEGORY, STATUS_VISIBLE))
+		TABLE_INVENTORY_ITEM, TABLE_COMPANY, SERVER_ROOT_CATEGORY_ID, TABLE_CATEGORY, STATUS_VISIBLE))
 
 	exec(fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s ( "+
 		// branch-item table
@@ -257,7 +257,7 @@ func ConnectDbStore() (*dbStore, error) {
 func checkRootCategoryCreated(db *sql.DB) error {
 	rows, err := db.Query(
 		fmt.Sprintf("select category_id from %s where category_id = $1", TABLE_CATEGORY),
-		ROOT_CATEGORY_ID)
+		SERVER_ROOT_CATEGORY_ID)
 	if err != nil {
 		return err
 	}
@@ -270,7 +270,7 @@ func checkRootCategoryCreated(db *sql.DB) error {
 		}
 		rows, err = db.Query(
 			fmt.Sprintf("select category_id from %s where category_id = $1", TABLE_CATEGORY),
-			ROOT_CATEGORY_ID)
+			SERVER_ROOT_CATEGORY_ID)
 		if err != nil {
 			return err
 		}
