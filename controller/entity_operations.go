@@ -168,7 +168,7 @@ func insertCreatedCategories(tnx *sql.Tx,
 
 		created_categories[category_id] = true
 
-		old_2_new.getType(_TYPE_CATEGORY)[category.CategoryId] = new_category_id
+		old_2_new.getType(_TYPE_CATEGORY)[category_id] = new_category_id
 
 		// pop-off the stack
 		category_stack.Remove(category_stack.Back())
@@ -392,7 +392,7 @@ func applyBranchOperations(tnx *sql.Tx,
 			if err != nil {
 				return fmt.Errorf("error creating branch %s", err.Error())
 			}
-			old_2_new.getType(_TYPE_BRANCH)[branch.BranchId] = created_branch.BranchId
+			old_2_new.getType(_TYPE_BRANCH)[_p_branch.Branch.BranchId] = created_branch.BranchId
 
 			rev := &models.ShEntityRevision{
 				CompanyId:        company_id,
