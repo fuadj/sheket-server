@@ -43,8 +43,7 @@ func init() {
 	}
 }
 
-func (s *SheketController) UserSignup(c context.Context, request *sp.SingupRequest) (response *sp.SignupResponse, err error) {
-	defer trace("UserSignup")()
+func getFacebookIdAndName(request *sp.SingupRequest) (fb_id, fb_name string, err error) {
 	user_token := request.Token
 	app_id := "313445519010095"
 
@@ -53,14 +52,14 @@ func (s *SheketController) UserSignup(c context.Context, request *sp.SingupReque
 	// exchange the short-term token to a long lived token(this synchronously calls facebook!!!)
 	app_token, _, err := app.ExchangeToken(user_token)
 	if err != nil {
-		return nil, err
+		return fb_id, fb_name, err
 	}
 
 	res, err := fb.Get("me", fb.Params{
 		"access_token": app_token,
 	})
 	if err != nil {
-		return nil, err
+		return fb_id, fb_name, err
 	}
 
 	var username, fb_id string
@@ -69,20 +68,28 @@ func (s *SheketController) UserSignup(c context.Context, request *sp.SingupReque
 
 	if v, ok = res["name"]; ok {
 		username, ok = v.(string)
-	}
-	if !ok {
-		return nil, fmt.Errorf("error facebook response: username field missing")
+		if !ok {
+			return fb_id, fb_name, fmt.Errorf("error facebook response: username field missing")
+		}
 	}
 
 	if v, ok = res["id"]; ok {
 		fb_id, ok = v.(string)
-	}
-	if !ok {
-		return nil, fmt.Errorf("error facebook response: facebook_id field missing")
+		if !ok {
+			return fb_id, fb_name, fmt.Errorf("error facebook response: facebook_id field missing")
+		}
 	}
 
-	username = strings.TrimSpace(username)
-	fb_id = strings.TrimSpace(fb_id)
+	return strings.TrimSpace(username), strings.TrimSpace(fb_id), nil
+}
+
+func (s *SheketController) UserSignup(c context.Context, request *sp.SingupRequest) (response *sp.SignupResponse, err error) {
+	defer trace("UserSignup")()
+
+	fb_id, username, err := getFacebookIdAndName(request)
+	if err != nil {
+		return nil, err
+	}
 
 	tnx, err := Store.GetDataStore().Begin()
 	if err != nil {
