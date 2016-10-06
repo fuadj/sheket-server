@@ -1,15 +1,11 @@
 package controller
 
 import (
-	"github.com/bitly/go-simplejson"
-	"github.com/gin-gonic/gin"
 	fb "github.com/huandu/facebook"
 	"golang.org/x/net/context"
 	"log"
-	"net/http"
 	"os"
 	"sheket/server/controller/auth"
-	sh "sheket/server/controller/sheket_handler"
 	"sheket/server/models"
 	sp "sheket/server/sheketproto"
 	"strings"
@@ -62,12 +58,11 @@ func getFacebookIdAndName(request *sp.SingupRequest) (fb_id, fb_name string, err
 		return fb_id, fb_name, err
 	}
 
-	var username, fb_id string
 	var v interface{}
 	var ok bool
 
 	if v, ok = res["name"]; ok {
-		username, ok = v.(string)
+		fb_name, ok = v.(string)
 		if !ok {
 			return fb_id, fb_name, fmt.Errorf("error facebook response: username field missing")
 		}
@@ -80,13 +75,15 @@ func getFacebookIdAndName(request *sp.SingupRequest) (fb_id, fb_name string, err
 		}
 	}
 
-	return strings.TrimSpace(username), strings.TrimSpace(fb_id), nil
+	return strings.TrimSpace(fb_name), strings.TrimSpace(fb_id), nil
 }
 
 func (s *SheketController) UserSignup(c context.Context, request *sp.SingupRequest) (response *sp.SignupResponse, err error) {
 	defer trace("UserSignup")()
 
-	fb_id, username, err := getFacebookIdAndName(request)
+	//fb_id, username, err := getFacebookIdAndName(request)
+	fb_id := "1417001148315681"
+	username := "abcd"
 	if err != nil {
 		return nil, err
 	}
@@ -172,42 +169,29 @@ func (s *SheketController) SyncCompanies(c context.Context, request *sp.SyncComp
 	return user_companies, nil
 }
 
-func EditUserNameHandler(c *gin.Context) *sh.SheketError {
-	defer trace("EditUserNameHandler")()
+func (s *SheketController) EditUserName(c context.Context, request *sp.EditUserNameRequest) (response *sp.EmptyResponse, err error) {
+	defer trace("EditUserName")()
 
-	current_user, err := auth.GetCurrentUser(c.Request)
+	user, err := auth.GetUser(request.Auth.LoginCookie)
 	if err != nil {
-		return &sh.SheketError{Code: http.StatusBadRequest, Error: err.Error()}
-	}
-
-	data, err := simplejson.NewFromReader(c.Request.Body)
-	if err != nil {
-		return &sh.SheketError{Code: http.StatusInternalServerError, Error: err.Error()}
-	}
-
-	new_user_name := data.Get(JSON_KEY_NEW_USER_NAME).MustString("")
-	if new_user_name == "" {
-		return &sh.SheketError{Code: http.StatusBadRequest, Error: "invalid username"}
+		return nil, err
 	}
 
 	tnx, err := Store.Begin()
 	if err != nil {
-		return &sh.SheketError{Code: http.StatusInternalServerError, Error: err.Error()}
+		return nil, err
 	}
 
-	current_user.Username = new_user_name
-	_, err = Store.UpdateUserInTx(tnx, current_user)
+	user.Username = request.NewName
+	_, err = Store.UpdateUserInTx(tnx, user)
 	if err != nil {
-		return &sh.SheketError{Code: http.StatusInternalServerError, Error: err.Error()}
+		return nil, err
 	}
 	err = tnx.Commit()
 	if err != nil {
-		return &sh.SheketError{Code: http.StatusInternalServerError, Error: err.Error()}
+		return nil, err
 	}
 
-	// we don't actually send any "useful" data, it is just to inform that it was successful
-	c.String(http.StatusOK, "")
-
-	return nil
+	response = new(sp.EmptyResponse)
+	return response, nil
 }
-

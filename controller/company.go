@@ -8,76 +8,69 @@ import (
 	sh "sheket/server/controller/sheket_handler"
 	"sheket/server/models"
 	"strings"
+	"golang.org/x/net/context"
+	sp "sheket/server/sheketproto"
+	"fmt"
 )
 
 const (
 	JSON_KEY_NEW_COMPANY_NAME = "new_company_name"
 )
 
-func AddCompanyMember(c *gin.Context) *sh.SheketError {
-	defer trace("AddCompanyMember")()
+func (s *SheketController) AddEmployee(c context.Context, request *sp.AddEmployeeRequest) (response *sp.AddEmployeeResponse, err error) {
+	defer trace("AddEmployee")()
 
-	info, err := GetIdentityInfo(c.Request)
+	user_info, err := GetUserWithCompanyPermission(request.CompanyAuth)
 	if err != nil {
-		return &sh.SheketError{Code: http.StatusBadRequest, Error: err.Error()}
-	}
-	company_id := info.CompanyId
-
-	data, err := simplejson.NewFromReader(c.Request.Body)
-	if err != nil {
-		return &sh.SheketError{Code: http.StatusBadRequest, Error: err.Error()}
+		return nil, err
 	}
 
-	invalid_id := int64(-1)
-	member_id := data.Get(JSON_KEY_USER_ID).MustInt64(invalid_id)
-	encoded_permission := strings.TrimSpace(data.Get(JSON_KEY_USER_PERMISSION).MustString())
-
-	if member_id == invalid_id ||
-		len(encoded_permission) == 0 {
-		return &sh.SheketError{Code: http.StatusBadRequest, Error: "error parsing member id"}
+	request.Permission = strings.TrimSpace(request.Permission)
+	if len(request.Permission) == 0 {
+		return nil, fmt.Errorf("Invalid company permission")
 	}
 
-	p := &models.UserPermission{}
+	p := &models.UserPermission{
+		CompanyId:user_info.CompanyId,
+		EncodedPermission:request.Permission,
+		UserId:request.EmployeeId,
+	}
 
-	p.EncodedPermission = encoded_permission
-	p.CompanyId = company_id
-	p.UserId = member_id
-
-	member, err := Store.FindUserById(member_id)
+	member, err := Store.FindUserById(p.UserId)
 	if err != nil {
-		return &sh.SheketError{Code: http.StatusInternalServerError, Error: "Couldn't find member: '" + err.Error() + "'"}
+		return nil, fmt.Errorf("Couldn't find employee:'%v'", err.Error())
 	}
 
 	tnx, err := Store.Begin()
 	if err != nil {
-		return &sh.SheketError{Code: http.StatusInternalServerError, Error: err.Error()}
+		return nil, fmt.Errorf("%v", err)
 	}
 
 	_, err = Store.SetUserPermissionInTx(tnx, p)
 	if err != nil {
-		return &sh.SheketError{Code: http.StatusInternalServerError, Error: err.Error()}
+		return nil, fmt.Errorf("%v", err)
 	}
 
 	rev := &models.ShEntityRevision{
-		CompanyId:        company_id,
+		CompanyId:        user_info.CompanyId,
 		EntityType:       models.REV_ENTITY_MEMBERS,
 		ActionType:       models.REV_ACTION_CREATE,
-		EntityAffectedId: member_id,
+		EntityAffectedId: p.UserId,
 		AdditionalInfo:   -1,
 	}
 
 	_, err = Store.AddEntityRevisionInTx(tnx, rev)
 	if err != nil {
+		tnx.Rollback()
 		return &sh.SheketError{Code: http.StatusInternalServerError, Error: err.Error()}
 	}
 	tnx.Commit()
 
-	c.JSON(http.StatusOK, map[string]interface{}{
-		JSON_KEY_MEMBER_ID: member_id,
-		JSON_KEY_USERNAME:  member.Username,
-	})
+	response = new(sp.AddEmployeeResponse)
+	response.EmployeeId = p.UserId
+	response.EmployeeName = member.Username
 
-	return nil
+	return response, nil
 }
 
 func CompanyCreateHandler(c *gin.Context) *sh.SheketError {
