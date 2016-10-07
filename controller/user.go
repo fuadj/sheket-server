@@ -150,6 +150,7 @@ func (s *SheketController) SyncCompanies(c context.Context, request *sp.SyncComp
 		company.CompanyId = company_permissions[i].CompanyInfo.CompanyId
 		company.CompanyName = company_permissions[i].CompanyInfo.CompanyName
 		company.Permission = company_permissions[i].Permission.EncodedPermission
+		company.PaymentId = generatePaymentId(company_permissions[i])
 
 		license, err := GenerateCompanyLicense(
 			company_permissions[i].CompanyInfo.CompanyId,

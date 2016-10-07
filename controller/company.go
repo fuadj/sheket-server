@@ -88,6 +88,11 @@ func getSingleUserContract() string {
 	return payment_info.Encode()
 }
 
+func generatePaymentId(company *models.Company) string {
+	// TODO: make it robust, add error detection
+	return fmt.Sprintf("%d", company.CompanyId)
+}
+
 func (s *SheketController) CreateCompany(c context.Context, request *sp.NewCompanyRequest) (response *sp.Company, err error) {
 	defer trace("CreateCompany")()
 
@@ -141,6 +146,7 @@ func (s *SheketController) CreateCompany(c context.Context, request *sp.NewCompa
 	response.CompanyName = request.CompanyName
 	response.Permission = permission.Encode()
 	response.SignedLicense = license
+	response.PaymentId = generatePaymentId(created_company)
 
 	return response, nil
 }
