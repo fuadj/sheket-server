@@ -1,0 +1,5 @@
+// first remove the constraint
+alter table s_company drop constraint s_company_company_name_key ;
+
+// drop the column
+alter table s_company drop column contact ;

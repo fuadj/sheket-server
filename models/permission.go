@@ -53,19 +53,19 @@ type Pair_User_UserPermission struct {
 	Permission UserPermission
 }
 
-func (u *UserPermission) Encode() interface{} {
-	result := map[string]interface{}{
+func (u *UserPermission) Encode() string {
+	permission := map[string]interface{}{
 		_PERMISSION_JSON_TYPE: u.PermissionType,
 	}
 	if u.BranchesAllowed != nil {
-		result[_PERMISSION_JSON_BRANCHES] = u.BranchesAllowed
+		permission[_PERMISSION_JSON_BRANCHES] = u.BranchesAllowed
 	}
 	if u.StoresAllowed != nil {
-		result[_PERMISSION_JSON_STORE_BRANCHES] = u.StoresAllowed
+		permission[_PERMISSION_JSON_STORE_BRANCHES] = u.StoresAllowed
 	}
-	b, _ := json.Marshal(result)
+	b, _ := json.Marshal(permission)
 	u.EncodedPermission = string(b)
-	return result
+	return u.EncodedPermission
 }
 
 func DecodePermission(s string) (*UserPermission, error) {
@@ -146,7 +146,7 @@ func (b *shStore) GetUserPermission(u *User, company_id int64) (*UserPermission,
 func (b *shStore) GetUserCompanyPermissions(u *User) ([]*Pair_Company_UserPermission, error) {
 	var result []*Pair_Company_UserPermission
 	query := fmt.Sprintf(
-		"select c.company_id, c.company_name, c.contact, c.encoded_payment, "+
+		"select c.company_id, c.company_name, c.encoded_payment, "+
 			" p.company_id, p.user_id, p.permission "+
 			"FROM %s AS c INNER JOIN %s AS p ON (c.company_id = p.company_id) "+
 			"WHERE p.user_id = $1",
@@ -164,7 +164,6 @@ func (b *shStore) GetUserCompanyPermissions(u *User) ([]*Pair_Company_UserPermis
 		err = rows.Scan(
 			&pc.CompanyInfo.CompanyId,
 			&pc.CompanyInfo.CompanyName,
-			&pc.CompanyInfo.Contact,
 			&pc.CompanyInfo.EncodedPayment,
 
 			&pc.Permission.CompanyId,

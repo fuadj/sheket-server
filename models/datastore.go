@@ -116,7 +116,6 @@ func ConnectDbStore() (*dbStore, error) {
 		// company-table
 		"company_id		SERIAL PRIMARY KEY, "+
 		"company_name	TEXT NOT NULL, "+
-		"contact		TEXT NOT NULL, "+
 		"encoded_payment	TEXT); ", TABLE_COMPANY))
 
 	exec(fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s ( "+

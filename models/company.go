@@ -10,7 +10,6 @@ import (
 type Company struct {
 	CompanyId      int64
 	CompanyName    string
-	Contact        string
 	EncodedPayment string
 }
 
@@ -71,9 +70,9 @@ func (b *shStore) CreateCompany(u *User, c *Company) (*Company, error) {
 func (b *shStore) CreateCompanyInTx(tnx *sql.Tx, u *User, c *Company) (*Company, error) {
 	err := tnx.QueryRow(
 		fmt.Sprintf("insert into %s "+
-			"(company_name, contact, encoded_payment) values "+
-			"($1, $2, $3) returning company_id;", TABLE_COMPANY),
-		c.CompanyName, c.Contact, c.EncodedPayment).Scan(&c.CompanyId)
+			"(company_name, encoded_payment) values "+
+			"($1, $2) returning company_id;", TABLE_COMPANY),
+		c.CompanyName, c.EncodedPayment).Scan(&c.CompanyId)
 	if err != nil {
 		return nil, err
 	}
@@ -84,9 +83,9 @@ func (b *shStore) CreateCompanyInTx(tnx *sql.Tx, u *User, c *Company) (*Company,
 func (b *shStore) UpdateCompanyInTx(tnx *sql.Tx, c *Company) (*Company, error) {
 	_, err := tnx.Exec(
 		fmt.Sprintf("update %s set "+
-		" company_name = $1, contact = $2, encoded_payment = $3 "+
-		" where company_id = $4 ", TABLE_COMPANY),
-		c.CompanyName, c.Contact, c.EncodedPayment,
+		" company_name = $1, encoded_payment = $2 "+
+		" where company_id = $3 ", TABLE_COMPANY),
+		c.CompanyName, c.EncodedPayment,
 		c.CompanyId)
 	return c, err
 }
@@ -126,13 +125,12 @@ func _queryCompany(s *shStore, err_msg string, where_stmt string, args ...interf
 	 * See: https://github.com/go-sql-driver/mysql/issues/34
 	 */
 	var _company_id sql.NullInt64
-	var _name, _contact, _encoded_payment sql.NullString
+	var _name, _encoded_payment sql.NullString
 
 	for rows.Next() {
 		if err := rows.Scan(
 			&_company_id,
 			&_name,
-			&_contact,
 			&_encoded_payment,
 		); err == sql.ErrNoRows {
 			// no-op
@@ -142,7 +140,6 @@ func _queryCompany(s *shStore, err_msg string, where_stmt string, args ...interf
 			c := new(Company)
 			c.CompanyId = _company_id.Int64
 			c.CompanyName = _name.String
-			c.Contact = _contact.String
 			c.EncodedPayment = _encoded_payment.String
 			result = append(result, c)
 		}
