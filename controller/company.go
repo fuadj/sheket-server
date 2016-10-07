@@ -11,6 +11,7 @@ import (
 	"golang.org/x/net/context"
 	sp "sheket/server/sheketproto"
 	"fmt"
+	"time"
 )
 
 const (
@@ -43,12 +44,12 @@ func (s *SheketController) AddEmployee(c context.Context, request *sp.AddEmploye
 
 	tnx, err := Store.Begin()
 	if err != nil {
-		return nil, fmt.Errorf("%v", err)
+		return nil, err
 	}
 
 	_, err = Store.SetUserPermissionInTx(tnx, p)
 	if err != nil {
-		return nil, fmt.Errorf("%v", err)
+		return nil, err
 	}
 
 	rev := &models.ShEntityRevision{
@@ -62,7 +63,7 @@ func (s *SheketController) AddEmployee(c context.Context, request *sp.AddEmploye
 	_, err = Store.AddEntityRevisionInTx(tnx, rev)
 	if err != nil {
 		tnx.Rollback()
-		return &sh.SheketError{Code: http.StatusInternalServerError, Error: err.Error()}
+		return nil, err
 	}
 	tnx.Commit()
 
@@ -73,58 +74,75 @@ func (s *SheketController) AddEmployee(c context.Context, request *sp.AddEmploye
 	return response, nil
 }
 
-func CompanyCreateHandler(c *gin.Context) *sh.SheketError {
-	defer trace("CompanyCreateHandler")()
+func getSingleUserContract() string {
+	payment_info := &models.PaymentInfo{}
 
-	current_user, err := auth.GetCurrentUser(c.Request)
+	payment_info.ContractType = models.PAYMENT_CONTRACT_TYPE_SINGLE_USE
+	payment_info.EmployeeLimit = _to_server_limit(CLIENT_NO_LIMIT)
+	payment_info.BranchLimit = _to_server_limit(CLIENT_NO_LIMIT)
+	payment_info.ItemLimit = _to_server_limit(CLIENT_NO_LIMIT)
+	payment_info.DurationInDays = 60 		// these is in days(2 months)
+
+	payment_info.IssuedDate = time.Now().Unix()
+
+	return payment_info.Encode()
+}
+
+func (s *SheketController) CreateCompany(c context.Context, request *sp.NewCompanyRequest) (response *sp.Company, err error) {
+	defer trace("CreateCompany")()
+
+	user, err := auth.GetUser(request.Auth.LoginCookie)
 	if err != nil {
-		return &sh.SheketError{Code: http.StatusBadRequest, Error: err.Error()}
+		return nil, err
 	}
 
-	data, err := simplejson.NewFromReader(c.Request.Body)
-	if err != nil {
-		return &sh.SheketError{Code: http.StatusBadRequest, Error: err.Error()}
-	}
+	// TODO: update the initial contract type
+	payment := getSingleUserContract()
 
-	company_name := data.Get(JSON_KEY_COMPANY_NAME).MustString()
-	if len(company_name) == 0 {
-		return &sh.SheketError{Code: http.StatusBadRequest, Error: "Empty company name"}
+	company := &models.Company{
+		CompanyName:request.CompanyName,
+		EncodedPayment:payment,
 	}
-	contact := data.Get(JSON_KEY_COMPANY_CONTACT).MustString()
-
-	company := &models.Company{CompanyName: company_name, Contact: contact}
 
 	tnx, err := Store.GetDataStore().Begin()
 	if err != nil {
-		return &sh.SheketError{Code: http.StatusInternalServerError, Error: err.Error()}
+		return nil, err
 	}
-	created, err := Store.CreateCompanyInTx(tnx, current_user, company)
+
+	created_company, err := Store.CreateCompanyInTx(tnx, user, company)
 	if err != nil {
 		tnx.Rollback()
-		return &sh.SheketError{Code: http.StatusInternalServerError, Error: err.Error()}
+		return nil, err
 	}
 
-	result := make(map[string]interface{}, 10)
-
-	result[JSON_KEY_COMPANY_ID] = created.CompanyId
-	result[JSON_KEY_COMPANY_NAME] = company_name
-	result[JSON_KEY_COMPANY_CONTACT] = contact
-
-	p := &models.UserPermission{CompanyId: created.CompanyId,
-		UserId:         current_user.UserId,
+	permission := &models.UserPermission{CompanyId: created_company.CompanyId,
+		UserId:         user.UserId,
 		PermissionType: models.PERMISSION_TYPE_CREATOR}
-	encoded := p.Encode()
-	result[JSON_KEY_USER_PERMISSION] = encoded
 
-	_, err = Store.SetUserPermissionInTx(tnx, p)
+	_, err = Store.SetUserPermissionInTx(tnx, permission)
 	if err != nil {
 		tnx.Rollback()
-		return &sh.SheketError{Code: http.StatusInternalServerError, Error: err.Error()}
+		return nil, err
 	}
 	tnx.Commit()
 
-	c.JSON(http.StatusOK, result)
-	return nil
+
+	license, err := GenerateCompanyLicense(
+		created_company.CompanyId,
+		user.UserId,
+		payment,
+		request.DeviceId, request.LocalUserTime)
+	if err != nil {
+		return nil, err
+	}
+
+	response = new(sp.Company)
+	response.CompanyId = created_company.CompanyId
+	response.CompanyName = request.CompanyName
+	response.Permission = permission.Encode()
+	response.SignedLicense = license
+
+	return response, nil
 }
 
 func EditCompanyNameHandler(c *gin.Context) *sh.SheketError {
