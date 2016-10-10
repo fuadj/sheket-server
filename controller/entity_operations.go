@@ -60,7 +60,7 @@ func applyEntityOperations(tnx *sql.Tx,
 		return nil, err
 	}
 
-	if user_info.Permission.PermissionType <= models.PERMISSION_TYPE_MANAGER {
+	if user_info.Permission.HasManagerAccess() {
 		if err = applyEmployeeOperations(tnx, request.Employees, company_id); err != nil {
 			return nil, err
 		}

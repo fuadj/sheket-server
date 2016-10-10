@@ -102,7 +102,7 @@ func fetchModifiedEntities(request *sp.EntityRequest,
 		return err
 	}
 
-	if user_info.Permission.PermissionType <= models.PERMISSION_TYPE_BRANCH_MANAGER {
+	if user_info.Permission.HasManagerAccess() {
 		if err := fetchMembersSinceLastRev(request, response, user_info.CompanyId); err != nil {
 			return err
 		}
