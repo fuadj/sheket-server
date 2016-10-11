@@ -1,5 +1,6 @@
 package controller
 
+/*
 import (
 	"database/sql"
 	"github.com/DATA-DOG/go-sqlmock"
@@ -65,3 +66,4 @@ func teardown_tnx() {
 	}
 	t_tnx_setup = false
 }
+*/

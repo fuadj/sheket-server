@@ -6,33 +6,33 @@ import (
 )
 
 type ShEntityRevision struct {
-	CompanyId      int64
-	RevisionNumber int64
+	CompanyId      int
+	RevisionNumber int
 	// The type of element this revision applies,
 	// e.g:(transaction, items, ...)
-	EntityType int64
+	EntityType int
 	// The action that caused the revision # to change
 	// e.g:(insert, update, ...)
-	ActionType int64
+	ActionType int
 	// The entity id affected by the change
-	EntityAffectedId int64
+	EntityAffectedId int
 	// Any other info necessary
-	AdditionalInfo int64
+	AdditionalInfo int
 }
 
 const (
-	REV_ACTION_CREATE int64 = 1
-	REV_ACTION_UPDATE int64 = 2
-	REV_ACTION_DELETE int64 = 3
+	REV_ACTION_CREATE int = 1
+	REV_ACTION_UPDATE int = 2
+	REV_ACTION_DELETE int = 3
 )
 
 const (
-	REV_ENTITY_ITEM            int64 = 1
-	REV_ENTITY_BRANCH          int64 = 2
-	REV_ENTITY_BRANCH_ITEM     int64 = 3
-	REV_ENTITY_MEMBERS         int64 = 4
-	REV_ENTITY_CATEGORY        int64 = 5
-	REV_ENTITY_BRANCH_CATEGORY int64 = 6
+	REV_ENTITY_ITEM            int = 1
+	REV_ENTITY_BRANCH          int = 2
+	REV_ENTITY_BRANCH_ITEM     int = 3
+	REV_ENTITY_MEMBERS         int = 4
+	REV_ENTITY_CATEGORY        int = 5
+	REV_ENTITY_BRANCH_CATEGORY int = 6
 )
 
 func (s *shStore) AddEntityRevisionInTx(tnx *sql.Tx, rev *ShEntityRevision) (*ShEntityRevision, error) {
@@ -45,7 +45,7 @@ func (s *shStore) AddEntityRevisionInTx(tnx *sql.Tx, rev *ShEntityRevision) (*Sh
 			err)
 	}
 
-	max_rev := int64(0)
+	max_rev := 0
 	var i sql.NullInt64
 	if rows.Next() {
 		err = rows.Scan(&i)
@@ -54,7 +54,7 @@ func (s *shStore) AddEntityRevisionInTx(tnx *sql.Tx, rev *ShEntityRevision) (*Sh
 			return nil, fmt.Errorf("Revision Scan error : %s", err.Error())
 		}
 		if i.Valid {
-			max_rev = i.Int64
+			max_rev = int(i.Int64)
 		}
 	}
 	// we don't defer the rows.Close b/c we want to release the connection
@@ -76,15 +76,15 @@ func (s *shStore) AddEntityRevisionInTx(tnx *sql.Tx, rev *ShEntityRevision) (*Sh
 	return rev, nil
 }
 
-func (s *shStore) GetRevisionsSince(prev_rev *ShEntityRevision) (int64, []*ShEntityRevision, error) {
+func (s *shStore) GetRevisionsSince(prev_rev *ShEntityRevision) (int, []*ShEntityRevision, error) {
 	var result []*ShEntityRevision
 
 	rows, err := s.Query(
 		fmt.Sprintf("select distinct on (affected_id, additional_info) "+
-			"company_id, revision_number, entity_type, action_type, "+
-			"affected_id, additional_info from %s "+
-			"where company_id = $1 AND entity_type = $2 AND "+
-			"revision_number > $3 ",
+			" company_id, revision_number, entity_type, action_type, "+
+			" affected_id, additional_info from %s "+
+			" where company_id = $1 AND entity_type = $2 AND "+
+			" revision_number > $3 ",
 			TABLE_ENTITY_REVISION),
 		prev_rev.CompanyId, prev_rev.EntityType, prev_rev.RevisionNumber)
 	if err != nil {
@@ -116,7 +116,7 @@ func (s *shStore) GetRevisionsSince(prev_rev *ShEntityRevision) (int64, []*ShEnt
 
 	rows, err = s.Query(
 		fmt.Sprintf("select max(revision_number) from %s "+
-			"where company_id = $1 AND entity_type = $2", TABLE_ENTITY_REVISION),
+			" where company_id = $1 AND entity_type = $2", TABLE_ENTITY_REVISION),
 		prev_rev.CompanyId, prev_rev.EntityType)
 	if err != nil {
 		return prev_rev.RevisionNumber, nil, fmt.Errorf("Revision query error : %s", err.Error())
@@ -128,7 +128,7 @@ func (s *shStore) GetRevisionsSince(prev_rev *ShEntityRevision) (int64, []*ShEnt
 	if rows.Next() {
 		var i sql.NullInt64
 		if rows.Scan(&i) == nil {
-			max_rev = i.Int64
+			max_rev = int(i.Int64)
 		}
 	}
 

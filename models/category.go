@@ -7,21 +7,21 @@ import (
 
 const (
 	SERVER_ROOT_CATEGORY_ID = 1
-	ROOT_CATEGORY_NAME = "__root category__"
+	ROOT_CATEGORY_NAME      = "__root category__"
 )
 
 type ShCategory struct {
-	CategoryId int64
+	CategoryId int
 	ClientUUID string
-	CompanyId  int64
-	ParentId   int64
+	CompanyId  int
+	ParentId   int
 	Name       string
 }
 
 type ShBranchCategory struct {
-	CompanyId  int64
-	BranchId   int64
-	CategoryId int64
+	CompanyId  int
+	BranchId   int
+	CategoryId int
 }
 
 func runInTransaction(s *shStore, f func(*sql.Tx) (*ShCategory, error)) (*ShCategory, error) {
@@ -69,7 +69,7 @@ func (s *shStore) UpdateCategoryInTx(tnx *sql.Tx, category *ShCategory) (*ShCate
 	return category, err
 }
 
-func (s *shStore) DeleteCategoryInTx(tnx *sql.Tx, category_id int64) error {
+func (s *shStore) DeleteCategoryInTx(tnx *sql.Tx, category_id int) error {
 	_, err := tnx.Exec(
 		fmt.Sprintf("delete from %s where category_id = $1", TABLE_CATEGORY),
 		category_id)
@@ -85,14 +85,14 @@ func (s *shStore) GetCategoryByUUIDInTx(tnx *sql.Tx, uid string) (*ShCategory, e
 	return category[0], nil
 }
 
-func (s *shStore) GetCategoryById(id int64) (*ShCategory, error) {
+func (s *shStore) GetCategoryById(id int) (*ShCategory, error) {
 	return runInTransaction(s,
 		func(tnx *sql.Tx) (*ShCategory, error) {
 			return s.GetCategoryByIdInTx(tnx, id)
 		})
 }
 
-func (s *shStore) GetCategoryByIdInTx(tnx *sql.Tx, id int64) (*ShCategory, error) {
+func (s *shStore) GetCategoryByIdInTx(tnx *sql.Tx, id int) (*ShCategory, error) {
 	msg := fmt.Sprintf("no category with that id:%d", id)
 	category, err := _queryCategoryInTx(tnx, msg, "where category_id = $1", id)
 	if err != nil {
@@ -169,7 +169,7 @@ func (s *shStore) AddCategoryToBranchInTx(tnx *sql.Tx, branch_category *ShBranch
 	return branch_category, nil
 }
 
-func (s *shStore) GetBranchCategory(branch_id, category_id int64) (*ShBranchCategory, error) {
+func (s *shStore) GetBranchCategory(branch_id, category_id int) (*ShBranchCategory, error) {
 	err_msg := fmt.Sprintf("err fetching category:%d in branch:%d", category_id, branch_id)
 	categories, err := _queryBranchCategory(s, err_msg, "where branch_id = $1 and category_id = $2",
 		branch_id, category_id)
@@ -179,7 +179,7 @@ func (s *shStore) GetBranchCategory(branch_id, category_id int64) (*ShBranchCate
 	return categories[0], nil
 }
 
-func (s *shStore) GetBranchCategoryInTx(tnx *sql.Tx, branch_id, category_id int64) (*ShBranchCategory, error) {
+func (s *shStore) GetBranchCategoryInTx(tnx *sql.Tx, branch_id, category_id int) (*ShBranchCategory, error) {
 	err_msg := fmt.Sprintf("err fetching category:%d in branch:%d", category_id, branch_id)
 	categories, err := _queryBranchCategoryInTx(tnx, err_msg, "where branch_id = $1 and category_id = $2",
 		branch_id, category_id)
@@ -189,7 +189,7 @@ func (s *shStore) GetBranchCategoryInTx(tnx *sql.Tx, branch_id, category_id int6
 	return categories[0], nil
 }
 
-func (s *shStore) DeleteBranchCategoryInTx(tnx *sql.Tx, branch_id, category_id int64) error {
+func (s *shStore) DeleteBranchCategoryInTx(tnx *sql.Tx, branch_id, category_id int) error {
 	_, err := tnx.Exec(
 		fmt.Sprintf("delete from %s where branch_id = $1 and category_id = $2", TABLE_BRANCH_CATEGORY),
 		branch_id, category_id)

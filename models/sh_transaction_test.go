@@ -1,5 +1,12 @@
 package models
 
+/*
+
+import (
+	"github.com/DATA-DOG/go-sqlmock"
+	"fmt"
+)
+
 import (
 	"fmt"
 	"github.com/DATA-DOG/go-sqlmock"
@@ -14,7 +21,7 @@ const (
 	num_trans_items = 4
 )
 
-func _dummyShTransactionItem(i int64) *ShTransactionItem {
+func _dummyShTransactionItem(i int) *ShTransactionItem {
 	return &ShTransactionItem{
 		TransType:     trans_type,
 		ItemId:        t_item_id + i,
@@ -30,13 +37,13 @@ func _dummyShTransaction() *ShTransaction {
 
 	trans.TransItems = make([]*ShTransactionItem, num_trans_items)
 	for i := 0; i < num_trans_items; i++ {
-		trans.TransItems[i] = _dummyShTransactionItem(int64(i))
+		trans.TransItems[i] = _dummyShTransactionItem(i)
 	}
 
 	return trans
 }
 
-func _transItemInsertExpectation(i int64, return_error bool) *sqlmock.ExpectedExec {
+func _transItemInsertExpectation(i int, return_error bool) *sqlmock.ExpectedExec {
 	expect := mock.ExpectExec(
 		fmt.Sprintf("insert into %s", TABLE_TRANSACTION_ITEM)).
 		WithArgs(transaction_id, trans_type, t_item_id+i,
@@ -49,7 +56,6 @@ func _transItemInsertExpectation(i int64, return_error bool) *sqlmock.ExpectedEx
 	return expect
 }
 
-/*
 func _transPrevExistExpectation(prev_exist bool, return_error bool) *sqlmock.ExpectedQuery {
 	rs := sqlmock.NewRows(_cols("transaction_id"))
 	if prev_exist {
@@ -64,7 +70,6 @@ func _transPrevExistExpectation(prev_exist bool, return_error bool) *sqlmock.Exp
 	}
 	return expect
 }
-*/
 
 func _transMaxExpectation(return_error bool) *sqlmock.ExpectedQuery {
 	expect := mock.ExpectQuery(
@@ -101,7 +106,7 @@ func TestCreateShTransactionNew(t *testing.T) {
 	_transMaxExpectation(false)
 	_transInsertExpectation(false)
 	for i := 0; i < len(trans.TransItems); i++ {
-		_transItemInsertExpectation(int64(i), false)
+		_transItemInsertExpectation(i, false)
 	}
 
 	tnx, _ := db.Begin()
@@ -156,7 +161,7 @@ func TestCreateShTransactionNewInsertItemsFail(t *testing.T) {
 	_transInsertExpectation(false)
 	for i := 0; i < len(trans.TransItems); i++ {
 		fail := true
-		_transItemInsertExpectation(int64(i), fail)
+		_transItemInsertExpectation(i, fail)
 		if fail { // we can't add expectations that won't be meet
 			break
 		}
@@ -182,7 +187,7 @@ func TestCreateShTransactionExistError(t *testing.T) {
 	}
 }
 
-func _transItemQueryExpectation(n int64, return_error bool) *sqlmock.ExpectedQuery {
+func _transItemQueryExpectation(n int, return_error bool) *sqlmock.ExpectedQuery {
 	expect := mock.ExpectQuery(
 		fmt.Sprintf("select (.+) from %s", TABLE_TRANSACTION_ITEM)).
 		WithArgs(transaction_id)
@@ -192,7 +197,7 @@ func _transItemQueryExpectation(n int64, return_error bool) *sqlmock.ExpectedQue
 		rows := sqlmock.NewRows(
 			_cols("transaction_id, trans_type, item_id, " +
 				"other_branch_id,quantity"))
-		for i := int64(0); i < n; i++ {
+		for i := 0; i < n; i++ {
 			rows.AddRow(transaction_id, trans_type, t_item_id+i,
 				other_branch, trans_quantity)
 		}
@@ -293,3 +298,4 @@ func TestGetShTransactionByIdFetchItemsFail(t *testing.T) {
 		t.Errorf("expected error")
 	}
 }
+*/

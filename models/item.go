@@ -7,14 +7,14 @@ import (
 )
 
 type ShItem struct {
-	ItemId     int64
+	ItemId     int
 	ClientUUID string
-	CompanyId  int64
-	CategoryId int64
+	CompanyId  int
+	CategoryId int
 	Name       string
 	ItemCode   string
 
-	UnitOfMeasurement int64
+	UnitOfMeasurement int
 	HasDerivedUnit    bool
 	DerivedName       string
 	DerivedFactor     float64
@@ -25,7 +25,7 @@ type ShItem struct {
 	BarCode    string
 	HasBarCode bool
 
-	StatusFlag int64
+	StatusFlag int
 }
 
 const (
@@ -52,30 +52,9 @@ const (
 	// Shared across entities that can have this field. Currently used to track if is
 	// visible/invisible. This is an integer, default value is STATUS_VISIBLE.
 	_db_status_flag  = " status_flag "
-	JSON_STATUS_FLAG = "status_flag"
 
-	STATUS_VISIBLE    int64 = 1
-	STATUS_IN_VISIBLE int64 = 2
-)
-
-const (
-	ITEM_JSON_ITEM_ID     = "item_id"
-	ITEM_JSON_UUID        = "client_uuid"
-	ITEM_JSON_COMPANY_ID  = "company_id"
-	ITEM_JSON_CATEGORY_ID = "category_id"
-	ITEM_JSON_ITEM_NAME   = "item_name"
-	ITEM_JSON_ITEM_CODE   = "item_code"
-
-	ITEM_JSON_UNIT_OF_MEASUREMENT = "units"
-	ITEM_JSON_HAS_DERIVED_UNIT    = "has_derived_unit"
-	ITEM_JSON_DERIVED_NAME        = "derived_name"
-	ITEM_JSON_DERIVED_FACTOR      = "derived_factor"
-	ITEM_JSON_REORDER_LEVEL       = "reorder_level"
-
-	ITEM_JSON_MODEL_YEAR   = "model_year"
-	ITEM_JSON_PART_NUMBER  = "part_number"
-	ITEM_JSON_BAR_CODE     = "bar_code"
-	ITEM_JSON_HAS_BAR_CODE = "has_bar_code"
+	STATUS_VISIBLE    int = 1
+	STATUS_IN_VISIBLE int = 2
 )
 
 func _checkItemArrError(items []*ShItem, err error) ([]*ShItem, error) {
@@ -178,7 +157,7 @@ func (s *shStore) GetItemByUUIDInTx(tnx *sql.Tx, uid string) (*ShItem, error) {
 	return items[0], nil
 }
 
-func (s *shStore) GetItemById(id int64) (*ShItem, error) {
+func (s *shStore) GetItemById(id int) (*ShItem, error) {
 	msg := fmt.Sprintf("no item with that id %d", id)
 	items, err := _queryInventoryItems(s, msg, "where item_id = $1", id)
 
@@ -190,7 +169,7 @@ func (s *shStore) GetItemById(id int64) (*ShItem, error) {
 	return items[0], nil
 }
 
-func (s *shStore) GetItemByIdInTx(tnx *sql.Tx, id int64) (*ShItem, error) {
+func (s *shStore) GetItemByIdInTx(tnx *sql.Tx, id int) (*ShItem, error) {
 	msg := fmt.Sprintf("no item with that id %d", id)
 	items, err := _queryInventoryItemsInTx(tnx, msg, "where item_id = $1", id)
 

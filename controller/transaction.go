@@ -7,6 +7,11 @@ import (
 	sp "sheket/server/sheketproto"
 )
 
+type Pair_BranchItem struct {
+	BranchId int
+	ItemId   int
+}
+
 type AffectedBranchItems map[Pair_BranchItem]*CachedBranchItem
 
 /**
@@ -70,12 +75,6 @@ func searchBranchItemInCache(tnx *sql.Tx, seenItems map[Pair_BranchItem]*CachedB
 	return cached_branch_item
 }
 
-type TransactionResult struct {
-	OldId2New           map[int64]int64
-	NewlyCreatedIds     map[int64]bool
-	AffectedBranchItems map[Pair_BranchItem]*CachedBranchItem
-}
-
 /**
  * Updates the items in branches. This works by updating the items in memory
  * until all transactions are processed, then finally committing the changes
@@ -89,7 +88,7 @@ type TransactionResult struct {
  */
 func updateBranchItems(tnx *sql.Tx,
 	affected_branch_items AffectedBranchItems,
-	company_id int64) error {
+	company_id int) error {
 
 	for pair_branch_item, cached_item := range affected_branch_items {
 		action_type := models.REV_ACTION_CREATE
@@ -121,11 +120,11 @@ func addTransactions(tnx *sql.Tx,
 	user_info *UserCompanyPermission,
 ) (
 	affected_branch_items AffectedBranchItems,
-	old_2_new OLD_ID_2_NEW,
+	old_2_new map[int64]int64,
 	err error,
 ) {
 	affected_branch_items = make(AffectedBranchItems)
-	old_2_new = new_Old_2_New()
+	old_2_new = make(map[int64]int64)
 
 	company_id := user_info.CompanyId
 	user_id := user_info.User.UserId
@@ -137,7 +136,7 @@ func addTransactions(tnx *sql.Tx,
 		 * them the id.
 		 */
 		if prev_trans, err := Store.GetShTransactionByUUIDInTx(tnx, posted_trans.UUID); err == nil {
-			old_2_new.getType(_TYPE_TRANSACTION)[posted_trans.TransId] = prev_trans.TransactionId
+			old_2_new[posted_trans.TransId] = prev_trans.TransactionId
 			continue
 		} else if err != models.ErrNoData {
 			return nil, nil, err
@@ -149,7 +148,7 @@ func addTransactions(tnx *sql.Tx,
 		trans.UserId = user_id
 
 		trans.TransactionId = posted_trans.TransId
-		trans.BranchId = posted_trans.BranchId
+		trans.BranchId = int(posted_trans.BranchId)
 		trans.Date = posted_trans.DateTime
 		trans.TransNote = posted_trans.TransNote
 		trans.ClientUUID = posted_trans.UUID
@@ -158,9 +157,9 @@ func addTransactions(tnx *sql.Tx,
 			trans.TransItems = append(trans.TransItems,
 				&models.ShTransactionItem{
 					CompanyId:     company_id,
-					TransType:     _item.TransType,
-					ItemId:        _item.ItemId,
-					OtherBranchId: _item.OtherBranchId,
+					TransType:     int(_item.TransType),
+					ItemId:        int(_item.ItemId),
+					OtherBranchId: int(_item.OtherBranchId),
 					Quantity:      _item.Quantity,
 					ItemNote:      _item.ItemNote,
 				})
@@ -170,20 +169,18 @@ func addTransactions(tnx *sql.Tx,
 			return nil, nil, err
 		}
 
-		old_2_new.getType(_TYPE_TRANSACTION)[posted_trans.TransId] = created.TransactionId
+		old_2_new[posted_trans.TransId] = created.TransactionId
 
 		for _, trans_item := range created.TransItems {
 			branch_item := searchBranchItemInCache(tnx, affected_branch_items,
 				&models.ShBranchItem{
-					CompanyId: company_id, BranchId: posted_trans.BranchId,
+					CompanyId: company_id, BranchId: int(posted_trans.BranchId),
 					ItemId: trans_item.ItemId,
 				})
 			branch_item.itemVisited = true
 
 			switch trans_item.TransType {
-			case models.TRANS_TYPE_ADD_PURCHASED,
-				models.TRANS_TYPE_ADD_RETURN_ITEM:
-
+			case models.TRANS_TYPE_ADD_PURCHASED:
 				branch_item.Quantity += trans_item.Quantity
 
 			case models.TRANS_TYPE_SUB_CURRENT_BRANCH_SALE:
@@ -231,7 +228,7 @@ func (s *SheketController) SyncTransaction(c context.Context, request *sp.Transa
 		return nil, err
 	}
 
-	var old_2_new OLD_ID_2_NEW
+	var old_2_new map[int64]int64
 	var affected_branch_items AffectedBranchItems
 
 	if affected_branch_items, old_2_new, err = addTransactions(tnx, request, user_info); err != nil {
@@ -247,9 +244,9 @@ func (s *SheketController) SyncTransaction(c context.Context, request *sp.Transa
 	tnx.Commit()
 
 	response = new(sp.TransactionResponse)
-	for old_id, new_id := range old_2_new.getType(_TYPE_TRANSACTION) {
+	for old_id, new_id := range old_2_new {
 		response.UpdatedTransactionIds = append(response.UpdatedTransactionIds,
-			&sp.EntityResponse_UpdatedId{
+			&sp.TransactionResponse_UpdatedTransId{
 				OldId: old_id,
 				NewId: new_id,
 			})
@@ -259,7 +256,7 @@ func (s *SheketController) SyncTransaction(c context.Context, request *sp.Transa
 		return nil, err
 	}
 
-	if user_info.Permission.PermissionType <= models.PERMISSION_TYPE_BRANCH_MANAGER {
+	if user_info.Permission.HasManagerAccess() {
 		if err := fetchTransactionsSince(request, response, old_2_new, user_info.CompanyId); err != nil {
 			return nil, err
 		}
@@ -271,8 +268,8 @@ func (s *SheketController) SyncTransaction(c context.Context, request *sp.Transa
 func fetchTransactionsSince(
 	request *sp.TransactionRequest,
 	response *sp.TransactionResponse,
-	old_2_new OLD_ID_2_NEW,
-	company_id int64) error {
+	old_2_new map[int64]int64,
+	company_id int) error {
 
 	transactions, err := Store.GetShTransactionSinceTransId(company_id, request.OldTransRev)
 	if err != nil {
@@ -297,9 +294,9 @@ func fetchTransactionsSince(
 		for _, _item := range trans.TransItems {
 			transItems = append(transItems,
 				&sp.Transaction_TransItem{
-					TransType:     _item.TransType,
-					ItemId:        _item.ItemId,
-					OtherBranchId: _item.OtherBranchId,
+					TransType:     int32(_item.TransType),
+					ItemId:        int32(_item.ItemId),
+					OtherBranchId: int32(_item.OtherBranchId),
 					Quantity:      _item.Quantity,
 					ItemNote:      _item.ItemNote,
 				})
@@ -307,11 +304,11 @@ func fetchTransactionsSince(
 
 		response.Transactions = append(response.Transactions,
 			&sp.TransactionResponse_SyncTransaction{
-				UserId: trans.UserId,
+				UserId: int32(trans.UserId),
 				Transaction: &sp.Transaction{
 					TransId:          trans.TransactionId,
 					UUID:             trans.ClientUUID,
-					BranchId:         trans.BranchId,
+					BranchId:         int32(trans.BranchId),
 					DateTime:         trans.Date,
 					TransNote:        trans.TransNote,
 					TransactionItems: transItems,
@@ -327,21 +324,21 @@ func fetchTransactionsSince(
 func fetchBranchItemsSinceRev(
 	request *sp.TransactionRequest,
 	response *sp.TransactionResponse,
-	old_2_new OLD_ID_2_NEW,
-	company_id int64) error {
+	old_2_new map[int64]int64,
+	company_id int) error {
 
 	max_rev, new_branch_item_revs, err := Store.GetRevisionsSince(
 		&models.ShEntityRevision{
 			CompanyId:      company_id,
 			EntityType:     models.REV_ENTITY_BRANCH_ITEM,
-			RevisionNumber: request.OldBranchItemRev,
+			RevisionNumber: int(request.OldBranchItemRev),
 		})
 
 	if err != nil {
 		return err
 	}
 
-	response.NewBranchItemRev = max_rev
+	response.NewBranchItemRev = int64(max_rev)
 
 	for _, branch_rev := range new_branch_item_revs {
 		branch_id := branch_rev.EntityAffectedId
@@ -361,8 +358,8 @@ func fetchBranchItemsSinceRev(
 		response.BranchItems = append(response.BranchItems,
 			&sp.TransactionResponse_SyncBranchItem{
 				BranchItem: &sp.BranchItem{
-					BranchId:      branch_id,
-					ItemId:        item_id,
+					BranchId:      int32(branch_id),
+					ItemId:        int32(item_id),
 					Quantity:      branch_item.Quantity,
 					ShelfLocation: branch_item.ItemLocation,
 				},

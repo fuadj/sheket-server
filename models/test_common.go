@@ -1,4 +1,5 @@
 package models
+/*
 
 import (
 	"database/sql"
@@ -8,19 +9,19 @@ import (
 )
 
 const (
-	t_company_id      = int64(1)
+	t_company_id      = 1
 	t_company_name    = "test company"
 	t_company_contact = "0912646275"
 	t_username        = "test user"
-	t_user_id         = int64(12312)
+	t_user_id         = 12312
 	t_password        = "abcd abcd"
 	t_pass_hash       = "xxkkadlkjaf"
 	t_branch_name     = "test branch"
 	t_permission      = "{}"
 	t_category_id     = 2
 	t_branch_location = "mexico"
-	t_branch_id       = int64(10)
-	t_item_id         = int64(88)
+	t_branch_id       = 10
+	t_item_id         = 88
 	t_quantity        = 8.8
 	t_item_location   = "A10"
 	t_date            = 87123
@@ -59,3 +60,4 @@ func _cols(s string) []string {
 	}
 	return subs
 }
+*/

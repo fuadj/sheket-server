@@ -3,31 +3,21 @@ package models
 import (
 	"database/sql"
 	"fmt"
-	"strings"
 	"strconv"
+	"strings"
 )
 
 type Company struct {
-	CompanyId      int64
+	CompanyId      int
 	CompanyName    string
 	EncodedPayment string
 }
 
 const (
-	PAYMENT_JSON_COMPANY_ID = "company_id"
-	PAYMENT_JSON_ISSUED_DATE = "issued_date"
-	PAYMENT_JSON_CONTRACT_TYPE = "contract_type"
-	PAYMENT_JSON_DURATION = "duration"
-	PAYMENT_JSON_LIMIT_EMPLOYEE = "employee_limit"
-	PAYMENT_JSON_LIMIT_BRANCH = "branch_limit"
-	PAYMENT_JSON_LIMIT_ITEM = "item_limit"
-)
-
-const (
-	PAYMENT_CONTRACT_TYPE_NONE int64 = -1
-	PAYMENT_CONTRACT_TYPE_SINGLE_USE int64 = 1
-	PAYMENT_CONTRACT_TYPE_GOLD int64 = 2
-	PAYMENT_CONTRACT_TYPE_PLATINUM int64 = 3
+	PAYMENT_CONTRACT_TYPE_NONE       = 0
+	PAYMENT_CONTRACT_TYPE_SINGLE_USE = 1
+	PAYMENT_CONTRACT_TYPE_GOLD       = 2
+	PAYMENT_CONTRACT_TYPE_PLATINUM   = 3
 )
 
 // can be used in either {employee | branch | item} to signal no limits
@@ -37,14 +27,13 @@ type PaymentInfo struct {
 	// value returned from time.Now().Unix(), time since the epoch. It is easier to store and "transport"
 	IssuedDate int64
 
-	ContractType   int64
-	DurationInDays int64
+	ContractType   int
+	DurationInDays int
 
-	EmployeeLimit int64
-	BranchLimit   int64
-	ItemLimit     int64
+	EmployeeLimit int
+	BranchLimit   int
+	ItemLimit     int
 }
-
 
 func (b *shStore) CreateCompany(u *User, c *Company) (*Company, error) {
 	tnx, err := b.Begin()
@@ -83,14 +72,14 @@ func (b *shStore) CreateCompanyInTx(tnx *sql.Tx, u *User, c *Company) (*Company,
 func (b *shStore) UpdateCompanyInTx(tnx *sql.Tx, c *Company) (*Company, error) {
 	_, err := tnx.Exec(
 		fmt.Sprintf("update %s set "+
-		" company_name = $1, encoded_payment = $2 "+
-		" where company_id = $3 ", TABLE_COMPANY),
+			" company_name = $1, encoded_payment = $2 "+
+			" where company_id = $3 ", TABLE_COMPANY),
 		c.CompanyName, c.EncodedPayment,
 		c.CompanyId)
 	return c, err
 }
 
-func (b *shStore) GetCompanyById(id int64) (*Company, error) {
+func (b *shStore) GetCompanyById(id int) (*Company, error) {
 	msg := fmt.Sprintf("no company with id %d", id)
 	companies, err := _queryCompany(b, msg, "where company_id = $1", id)
 	if err != nil {
@@ -138,7 +127,7 @@ func _queryCompany(s *shStore, err_msg string, where_stmt string, args ...interf
 			return nil, fmt.Errorf("%s %v", err_msg, err.Error())
 		} else {
 			c := new(Company)
-			c.CompanyId = _company_id.Int64
+			c.CompanyId = int(_company_id.Int64)
 			c.CompanyName = _name.String
 			c.EncodedPayment = _encoded_payment.String
 			result = append(result, c)
@@ -149,13 +138,14 @@ func _queryCompany(s *shStore, err_msg string, where_stmt string, args ...interf
 	}
 	return result, nil
 }
+
 const (
-	_p_s_issued_date = "issued_date"
-	_p_s_duration = "duration"
-	_p_s_contract_type = "contract_type"
+	_p_s_issued_date    = "issued_date"
+	_p_s_duration       = "duration"
+	_p_s_contract_type  = "contract_type"
 	_p_s_employee_limit = "employee_limit"
-	_p_s_branch_limit = "branch_limit"
-	_p_s_item_limit = "item_limit"
+	_p_s_branch_limit   = "branch_limit"
+	_p_s_item_limit     = "item_limit"
 )
 
 const _C_D = ":%d"
@@ -163,12 +153,12 @@ const _C_D_S = _C_D + ";"
 
 func (p *PaymentInfo) Encode() string {
 	return fmt.Sprintf(
-		_p_s_issued_date + _C_D_S +
-		_p_s_duration + _C_D_S +
-		_p_s_contract_type + _C_D_S +
-		_p_s_employee_limit + _C_D_S +
-		_p_s_branch_limit + _C_D_S +
-		_p_s_item_limit + _C_D,
+		_p_s_issued_date+_C_D_S+
+			_p_s_duration+_C_D_S+
+			_p_s_contract_type+_C_D_S+
+			_p_s_employee_limit+_C_D_S+
+			_p_s_branch_limit+_C_D_S+
+			_p_s_item_limit+_C_D,
 
 		p.IssuedDate, p.DurationInDays, p.ContractType,
 		p.EmployeeLimit, p.BranchLimit, p.ItemLimit)
@@ -182,21 +172,21 @@ func DecodePayment(s string) (*PaymentInfo, error) {
 		return nil, fmt.Errorf("Invalid payment info encoding '%s'", s)
 	}
 
-	p.IssuedDate = _extract_int64(subs[0])
-	p.DurationInDays = _extract_int64(subs[1])
-	p.ContractType = _extract_int64(subs[2], PAYMENT_CONTRACT_TYPE_NONE)
+	p.IssuedDate = int64(_extract_int(subs[0]))
+	p.DurationInDays = _extract_int(subs[1])
+	p.ContractType = _extract_int(subs[2], PAYMENT_CONTRACT_TYPE_NONE)
 	if p.ContractType == PAYMENT_CONTRACT_TYPE_NONE {
 		return nil, fmt.Errorf("invalid contract type '%d'", p.ContractType)
 	}
-	p.EmployeeLimit = _extract_int64(subs[3])
-	p.BranchLimit = _extract_int64(subs[4])
-	p.ItemLimit = _extract_int64(subs[5])
+	p.EmployeeLimit = _extract_int(subs[3])
+	p.BranchLimit = _extract_int(subs[4])
+	p.ItemLimit = _extract_int(subs[5])
 
 	return p, nil
 }
 
-func _extract_int64(s string, args ...int64) int64 {
-	var def int64
+func _extract_int(s string, args ...int) int {
+	var def int
 
 	if len(args) != 0 {
 		def = args[0]
@@ -212,6 +202,5 @@ func _extract_int64(s string, args ...int64) int64 {
 		return def
 	}
 
-	return int64(i)
+	return i
 }
-

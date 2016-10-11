@@ -15,10 +15,10 @@ type TransactionStore interface {
 	AddShTransactionItemInTx(*sql.Tx, *ShTransaction, *ShTransactionItem) (*ShTransactionItem, error)
 
 	// @args fetch_items 	whether you want the items in the transaction
-	GetShTransactionById(company_id, trans_id int64, fetch_items bool) (*ShTransaction, error)
+	GetShTransactionById(company_id int, trans_id int64, fetch_items bool) (*ShTransaction, error)
 	GetShTransactionByUUIDInTx(*sql.Tx, string) (*ShTransaction, error)
 
-	GetShTransactionSinceTransId(company_id, start_id int64) (trans []*ShTransaction, err error)
+	GetShTransactionSinceTransId(company_id int, prev_trans_id int64) (trans []*ShTransaction, err error)
 }
 
 type ItemStore interface {
@@ -27,9 +27,9 @@ type ItemStore interface {
 
 	UpdateItemInTx(*sql.Tx, *ShItem) (*ShItem, error)
 
-	GetItemById(int64) (*ShItem, error)
+	GetItemById(int) (*ShItem, error)
 	GetItemByUUIDInTx(*sql.Tx, string) (*ShItem, error)
-	GetItemByIdInTx(*sql.Tx, int64) (*ShItem, error)
+	GetItemByIdInTx(*sql.Tx, int) (*ShItem, error)
 }
 
 type BranchStore interface {
@@ -38,8 +38,8 @@ type BranchStore interface {
 	UpdateBranchInTx(*sql.Tx, *ShBranch) (*ShBranch, error)
 
 	GetBranchByUUIDInTx(*sql.Tx, string) (*ShBranch, error)
-	GetBranchById(int64) (*ShBranch, error)
-	GetBranchByIdInTx(*sql.Tx, int64) (*ShBranch, error)
+	GetBranchById(int) (*ShBranch, error)
+	GetBranchByIdInTx(*sql.Tx, int) (*ShBranch, error)
 }
 
 type BranchItemStore interface {
@@ -48,8 +48,8 @@ type BranchItemStore interface {
 
 	// the *ShBranchItem argument is only used to get the
 	// branch and item id's
-	GetBranchItem(branch_id, item_id int64) (*ShBranchItem, error)
-	GetBranchItemInTx(tnx *sql.Tx, branch_id, item_id int64) (*ShBranchItem, error)
+	GetBranchItem(branch_id, item_id int) (*ShBranchItem, error)
+	GetBranchItemInTx(tnx *sql.Tx, branch_id, item_id int) (*ShBranchItem, error)
 	UpdateBranchItemInTx(*sql.Tx, *ShBranchItem) (*ShBranchItem, error)
 }
 
@@ -61,7 +61,7 @@ type CompanyStore interface {
 	// NOTE: the transaction is not rolled-back in this method
 	// The CALLER needs to rollback the transaction if error occurs
 	CreateCompanyInTx(*sql.Tx, *User, *Company) (*Company, error)
-	GetCompanyById(int64) (*Company, error)
+	GetCompanyById(int) (*Company, error)
 
 	UpdateCompanyInTx(*sql.Tx, *Company) (*Company, error)
 }
@@ -69,10 +69,10 @@ type CompanyStore interface {
 type UserStore interface {
 	CreateUserInTx(tnx *sql.Tx, u *User) (*User, error)
 
-	FindUserById(int64) (*User, error)
+	FindUserById(int) (*User, error)
 
 	// searches for the user by the unique id given to the user by the provider
-	FindUserWithProviderIdInTx(tnx *sql.Tx, provider_id int64, provider_user_id string) (*User, error)
+	FindUserWithProviderIdInTx(tnx *sql.Tx, provider_id int, provider_user_id string) (*User, error)
 
 	UpdateUserInTx(*sql.Tx, *User) (*User, error)
 
@@ -83,7 +83,7 @@ type UserStore interface {
 	 */
 	SetUserPermission(*UserPermission) (*UserPermission, error)
 
-	RemoveUserFromCompanyInTx(tnx *sql.Tx, user_id, company_id int64) (error)
+	RemoveUserFromCompanyInTx(tnx *sql.Tx, user_id, company_id int) (error)
 
 	// If a user is creating their own company, we need to make him/her
 	// the admin of the company, that needs to happens in a single transaction with company creation
@@ -91,7 +91,7 @@ type UserStore interface {
 	// The CALLER needs to rollback the transaction if error occurs
 	SetUserPermissionInTx(*sql.Tx, *UserPermission) (*UserPermission, error)
 
-	GetUserPermission(u *User, company_id int64) (*UserPermission, error)
+	GetUserPermission(u *User, company_id int) (*UserPermission, error)
 
 	GetUserCompanyPermissions(u *User) ([]*Pair_Company_UserPermission, error)
 
@@ -102,7 +102,7 @@ type RevisionStore interface {
 	AddEntityRevisionInTx(*sql.Tx, *ShEntityRevision) (*ShEntityRevision, error)
 
 	// returns changes since the start revision
-	GetRevisionsSince(start_from *ShEntityRevision) (latest_rev int64, since []*ShEntityRevision, err error)
+	GetRevisionsSince(start_from *ShEntityRevision) (latest_rev int, since []*ShEntityRevision, err error)
 }
 
 type Source interface {
@@ -115,21 +115,21 @@ type Source interface {
 
 type CategoryStore interface {
 	CreateCategoryInTx(*sql.Tx, *ShCategory) (*ShCategory, error)
-	GetCategoryById(int64) (*ShCategory, error)
-	GetCategoryByIdInTx(*sql.Tx, int64) (*ShCategory, error)
+	GetCategoryById(int) (*ShCategory, error)
+	GetCategoryByIdInTx(*sql.Tx, int) (*ShCategory, error)
 	GetCategoryByUUIDInTx(*sql.Tx, string) (*ShCategory, error)
 
 	UpdateCategoryInTx(*sql.Tx, *ShCategory) (*ShCategory, error)
-	DeleteCategoryInTx(*sql.Tx, int64) (error)
+	DeleteCategoryInTx(*sql.Tx, int) (error)
 }
 
 type BranchCategoryStore interface {
 	AddCategoryToBranchInTx(*sql.Tx, *ShBranchCategory) (*ShBranchCategory, error)
 
-	GetBranchCategory(branch_id, category_id int64) (*ShBranchCategory, error)
-	GetBranchCategoryInTx(tnx *sql.Tx, branch_id, category_id int64) (*ShBranchCategory, error)
+	GetBranchCategory(branch_id, category_id int) (*ShBranchCategory, error)
+	GetBranchCategoryInTx(tnx *sql.Tx, branch_id, category_id int) (*ShBranchCategory, error)
 
-	DeleteBranchCategoryInTx(tnx *sql.Tx, branch_id, category_id int64) (error)
+	DeleteBranchCategoryInTx(tnx *sql.Tx, branch_id, category_id int) (error)
 }
 
 type ShStore interface {

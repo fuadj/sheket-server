@@ -8,33 +8,31 @@ import (
 	sp "sheket/server/sheketproto"
 )
 
-type _ID_TYPE int64
+type _ENTITY_ID_TYPE int
 
 const (
-	_TYPE_ITEM _ID_TYPE = 0 + iota
+	_TYPE_ITEM _ENTITY_ID_TYPE = 0 + iota
 	_TYPE_BRANCH
 	_TYPE_CATEGORY
-	_TYPE_TRANSACTION
 )
 
-type OLD_ID_2_NEW map[_ID_TYPE]map[int64]int64
+type OLD_ENTITY_ID_2_NEW map[_ENTITY_ID_TYPE]map[int]int
 
-func new_Old_2_New() OLD_ID_2_NEW {
-	old_2_new := make(OLD_ID_2_NEW)
-	old_2_new[_TYPE_ITEM] = make(map[int64]int64)
-	old_2_new[_TYPE_BRANCH] = make(map[int64]int64)
-	old_2_new[_TYPE_CATEGORY] = make(map[int64]int64)
-	old_2_new[_TYPE_TRANSACTION] = make(map[int64]int64)
+func new_Old_2_New() OLD_ENTITY_ID_2_NEW {
+	old_2_new := make(OLD_ENTITY_ID_2_NEW)
+	old_2_new[_TYPE_ITEM] = make(map[int]int)
+	old_2_new[_TYPE_BRANCH] = make(map[int]int)
+	old_2_new[_TYPE_CATEGORY] = make(map[int]int)
 	return old_2_new
 }
 
-func (old_2_new OLD_ID_2_NEW) getType(id_type _ID_TYPE) map[int64]int64 {
+func (old_2_new OLD_ENTITY_ID_2_NEW) getEntityType(id_type _ENTITY_ID_TYPE) map[int]int {
 	return old_2_new[id_type]
 }
 
 func applyEntityOperations(tnx *sql.Tx,
 	request *sp.EntityRequest,
-	user_info *UserCompanyPermission) (old_2_new OLD_ID_2_NEW, err error) {
+	user_info *UserCompanyPermission) (old_2_new OLD_ENTITY_ID_2_NEW, err error) {
 
 	old_2_new = new_Old_2_New()
 
@@ -75,8 +73,8 @@ func _to_sh_category(sp_category *sp.Category) *models.ShCategory {
 
 	m_category.ClientUUID = sp_category.UUID
 	m_category.Name = sp_category.Name
-	m_category.CategoryId = sp_category.CategoryId
-	m_category.ParentId = sp_category.ParentId
+	m_category.CategoryId = int(sp_category.CategoryId)
+	m_category.ParentId = int(sp_category.ParentId)
 
 	return m_category
 }
@@ -93,11 +91,11 @@ func _to_sh_category(sp_category *sp.Category) *models.ShCategory {
  */
 func insertCreatedCategories(tnx *sql.Tx,
 	posted_categories []*sp.EntityRequest_RequestCategory,
-	old_2_new OLD_ID_2_NEW,
-	company_id int64) error {
+	old_2_new OLD_ENTITY_ID_2_NEW,
+	company_id int) error {
 
 	category_stack := list.New()
-	categories := make(map[int64]*models.ShCategory)
+	categories := make(map[int]*models.ShCategory)
 
 	for _, _category := range posted_categories {
 		if _category.Action == sp.EntityRequest_CREATE {
@@ -111,10 +109,10 @@ func insertCreatedCategories(tnx *sql.Tx,
 		}
 	}
 
-	created_categories := make(map[int64]bool)
+	created_categories := make(map[int]bool)
 
 	for category_stack.Len() > 0 {
-		category_id, _ := category_stack.Back().Value.(int64)
+		category_id, _ := category_stack.Back().Value.(int)
 		category := categories[category_id]
 
 		if created_categories[category_id] {
@@ -125,7 +123,7 @@ func insertCreatedCategories(tnx *sql.Tx,
 
 		// Check if the category already exists
 		if prev_category, err := Store.GetCategoryByUUIDInTx(tnx, category.ClientUUID); err == nil {
-			old_2_new.getType(_TYPE_CATEGORY)[category.CategoryId] = prev_category.CategoryId
+			old_2_new.getEntityType(_TYPE_CATEGORY)[category.CategoryId] = prev_category.CategoryId
 
 			// pop-off the stack
 			category_stack.Remove(category_stack.Back())
@@ -136,7 +134,7 @@ func insertCreatedCategories(tnx *sql.Tx,
 		}
 
 		// if the parent has been added and it has an "un-synced" id, update the id
-		if new_parent_id, ok := old_2_new.getType(_TYPE_CATEGORY)[category.ParentId]; ok {
+		if new_parent_id, ok := old_2_new.getEntityType(_TYPE_CATEGORY)[category.ParentId]; ok {
 			category.ParentId = new_parent_id
 		} else if (category.ParentId < 0) &&
 			(category.ParentId != models.SERVER_ROOT_CATEGORY_ID) {
@@ -147,7 +145,7 @@ func insertCreatedCategories(tnx *sql.Tx,
 			continue
 		}
 
-		var new_category_id int64
+		var new_category_id int
 		if category, err := Store.CreateCategoryInTx(tnx, category); err == nil {
 			new_category_id = category.CategoryId
 		} else {
@@ -168,7 +166,7 @@ func insertCreatedCategories(tnx *sql.Tx,
 
 		created_categories[category_id] = true
 
-		old_2_new.getType(_TYPE_CATEGORY)[category_id] = new_category_id
+		old_2_new.getEntityType(_TYPE_CATEGORY)[category_id] = new_category_id
 
 		// pop-off the stack
 		category_stack.Remove(category_stack.Back())
@@ -179,8 +177,8 @@ func insertCreatedCategories(tnx *sql.Tx,
 
 func applyCategoryOperations(tnx *sql.Tx,
 	posted_categories []*sp.EntityRequest_RequestCategory,
-	old_2_new OLD_ID_2_NEW,
-	company_id int64) error {
+	old_2_new OLD_ENTITY_ID_2_NEW,
+	company_id int) error {
 
 	if err := insertCreatedCategories(tnx, posted_categories, old_2_new, company_id); err != nil {
 		return err
@@ -252,24 +250,24 @@ func applyCategoryOperations(tnx *sql.Tx,
 func _to_sh_item(sp_item *sp.Item) *models.ShItem {
 	m_item := new(models.ShItem)
 
-	m_item.ItemId = sp_item.ItemId
+	m_item.ItemId = int(sp_item.ItemId)
 	m_item.ClientUUID = sp_item.UUID
-	m_item.CategoryId = sp_item.CategoryId
+	m_item.CategoryId = int(sp_item.CategoryId)
 	m_item.Name = sp_item.Name
 	m_item.ItemCode = sp_item.Code
-	m_item.UnitOfMeasurement = sp_item.UnitOfMeasurement
+	m_item.UnitOfMeasurement = int(sp_item.UnitOfMeasurement)
 	m_item.HasDerivedUnit = sp_item.HasDerivedUnit
 	m_item.DerivedName = sp_item.DerivedName
 	m_item.DerivedFactor = sp_item.DerivedFactor
-	m_item.StatusFlag = sp_item.StatusFlag
+	m_item.StatusFlag = int(sp_item.StatusFlag)
 
 	return m_item
 }
 
 func applyItemOperations(tnx *sql.Tx,
 	posted_items []*sp.EntityRequest_RequestItem,
-	old_2_new OLD_ID_2_NEW,
-	company_id int64) error {
+	old_2_new OLD_ENTITY_ID_2_NEW,
+	company_id int) error {
 
 	for _, _p_item := range posted_items {
 		item := _to_sh_item(_p_item.Item)
@@ -280,14 +278,14 @@ func applyItemOperations(tnx *sql.Tx,
 		case sp.EntityRequest_CREATE:
 			// check if it already exists
 			if prev_item, err := Store.GetItemByUUIDInTx(tnx, _p_item.Item.UUID); err == nil {
-				old_2_new.getType(_TYPE_ITEM)[_p_item.Item.ItemId] = prev_item.ItemId
+				old_2_new.getEntityType(_TYPE_ITEM)[int(_p_item.Item.ItemId)] = prev_item.ItemId
 
 				continue
 			} else if err != models.ErrNoData {
 				return err
 			}
 
-			if new_category_id, ok := old_2_new.getType(_TYPE_CATEGORY)[item.CategoryId]; ok {
+			if new_category_id, ok := old_2_new.getEntityType(_TYPE_CATEGORY)[item.CategoryId]; ok {
 				item.CategoryId = new_category_id
 			}
 
@@ -295,7 +293,7 @@ func applyItemOperations(tnx *sql.Tx,
 			if err != nil {
 				return fmt.Errorf("error creating item %s", err.Error())
 			}
-			old_2_new.getType(_TYPE_ITEM)[_p_item.Item.ItemId] = created_item.ItemId
+			old_2_new.getEntityType(_TYPE_ITEM)[int(_p_item.Item.ItemId)] = created_item.ItemId
 
 			rev := &models.ShEntityRevision{
 				CompanyId:        company_id,
@@ -310,7 +308,7 @@ func applyItemOperations(tnx *sql.Tx,
 			}
 
 		case sp.EntityRequest_UPDATE:
-			if new_category_id, ok := old_2_new.getType(_TYPE_CATEGORY)[item.CategoryId]; ok {
+			if new_category_id, ok := old_2_new.getEntityType(_TYPE_CATEGORY)[item.CategoryId]; ok {
 				item.CategoryId = new_category_id
 			}
 
@@ -362,18 +360,18 @@ func applyItemOperations(tnx *sql.Tx,
 func _to_sh_branch(sp_branch *sp.Branch) *models.ShBranch {
 	m_branch := new(models.ShBranch)
 
-	m_branch.BranchId = sp_branch.BranchId
+	m_branch.BranchId = int(sp_branch.BranchId)
 	m_branch.ClientUUID = sp_branch.UUID
 	m_branch.Name = sp_branch.Name
-	m_branch.StatusFlag = sp_branch.StatusFlag
+	m_branch.StatusFlag = int(sp_branch.StatusFlag)
 
 	return m_branch
 }
 
 func applyBranchOperations(tnx *sql.Tx,
 	posted_branches []*sp.EntityRequest_RequestBranch,
-	old_2_new OLD_ID_2_NEW,
-	company_id int64) error {
+	old_2_new OLD_ENTITY_ID_2_NEW,
+	company_id int) error {
 
 	for _, _p_branch := range posted_branches {
 		branch := _to_sh_branch(_p_branch.Branch)
@@ -382,7 +380,7 @@ func applyBranchOperations(tnx *sql.Tx,
 		switch _p_branch.Action {
 		case sp.EntityRequest_CREATE:
 			if prev_branch, err := Store.GetBranchByUUIDInTx(tnx, branch.ClientUUID); err == nil {
-				old_2_new.getType(_TYPE_BRANCH)[branch.BranchId] = prev_branch.BranchId
+				old_2_new.getEntityType(_TYPE_BRANCH)[branch.BranchId] = prev_branch.BranchId
 				continue
 			} else if err != models.ErrNoData {
 				return err
@@ -392,7 +390,7 @@ func applyBranchOperations(tnx *sql.Tx,
 			if err != nil {
 				return fmt.Errorf("error creating branch %s", err.Error())
 			}
-			old_2_new.getType(_TYPE_BRANCH)[_p_branch.Branch.BranchId] = created_branch.BranchId
+			old_2_new.getEntityType(_TYPE_BRANCH)[int(_p_branch.Branch.BranchId)] = created_branch.BranchId
 
 			rev := &models.ShEntityRevision{
 				CompanyId:        company_id,
@@ -443,8 +441,8 @@ func applyBranchOperations(tnx *sql.Tx,
 func _to_sh_branch_item(sp_branch_item *sp.BranchItem) *models.ShBranchItem {
 	m_br_item := new(models.ShBranchItem)
 
-	m_br_item.ItemId = sp_branch_item.ItemId
-	m_br_item.BranchId = sp_branch_item.BranchId
+	m_br_item.ItemId = int(sp_branch_item.ItemId)
+	m_br_item.BranchId = int(sp_branch_item.BranchId)
 	m_br_item.ItemLocation = sp_branch_item.ShelfLocation
 	m_br_item.Quantity = sp_branch_item.Quantity
 
@@ -453,8 +451,8 @@ func _to_sh_branch_item(sp_branch_item *sp.BranchItem) *models.ShBranchItem {
 
 func applyBranchItemOperations(tnx *sql.Tx,
 	posted_branch_items []*sp.EntityRequest_RequestBranchItem,
-	old_2_new OLD_ID_2_NEW,
-	company_id int64) error {
+	old_2_new OLD_ENTITY_ID_2_NEW,
+	company_id int) error {
 
 	for _, _p_branch_item := range posted_branch_items {
 		b_item := _to_sh_branch_item(_p_branch_item.BranchItem)
@@ -466,10 +464,10 @@ func applyBranchItemOperations(tnx *sql.Tx,
 
 			// if the id's of the branch item were the locally user generated(yet to be replaced with
 			// server generated global ids), then use the server's
-			if new_branch_id, ok := old_2_new.getType(_TYPE_BRANCH)[branch_id]; ok {
+			if new_branch_id, ok := old_2_new.getEntityType(_TYPE_BRANCH)[branch_id]; ok {
 				b_item.BranchId = new_branch_id
 			}
-			if new_item_id, ok := old_2_new.getType(_TYPE_ITEM)[item_id]; ok {
+			if new_item_id, ok := old_2_new.getEntityType(_TYPE_ITEM)[item_id]; ok {
 				b_item.ItemId = new_item_id
 			}
 
@@ -496,10 +494,10 @@ func applyBranchItemOperations(tnx *sql.Tx,
 
 			// if the id's of the branch item were the locally user generated(yet to be replaced with
 			// server generated global ids), then use the server's
-			if new_branch_id, ok := old_2_new.getType(_TYPE_BRANCH)[branch_id]; ok {
+			if new_branch_id, ok := old_2_new.getEntityType(_TYPE_BRANCH)[branch_id]; ok {
 				b_item.BranchId = new_branch_id
 			}
-			if new_item_id, ok := old_2_new.getType(_TYPE_ITEM)[item_id]; ok {
+			if new_item_id, ok := old_2_new.getEntityType(_TYPE_ITEM)[item_id]; ok {
 				b_item.ItemId = new_item_id
 			}
 
@@ -541,7 +539,7 @@ func applyBranchItemOperations(tnx *sql.Tx,
 func _to_sh_user_permission(sp_employee *sp.Employee) *models.UserPermission {
 	m_user_permission := new(models.UserPermission)
 
-	m_user_permission.UserId = sp_employee.EmployeeId
+	m_user_permission.UserId = int(sp_employee.EmployeeId)
 	m_user_permission.EncodedPermission = sp_employee.Permission
 
 	return m_user_permission
@@ -549,7 +547,7 @@ func _to_sh_user_permission(sp_employee *sp.Employee) *models.UserPermission {
 
 func applyEmployeeOperations(tnx *sql.Tx,
 	posted_employees []*sp.EntityRequest_RequestEmployee,
-	company_id int64) error {
+	company_id int) error {
 
 	for _, _p_employee := range posted_employees {
 		employee := _to_sh_user_permission(_p_employee.Employee)
@@ -616,16 +614,16 @@ func applyEmployeeOperations(tnx *sql.Tx,
 func _to_sh_branch_category(sp_branch_category *sp.BranchCategory) *models.ShBranchCategory {
 	m_branch_category := new(models.ShBranchCategory)
 
-	m_branch_category.BranchId = sp_branch_category.BranchId
-	m_branch_category.CategoryId = sp_branch_category.CategoryId
+	m_branch_category.BranchId = int(sp_branch_category.BranchId)
+	m_branch_category.CategoryId = int(sp_branch_category.CategoryId)
 
 	return m_branch_category
 }
 
 func applyBranchCategoryOperations(tnx *sql.Tx,
 	posted_branch_categories []*sp.EntityRequest_RequestBranchCategory,
-	old_2_new OLD_ID_2_NEW,
-	company_id int64) error {
+	old_2_new OLD_ENTITY_ID_2_NEW,
+	company_id int) error {
 
 	for _, _p_branch_category := range posted_branch_categories {
 		branch_category := _to_sh_branch_category(_p_branch_category.BranchCategory)
@@ -639,10 +637,10 @@ func applyBranchCategoryOperations(tnx *sql.Tx,
 
 			// if the id's of the branch category were the locally user generated(yet to be replaced with
 			// server generated global ids), then use the server's
-			if new_branch_id, ok := old_2_new.getType(_TYPE_BRANCH)[branch_id]; ok {
+			if new_branch_id, ok := old_2_new.getEntityType(_TYPE_BRANCH)[branch_id]; ok {
 				branch_category.BranchId = new_branch_id
 			}
-			if new_category_id, ok := old_2_new.getType(_TYPE_CATEGORY)[category_id]; ok {
+			if new_category_id, ok := old_2_new.getEntityType(_TYPE_CATEGORY)[category_id]; ok {
 				branch_category.CategoryId = new_category_id
 			}
 

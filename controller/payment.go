@@ -2,9 +2,7 @@ package controller
 
 import (
 	"fmt"
-	"github.com/bitly/go-simplejson"
 	"github.com/gin-gonic/gin"
-	"net/http"
 	sh "sheket/server/controller/sheket_handler"
 	"sheket/server/controller/signature"
 	"sheket/server/models"
@@ -12,26 +10,17 @@ import (
 )
 
 const (
-	JSON_PAYMENT_DESCRIPTION = "payment_desc"
-
-	JSON_PAYMENT_SIGNED_LICENSE = "signed_license"
-
-	JSON_PAYMENT_DEVICE_ID       = "device_id"
-	JSON_PAYMENT_LOCAL_USER_TIME = "local_user_time"
+	CLIENT_NO_LIMIT int = -1
 )
 
-const (
-	CLIENT_NO_LIMIT int64 = -1
-)
-
-func _to_server_limit(val int64) int64 {
+func _to_server_limit(val int) int {
 	if val == CLIENT_NO_LIMIT {
 		return models.PAYMENT_LIMIT_NONE
 	}
 	return val
 }
 
-func _to_client_limit(val int64) int64 {
+func _to_client_limit(val int) int {
 	if val == models.PAYMENT_LIMIT_NONE {
 		return CLIENT_NO_LIMIT
 	}
@@ -48,6 +37,7 @@ func _to_client_limit(val int64) int64 {
  * been paid and do {extend | upgrade}
  */
 func IssuePaymentHandler(c *gin.Context) *sh.SheketError {
+	/*
 	data, err := simplejson.NewFromReader(c.Request.Body)
 	if err != nil {
 		return &sh.SheketError{Code: http.StatusBadRequest, Error: err.Error()}
@@ -60,7 +50,7 @@ func IssuePaymentHandler(c *gin.Context) *sh.SheketError {
 
 	payment_info := &models.PaymentInfo{}
 
-	var company_id int64
+	var company_id int
 	var ok bool
 	var missing_field string
 
@@ -113,6 +103,7 @@ func IssuePaymentHandler(c *gin.Context) *sh.SheketError {
 		JSON_PAYMENT_DESCRIPTION: fmt.Sprintf("Successful payment for %d days", payment_info.DurationInDays),
 	})
 
+	*/
 	return nil
 }
 
@@ -124,6 +115,7 @@ func IssuePaymentHandler(c *gin.Context) *sh.SheketError {
  * should always happen on every sync.
  */
 func VerifyPaymentHandler(c *gin.Context) *sh.SheketError {
+	/*
 	info, err := GetIdentityInfo(c.Request)
 	if err != nil {
 		return &sh.SheketError{Code: http.StatusBadRequest, Error: err.Error()}
@@ -155,6 +147,7 @@ func VerifyPaymentHandler(c *gin.Context) *sh.SheketError {
 
 	c.JSON(http.StatusOK,
 		gin.H{JSON_PAYMENT_SIGNED_LICENSE: license})
+	*/
 	return nil
 }
 
@@ -162,7 +155,7 @@ func VerifyPaymentHandler(c *gin.Context) *sh.SheketError {
  * Generates a signed license if there is still paid period left. This doesn't query the db, only uses
  * the info provided.
  */
-func GenerateCompanyLicense(company_id, user_id int64, encoded_payment, device_id, user_local_time string) (string, error) {
+func GenerateCompanyLicense(company_id, user_id int, encoded_payment, device_id, user_local_time string) (string, error) {
 	payment_info, err := models.DecodePayment(encoded_payment)
 	if err != nil {
 		return "", err
@@ -172,14 +165,14 @@ func GenerateCompanyLicense(company_id, user_id int64, encoded_payment, device_i
 	end_date := time.Unix(payment_info.IssuedDate, 0).
 		AddDate(0, 0, int(payment_info.DurationInDays)).Unix()
 
-	var remaining_days int64
+	var remaining_days int
 
 	payment_expired := false
 
 	if current_date > end_date {
 		payment_expired = true
 	} else {
-		remaining_days = int64(
+		remaining_days = int(
 			time.Unix(end_date, 0).Sub(time.Unix(current_date, 0)).
 				Hours() / 24.0)
 		// if there is < 1 day of payment remaining, revoke it b/c that will be encoded as 0 when converted to int
@@ -221,22 +214,3 @@ func GenerateCompanyLicense(company_id, user_id int64, encoded_payment, device_i
 	return license, nil
 }
 
-func revokeCompanyLicense(company_id int64) error {
-	tnx, err := Store.Begin()
-	if err != nil {
-		return err
-	}
-	company, err := Store.GetCompanyById(company_id)
-	if err != nil {
-		return err
-	}
-	company.EncodedPayment = ""
-
-	company, err = Store.UpdateCompanyInTx(tnx, company)
-	if err != nil {
-		tnx.Rollback()
-		return err
-	}
-	tnx.Commit()
-	return nil
-}

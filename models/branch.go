@@ -5,38 +5,19 @@ import (
 	"fmt"
 )
 
-const (
-	BRANCH_JSON_BRANCH_ID = "branch_id"
-	BRANCH_JSON_UUID      = "client_uuid"
-	BRANCH_JSON_NAME      = "name"
-	BRANCH_JSON_LOCATION  = "location"
-)
-
-const (
-	// branch item constants
-
-	// the val of this should be string of "branch_id:item_id"
-	BRANCH_ITEM_JSON_ID = "branch_item_id"
-
-	BRANCH_ITEM_JSON_BRANCH_ID     = "branch_id"
-	BRANCH_ITEM_JSON_ITEM_ID       = "item_id"
-	BRANCH_ITEM_JSON_QUANTITY      = "quantity"
-	BRANCH_ITEM_JSON_ITEM_LOCATION = "loc"
-)
-
 type ShBranch struct {
-	CompanyId  int64
-	BranchId   int64
+	CompanyId  int
+	BranchId   int
 	ClientUUID string
 	Name       string
 	Location   string
-	StatusFlag int64
+	StatusFlag int
 }
 
 type ShBranchItem struct {
-	CompanyId    int64
-	BranchId     int64
-	ItemId       int64
+	CompanyId    int
+	BranchId     int
+	ItemId       int
 	Quantity     float64
 	ItemLocation string
 }
@@ -77,7 +58,7 @@ func (s *shStore) UpdateBranchInTx(tnx *sql.Tx, b *ShBranch) (*ShBranch, error) 
 	return b, err
 }
 
-func (s *shStore) GetBranchById(id int64) (*ShBranch, error) {
+func (s *shStore) GetBranchById(id int) (*ShBranch, error) {
 	msg := fmt.Sprintf("no branch with that id %d", id)
 	branches, err := _queryBranch(s, msg, "where branch_id = $1", id)
 	if err != nil {
@@ -86,7 +67,7 @@ func (s *shStore) GetBranchById(id int64) (*ShBranch, error) {
 	return branches[0], nil
 }
 
-func (s *shStore) GetBranchByIdInTx(tnx *sql.Tx, id int64) (*ShBranch, error) {
+func (s *shStore) GetBranchByIdInTx(tnx *sql.Tx, id int) (*ShBranch, error) {
 	msg := fmt.Sprintf("no branch with that id %d", id)
 	branches, err := _queryBranchInTx(tnx, msg, "where branch_id = $1", id)
 	if err != nil {
@@ -167,7 +148,7 @@ func (s *shStore) UpdateBranchItemInTx(tnx *sql.Tx, item *ShBranchItem) (*ShBran
 	return item, nil
 }
 
-func (s *shStore) GetBranchItem(branch_id, item_id int64) (*ShBranchItem, error) {
+func (s *shStore) GetBranchItem(branch_id, item_id int) (*ShBranchItem, error) {
 	msg := fmt.Sprintf("err fetching item:%d in branch:%d", item_id, branch_id)
 	items, err := _queryBranchItem(s, msg, "where branch_id = $1 and item_id = $2",
 		branch_id, item_id)
@@ -177,7 +158,7 @@ func (s *shStore) GetBranchItem(branch_id, item_id int64) (*ShBranchItem, error)
 	return items[0], nil
 }
 
-func (s *shStore) GetBranchItemInTx(tnx *sql.Tx, branch_id, item_id int64) (*ShBranchItem, error) {
+func (s *shStore) GetBranchItemInTx(tnx *sql.Tx, branch_id, item_id int) (*ShBranchItem, error) {
 	msg := fmt.Sprintf("err fetching item:%d in branch:%d", item_id, branch_id)
 	items, err := _queryBranchItemInTx(tnx, msg, "where branch_id = $1 and item_id = $2",
 		branch_id, item_id)

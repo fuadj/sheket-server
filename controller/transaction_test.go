@@ -1,5 +1,15 @@
 package controller
 
+/*
+import (
+	"strings"
+	"fmt"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+)
+
 import (
 	"database/sql"
 	"encoding/json"
@@ -22,8 +32,8 @@ const (
 	test_branch_item_rev = 121
 )
 
-func createTestTransaction(trans_id, branch_id, date int64,
-	num_items int64) map[string]interface{} {
+func createTestTransaction(trans_id, branch_id, date int,
+	num_items int) map[string]interface{} {
 	trans := make(map[string]interface{})
 	trans["trans_id"] = trans_id
 	trans["branch_id"] = branch_id
@@ -32,7 +42,7 @@ func createTestTransaction(trans_id, branch_id, date int64,
 	var items []interface{}
 	if num_items > 0 {
 		items = make([]interface{}, num_items)
-		for i := int64(0); i < num_items; i++ {
+		for i := int(0); i < num_items; i++ {
 			item := make([]interface{}, 4)
 			item[0] = rand.Int63n(10)
 			item[1] = rand.Int63n(100)
@@ -57,18 +67,18 @@ var transactionSyncFormat string = `
 `
 
 var parseTransactionTests = []struct {
-	trans_id  int64
-	branch_id int64
-	date      int64
-	num_items int64
+	trans_id  int
+	branch_id int
+	date      int
+	num_items int
 }{
 	{-5, 2, 1002, 1},
 	{-6, 8, 201, 10},
 }
 
 func TestParseTransactionPost(t *testing.T) {
-	trans_rev := int64(10)
-	branch_item_rev := int64(100)
+	trans_rev := int(10)
+	branch_item_rev := int(100)
 
 	transactions := make([]interface{}, len(parseTransactionTests))
 	for i, test := range parseTransactionTests {
@@ -119,7 +129,7 @@ func TestParseTransactionPost(t *testing.T) {
 				i, expected.date, got.Date)
 		}
 
-		if int64(len(got.TransItems)) != expected.num_items {
+		if int(len(got.TransItems)) != expected.num_items {
 			t.Errorf("got:%d, num_items wanted %d, expected %d",
 				i, expected.num_items, len(got.TransItems))
 		}
@@ -127,8 +137,8 @@ func TestParseTransactionPost(t *testing.T) {
 }
 
 func TestParseMissingTransArr(t *testing.T) {
-	trans_rev := int64(10)
-	branch_item_rev := int64(100)
+	trans_rev := int(10)
+	branch_item_rev := int(100)
 
 	trans_test_string := fmt.Sprintf(transactionSyncFormat,
 		trans_rev, branch_item_rev, "")
@@ -142,8 +152,8 @@ func TestParseMissingTransArr(t *testing.T) {
 }
 
 func TestParseEmptyTransArr(t *testing.T) {
-	trans_rev := int64(10)
-	branch_item_rev := int64(100)
+	trans_rev := int(10)
+	branch_item_rev := int(100)
 
 	trans_test_string := fmt.Sprintf(transactionSyncFormat,
 		trans_rev, branch_item_rev, "[]")
@@ -157,8 +167,8 @@ func TestParseEmptyTransArr(t *testing.T) {
 }
 
 func TestParseMissingTransId(t *testing.T) {
-	trans_rev := int64(10)
-	branch_item_rev := int64(100)
+	trans_rev := int(10)
+	branch_item_rev := int(100)
 
 	transactions := make([]interface{}, len(parseTransactionTests))
 	for i, test := range parseTransactionTests {
@@ -181,8 +191,8 @@ func TestParseMissingTransId(t *testing.T) {
 }
 
 func TestParseInvalidItems(t *testing.T) {
-	trans_rev := int64(10)
-	branch_item_rev := int64(100)
+	trans_rev := int(10)
+	branch_item_rev := int(100)
 
 	transactions := make([]interface{}, len(parseTransactionTests))
 	for i, test := range parseTransactionTests {
@@ -213,30 +223,30 @@ func TestParseInvalidItems(t *testing.T) {
 }
 
 type t_trans_items struct {
-	trans_type      int64
-	item_id         int64
-	other_branch_id int64
+	trans_type      int
+	item_id         int
+	other_branch_id int
 	quantity        float64
 	existInBranch   bool
 }
 
 type t_branch_item_qty struct {
-	branch_id     int64
-	item_id       int64
+	branch_id     int
+	item_id       int
 	quantity_left float64
 }
 
 var (
-	t_branch_1 int64 = 1
-	t_branch_2 int64 = 2
-	t_branch_3 int64 = 3
+	t_branch_1 int = 1
+	t_branch_2 int = 2
+	t_branch_3 int = 3
 
-	t_item_1 int64 = 11
-	t_item_2 int64 = 12
-	t_item_3 int64 = 13
+	t_item_1 int = 11
+	t_item_2 int = 12
+	t_item_3 int = 13
 
 	initialQty = []struct {
-		branch_id, item_id int64
+		branch_id, item_id int
 		initial_qty        float64
 	}{
 		// if not listed here, 0 is the default initial quantity
@@ -246,9 +256,9 @@ var (
 	}
 
 	addTransactionsTests = []struct {
-		created_trans_id int64
+		created_trans_id int
 
-		branch_id   int64
+		branch_id   int
 		trans_items []t_trans_items
 	}{
 		{2, t_branch_1,
@@ -351,8 +361,8 @@ func TestAddTransactionFinalQuantity(t *testing.T) {
 	}
 }
 
-/*
- * This is just too complicated to be a unit-test
+
+// This is just too complicated to be a unit-test
 func setUpTransactionExpectation(mock *models.MockShStore, tnx *sql.Tx) []*models.ShTransaction {
 	seenItems := make(map[Pair_BranchItem]bool, 10)
 
@@ -367,7 +377,7 @@ func setUpTransactionExpectation(mock *models.MockShStore, tnx *sql.Tx) []*model
 				ItemId: item.item_id, OtherBranchId: item.other_branch_id,
 				Quantity: item.quantity}
 
-			expect_get_item := func(branch_id, item_id int64, exist bool) {
+			expect_get_item := func(branch_id, item_id int, exist bool) {
 
 				if seenItems[Pair_BranchItem{branch_id, item_id}] {
 					return
@@ -456,13 +466,12 @@ func TestAddTransactionFinalQuantity(t *testing.T) {
 		}
 	}
 }
-*/
 
 const (
-	trans_rev       = int64(10)
-	branch_item_rev = int64(100)
-	company_id      = int64(100)
-	user_id         = int64(12)
+	trans_rev       = int(10)
+	branch_item_rev = int(100)
+	company_id      = int(100)
+	user_id         = int(12)
 )
 
 func TestTransactionHandler(t *testing.T) {
@@ -522,22 +531,19 @@ func TestTransactionHandler(t *testing.T) {
 	}
 }
 
-/**
- * Benchmark tests
- */
 var parseTransactionBenchTests = []struct {
-	trans_id  int64
-	branch_id int64
-	date      int64
-	num_items int64
+	trans_id  int
+	branch_id int
+	date      int
+	num_items int
 }{{-5, 2, 1002, 300},
 	{-6, 8, 201, 0},
 	{-6, 8, 201, 100},
 }
 
 func BenchmarkParseTransactionPost(b *testing.B) {
-	trans_rev := int64(10)
-	branch_item_rev := int64(100)
+	trans_rev := 10
+	branch_item_rev := 100
 
 	transactions := make([]interface{}, len(parseTransactionBenchTests))
 	for i, test := range parseTransactionBenchTests {
@@ -558,3 +564,4 @@ func BenchmarkParseTransactionPost(b *testing.B) {
 		}
 	}
 }
+*/

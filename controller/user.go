@@ -12,25 +12,6 @@ import (
 	"fmt"
 )
 
-const (
-	JSON_KEY_USERNAME   = "username"
-	JSON_KEY_USER_TOKEN = "token"
-	// this is an optional parameter, it should be included
-	// and its value set to true if the app is a SheketPay client.
-	// If this is set, only users who are AUTHORIZED will be
-	// given login cookie.
-	JSON_KEY_IS_SHEKET_PAY = "is_sheket_pay"
-
-	JSON_KEY_USER_ID   = "user_id"
-	JSON_KEY_MEMBER_ID = "user_id"
-
-	JSON_KEY_COMPANY_NAME    = "company_name"
-	JSON_KEY_COMPANY_CONTACT = "company_contact"
-	JSON_KEY_USER_PERMISSION = "user_permission"
-
-	JSON_KEY_NEW_USER_NAME = "new_user_name"
-)
-
 var fb_app_secret string
 
 func init() {
@@ -147,10 +128,10 @@ func (s *SheketController) SyncCompanies(c context.Context, request *sp.SyncComp
 	for i := 0; i < len(company_permissions); i++ {
 		company := new(sp.Company)
 
-		company.CompanyId = company_permissions[i].CompanyInfo.CompanyId
+		company.CompanyId = int32(company_permissions[i].CompanyInfo.CompanyId)
 		company.CompanyName = company_permissions[i].CompanyInfo.CompanyName
 		company.Permission = company_permissions[i].Permission.EncodedPermission
-		company.PaymentId = generatePaymentId(company_permissions[i])
+		company.PaymentId = generatePaymentId(&company_permissions[i].CompanyInfo)
 
 		license, err := GenerateCompanyLicense(
 			company_permissions[i].CompanyInfo.CompanyId,

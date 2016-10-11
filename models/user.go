@@ -6,17 +6,16 @@ import (
 )
 
 const (
-	AUTH_PROVIDER_FACEBOOK int64 = 1
-	AUTH_PROVIDER_GOOGLE   int64 = 2
+	AUTH_PROVIDER_FACEBOOK = 1
+	AUTH_PROVIDER_GOOGLE   = 2
 )
 
 type User struct {
-	// This is the id in our database
-	UserId   int64
+	UserId   int
 	Username string
 
 	// these will be the id of the provider which gave us the user's info (like: facebook, ...)
-	ProviderID     int64
+	ProviderID     int
 	UserProviderID string
 }
 
@@ -58,7 +57,7 @@ func (b *shStore) FindUserByNameInTx(tnx *sql.Tx, username string) (*User, error
 		"where username = $1", username)
 }
 
-func (b *shStore) FindUserById(id int64) (*User, error) {
+func (b *shStore) FindUserById(id int) (*User, error) {
 	user, err := _queryUser(b,
 		fmt.Sprintf("no user with id:%d", id),
 		"where user_id = $1", id)
@@ -68,7 +67,7 @@ func (b *shStore) FindUserById(id int64) (*User, error) {
 	return user, nil
 }
 
-func (b *shStore) FindUserWithProviderIdInTx(tnx *sql.Tx, provider_id int64, provider_user_id string) (*User, error) {
+func (b *shStore) FindUserWithProviderIdInTx(tnx *sql.Tx, provider_id int, provider_user_id string) (*User, error) {
 	return _queryUserTnx(tnx,
 		fmt.Sprintf("no user with id:%s in provider:%d", provider_user_id, provider_id),
 		"where provider_id = $1 AND user_provider_id = $2",
@@ -78,8 +77,8 @@ func (b *shStore) FindUserWithProviderIdInTx(tnx *sql.Tx, provider_id int64, pro
 func (b *shStore) UpdateUserInTx(tnx *sql.Tx, u *User) (*User, error) {
 	_, err := tnx.Exec(
 		fmt.Sprintf("update %s set "+
-		" username = $1, provider_id = $2, user_provider_id = $3 " +
-		" where user_id = $4 ", TABLE_USER),
+			" username = $1, provider_id = $2, user_provider_id = $3 "+
+			" where user_id = $4 ", TABLE_USER),
 		u.Username, u.ProviderID, u.UserProviderID,
 		u.UserId)
 	return u, err
@@ -126,8 +125,8 @@ func _parseColumns(row *sql.Row, user *User) error {
 		return err
 	}
 
-	user.UserId = _user_id.Int64
-	user.ProviderID = _provider_id.Int64
+	user.UserId = int(_user_id.Int64)
+	user.ProviderID = int(_provider_id.Int64)
 	user.Username = _username.String
 	user.UserProviderID = _user_provider_id.String
 

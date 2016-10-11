@@ -1,9 +1,7 @@
 package controller
 
 import (
-	"github.com/bitly/go-simplejson"
 	"github.com/gin-gonic/gin"
-	"net/http"
 	"sheket/server/controller/auth"
 	sh "sheket/server/controller/sheket_handler"
 	"sheket/server/models"
@@ -12,10 +10,6 @@ import (
 	sp "sheket/server/sheketproto"
 	"fmt"
 	"time"
-)
-
-const (
-	JSON_KEY_NEW_COMPANY_NAME = "new_company_name"
 )
 
 func (s *SheketController) AddEmployee(c context.Context, request *sp.AddEmployeeRequest) (response *sp.AddEmployeeResponse, err error) {
@@ -34,7 +28,7 @@ func (s *SheketController) AddEmployee(c context.Context, request *sp.AddEmploye
 	p := &models.UserPermission{
 		CompanyId:user_info.CompanyId,
 		EncodedPermission:request.Permission,
-		UserId:request.EmployeeId,
+		UserId:int(request.EmployeeId),
 	}
 
 	member, err := Store.FindUserById(p.UserId)
@@ -68,7 +62,7 @@ func (s *SheketController) AddEmployee(c context.Context, request *sp.AddEmploye
 	tnx.Commit()
 
 	response = new(sp.AddEmployeeResponse)
-	response.EmployeeId = p.UserId
+	response.EmployeeId = int32(p.UserId)
 	response.EmployeeName = member.Username
 
 	return response, nil
@@ -122,7 +116,7 @@ func (s *SheketController) CreateCompany(c context.Context, request *sp.NewCompa
 
 	permission := &models.UserPermission{CompanyId: created_company.CompanyId,
 		UserId:         user.UserId,
-		PermissionType: models.PERMISSION_TYPE_CREATOR}
+		PermissionType: models.PERMISSION_TYPE_OWNER}
 
 	_, err = Store.SetUserPermissionInTx(tnx, permission)
 	if err != nil {
@@ -142,7 +136,7 @@ func (s *SheketController) CreateCompany(c context.Context, request *sp.NewCompa
 	}
 
 	response = new(sp.Company)
-	response.CompanyId = created_company.CompanyId
+	response.CompanyId = int32(created_company.CompanyId)
 	response.CompanyName = request.CompanyName
 	response.Permission = permission.Encode()
 	response.SignedLicense = license
@@ -152,6 +146,7 @@ func (s *SheketController) CreateCompany(c context.Context, request *sp.NewCompa
 }
 
 func EditCompanyNameHandler(c *gin.Context) *sh.SheketError {
+	/*
 	defer trace("EditCompanyNameHandler")()
 
 	info, err := GetIdentityInfo(c.Request)
@@ -192,5 +187,6 @@ func EditCompanyNameHandler(c *gin.Context) *sh.SheketError {
 	// we don't actually send any "useful" data, it is just to inform that it was successful
 	c.String(http.StatusOK, "")
 
+	*/
 	return nil
 }

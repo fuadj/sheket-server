@@ -8,10 +8,10 @@ import (
 )
 
 const (
-	CLIENT_ROOT_CATEGORY_ID int64 = -3
+	CLIENT_ROOT_CATEGORY_ID = -3
 )
 
-func To_Server_Category_Id(category_id int64) int64 {
+func To_Server_Category_Id(category_id int) int {
 	if (category_id == CLIENT_ROOT_CATEGORY_ID) {
 		return models.SERVER_ROOT_CATEGORY_ID
 	} else {
@@ -19,7 +19,7 @@ func To_Server_Category_Id(category_id int64) int64 {
 	}
 }
 
-func To_Client_Category_Id(category_id int64) int64 {
+func To_Client_Category_Id(category_id int) int{
 	if (category_id == models.SERVER_ROOT_CATEGORY_ID) {
 		return CLIENT_ROOT_CATEGORY_ID
 	} else {
@@ -40,7 +40,7 @@ func (s *SheketController) SyncEntity(c context.Context, request *sp.EntityReque
 		return nil, err
 	}
 
-	var old_2_new OLD_ID_2_NEW
+	var old_2_new OLD_ENTITY_ID_2_NEW
 
 	if old_2_new, err = applyEntityOperations(tnx, request, user_info); err != nil {
 		tnx.Rollback()
@@ -54,22 +54,22 @@ func (s *SheketController) SyncEntity(c context.Context, request *sp.EntityReque
 		return nil, err
 	}
 
-	for old_id, new_id := range old_2_new.getType(_TYPE_ITEM) {
+	for old_id, new_id := range old_2_new.getEntityType(_TYPE_ITEM) {
 		updated := new(sp.EntityResponse_UpdatedId)
-		updated.OldId = old_id
-		updated.NewId = new_id
+		updated.OldId = int32(old_id)
+		updated.NewId = int32(new_id)
 		response.UpdatedItemIds = append(response.UpdatedItemIds, updated)
 	}
-	for old_id, new_id := range old_2_new.getType(_TYPE_BRANCH) {
+	for old_id, new_id := range old_2_new.getEntityType(_TYPE_BRANCH) {
 		updated := new(sp.EntityResponse_UpdatedId)
-		updated.OldId = old_id
-		updated.NewId = new_id
+		updated.OldId = int32(old_id)
+		updated.NewId = int32(new_id)
 		response.UpdatedBranchIds = append(response.UpdatedBranchIds, updated)
 	}
-	for old_id, new_id := range old_2_new.getType(_TYPE_CATEGORY) {
+	for old_id, new_id := range old_2_new.getEntityType(_TYPE_CATEGORY) {
 		updated := new(sp.EntityResponse_UpdatedId)
-		updated.OldId = old_id
-		updated.NewId = new_id
+		updated.OldId = int32(old_id)
+		updated.NewId = int32(new_id)
 		response.UpdatedCategoryIds = append(response.UpdatedCategoryIds, updated)
 	}
 
@@ -83,7 +83,7 @@ func (s *SheketController) SyncEntity(c context.Context, request *sp.EntityReque
  */
 func fetchModifiedEntities(request *sp.EntityRequest,
 	response *sp.EntityResponse,
-	old_2_new OLD_ID_2_NEW,
+	old_2_new OLD_ENTITY_ID_2_NEW,
 	user_info *UserCompanyPermission) error {
 
 	if err := fetchCategoriesSinceLastRev(request, response, user_info.CompanyId); err != nil {
@@ -112,19 +112,19 @@ func fetchModifiedEntities(request *sp.EntityRequest,
 
 func fetchCategoriesSinceLastRev(request *sp.EntityRequest,
 	response *sp.EntityResponse,
-	company_id int64) error {
+	company_id int) error {
 
 	max_rev, category_revs, err := Store.GetRevisionsSince(
 		&models.ShEntityRevision{
 			CompanyId:      company_id,
 			EntityType:     models.REV_ENTITY_CATEGORY,
-			RevisionNumber: request.OldCategoryRev,
+			RevisionNumber: int(request.OldCategoryRev),
 		})
 	if err != nil && err != models.ErrNoData {
 		return err
 	}
 
-	response.NewCategoryRev = max_rev
+	response.NewCategoryRev = int32(max_rev)
 
 	for _, rev := range category_revs {
 		category_id := rev.EntityAffectedId
@@ -146,13 +146,13 @@ func fetchCategoriesSinceLastRev(request *sp.EntityRequest,
 			response.Categories = append(response.Categories,
 				&sp.EntityResponse_SyncCategory{
 					Category: &sp.Category{
-						CategoryId: category.CategoryId,
+						CategoryId: int32(category.CategoryId),
 						Name:       category.Name,
-						ParentId:   category.ParentId,
+						ParentId:   int32(category.ParentId),
 						UUID:       category.ClientUUID,
 
 						// TODO: check if we support "hiding" categories
-						StatusFlag: models.STATUS_VISIBLE,
+						StatusFlag: int32(models.STATUS_VISIBLE),
 					},
 				})
 
@@ -160,7 +160,7 @@ func fetchCategoriesSinceLastRev(request *sp.EntityRequest,
 			response.Categories = append(response.Categories,
 				&sp.EntityResponse_SyncCategory{
 					Category: &sp.Category{
-						CategoryId: category_id,
+						CategoryId: int32(category_id),
 					},
 					State: sp.EntityResponse_REMOVED,
 				})
@@ -172,19 +172,19 @@ func fetchCategoriesSinceLastRev(request *sp.EntityRequest,
 
 func fetchItemsSinceLastRev(request *sp.EntityRequest,
 	response *sp.EntityResponse,
-	company_id int64) error {
+	company_id int) error {
 
 	max_rev, changed_item_revs, err := Store.GetRevisionsSince(
 		&models.ShEntityRevision{
 			CompanyId:      company_id,
 			EntityType:     models.REV_ENTITY_ITEM,
-			RevisionNumber: request.OldItemRev,
+			RevisionNumber: int(request.OldItemRev),
 		})
 	if err != nil && err != models.ErrNoData {
 		return err
 	}
 
-	response.NewItemRev = max_rev
+	response.NewItemRev = int32(max_rev)
 
 	for _, item_rev := range changed_item_revs {
 		item_id := item_rev.EntityAffectedId
@@ -203,16 +203,16 @@ func fetchItemsSinceLastRev(request *sp.EntityRequest,
 		response.Items = append(response.Items,
 			&sp.EntityResponse_SyncItem{
 				Item: &sp.Item{
-					ItemId:            item.ItemId,
+					ItemId:            int32(item.ItemId),
 					UUID:              item.ClientUUID,
 					Name:              item.Name,
 					Code:              item.ItemCode,
-					CategoryId:        item.CategoryId,
-					UnitOfMeasurement: item.UnitOfMeasurement,
+					CategoryId:        int32(item.CategoryId),
+					UnitOfMeasurement: int32(item.UnitOfMeasurement),
 					HasDerivedUnit:    item.HasDerivedUnit,
 					DerivedName:       item.DerivedName,
 					DerivedFactor:     item.DerivedFactor,
-					StatusFlag:        item.StatusFlag,
+					StatusFlag:        int32(item.StatusFlag),
 				},
 			})
 	}
@@ -220,19 +220,19 @@ func fetchItemsSinceLastRev(request *sp.EntityRequest,
 }
 
 func fetchBranchesSinceLastRev(request *sp.EntityRequest,
-	response *sp.EntityResponse, company_id int64) error {
+	response *sp.EntityResponse, company_id int) error {
 
 	max_rev, new_branch_revs, err := Store.GetRevisionsSince(
 		&models.ShEntityRevision{
 			CompanyId:      company_id,
 			EntityType:     models.REV_ENTITY_BRANCH,
-			RevisionNumber: request.OldBranchRev,
+			RevisionNumber: int(request.OldBranchRev),
 		})
 	if err != nil && err != models.ErrNoData {
 		return err
 	}
 
-	response.NewBranchRev = max_rev
+	response.NewBranchRev = int32(max_rev)
 
 	for _, branch_rev := range new_branch_revs {
 		branch_id := branch_rev.EntityAffectedId
@@ -251,10 +251,10 @@ func fetchBranchesSinceLastRev(request *sp.EntityRequest,
 		response.Branches = append(response.Branches,
 			&sp.EntityResponse_SyncBranch{
 				Branch: &sp.Branch{
-					BranchId:   branch_id,
+					BranchId:   int32(branch_id),
 					UUID:       branch.ClientUUID,
 					Name:       branch.Name,
-					StatusFlag: branch.StatusFlag,
+					StatusFlag: int32(branch.StatusFlag),
 				},
 			})
 	}
@@ -263,19 +263,19 @@ func fetchBranchesSinceLastRev(request *sp.EntityRequest,
 
 func fetchMembersSinceLastRev(request *sp.EntityRequest,
 	response *sp.EntityResponse,
-	company_id int64) error {
+	company_id int) error {
 
 	max_rev, member_revs, err := Store.GetRevisionsSince(
 		&models.ShEntityRevision{
 			CompanyId:      company_id,
 			EntityType:     models.REV_ENTITY_MEMBERS,
-			RevisionNumber: request.OldMemberRev,
+			RevisionNumber: int(request.OldMemberRev),
 		})
 	if err != nil && err != models.ErrNoData {
 		return err
 	}
 
-	response.NewMemberRev = max_rev
+	response.NewMemberRev = int32(max_rev)
 
 	for _, rev := range member_revs {
 		member_id := rev.EntityAffectedId
@@ -301,7 +301,7 @@ func fetchMembersSinceLastRev(request *sp.EntityRequest,
 			response.Employees = append(response.Employees,
 				&sp.EntityResponse_SyncEmployee{
 					Employee: &sp.Employee{
-						EmployeeId: member_id,
+						EmployeeId: int32(member_id),
 						Permission: permission.EncodedPermission,
 						Name:       user.Username,
 					},
@@ -311,7 +311,7 @@ func fetchMembersSinceLastRev(request *sp.EntityRequest,
 			response.Employees = append(response.Employees,
 				&sp.EntityResponse_SyncEmployee{
 					Employee: &sp.Employee{
-						EmployeeId: member_id,
+						EmployeeId: int32(member_id),
 					},
 					State: sp.EntityResponse_REMOVED,
 				})
@@ -324,19 +324,19 @@ func fetchMembersSinceLastRev(request *sp.EntityRequest,
 func fetchBranchCategoriesSinceLastRev(
 	request *sp.EntityRequest,
 	response *sp.EntityResponse,
-	company_id int64) error {
+	company_id int) error {
 
 	max_rev, branch_category_revs, err := Store.GetRevisionsSince(
 		&models.ShEntityRevision{
 			CompanyId:      company_id,
 			EntityType:     models.REV_ENTITY_BRANCH_CATEGORY,
-			RevisionNumber: request.OldBranchCategoryRev,
+			RevisionNumber: int(request.OldBranchCategoryRev),
 		})
 	if err != nil && err != models.ErrNoData {
 		return err
 	}
 
-	response.NewBranchCategoryRev = max_rev
+	response.NewBranchCategoryRev = int32(max_rev)
 
 	for _, rev := range branch_category_revs {
 		branch_id := rev.EntityAffectedId
@@ -354,16 +354,16 @@ func fetchBranchCategoriesSinceLastRev(
 			response.BranchCategories = append(response.BranchCategories,
 				&sp.EntityResponse_SyncBranchCategory{
 					BranchCategory: &sp.BranchCategory{
-						BranchId:   branch_id,
-						CategoryId: To_Client_Category_Id(category_id),
+						BranchId:   int32(branch_id),
+						CategoryId: int32(To_Client_Category_Id(category_id)),
 					},
 				})
 		case models.REV_ACTION_DELETE:
 			response.BranchCategories = append(response.BranchCategories,
 				&sp.EntityResponse_SyncBranchCategory{
 					BranchCategory: &sp.BranchCategory{
-						BranchId:   branch_id,
-						CategoryId: To_Client_Category_Id(category_id),
+						BranchId:   int32(branch_id),
+						CategoryId: int32(To_Client_Category_Id(category_id)),
 					},
 					State: sp.EntityResponse_REMOVED,
 				})

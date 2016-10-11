@@ -6,46 +6,36 @@ import (
 )
 
 type ShTransaction struct {
-	CompanyId     int64
+	CompanyId     int
 	TransactionId int64
 	ClientUUID    string
 
-	UserId    int64
-	BranchId  int64
+	UserId    int
+	BranchId  int
 	Date      int64
 	TransNote string
 
 	TransItems []*ShTransactionItem
 }
 
-const (
-	TRANS_JSON_TRANS_ID   = "trans_id"
-	TRANS_JSON_UUID       = "client_uuid"
-	TRANS_JSON_USER_ID    = "user_id"
-	TRANS_JSON_BRANCH_ID  = "branch_id"
-	TRANS_JSON_DATE       = "date"
-	TRANS_JSON_TRANS_NOTE = "trans_note"
-	TRANS_JSON_ITEMS      = "items"
-)
-
 type ShTransactionItem struct {
-	CompanyId     int64
+	CompanyId     int
 	TransactionId int64
-	TransType     int64
-	ItemId        int64
-	OtherBranchId int64
+	TransType     int
+	ItemId        int
+	OtherBranchId int
 	Quantity      float64
 	ItemNote      string
 }
 
 const (
 	// Transaction Type constants
-	TRANS_TYPE_ADD_PURCHASED           int64 = 1 // Increase stock count from purchased merchandise
-	TRANS_TYPE_ADD_RETURN_ITEM         int64 = 2 // When a customer returns an item
-	TRANS_TYPE_ADD_TRANSFER_FROM_OTHER int64 = 3 // Increase stock from transfer from another branch
+	TRANS_TYPE_ADD_PURCHASED = 1 // Increase stock count from purchased merchandise
+	//TODO: update the constants
+	TRANS_TYPE_ADD_TRANSFER_FROM_OTHER = 3 // Increase stock from transfer from another branch
 
-	TRANS_TYPE_SUB_CURRENT_BRANCH_SALE int64 = 11 // Decrease stock by selling current branch inventory
-	TRANS_TYPE_SUB_TRANSFER_TO_OTHER   int64 = 12 // Decrease stock by sending inventory to other branch
+	TRANS_TYPE_SUB_CURRENT_BRANCH_SALE = 11 // Decrease stock by selling current branch inventory
+	TRANS_TYPE_SUB_TRANSFER_TO_OTHER   = 12 // Decrease stock by sending inventory to other branch
 )
 
 func (s *shStore) CreateShTransactionInTx(tnx *sql.Tx, trans *ShTransaction) (*ShTransaction, error) {
@@ -84,7 +74,7 @@ func (s *shStore) AddShTransactionItemInTx(tnx *sql.Tx, trans *ShTransaction, el
 	return elem, nil
 }
 
-func (s *shStore) GetShTransactionById(company_id, trans_id int64, fetch_items bool) (*ShTransaction, error) {
+func (s *shStore) GetShTransactionById(company_id int, trans_id int64, fetch_items bool) (*ShTransaction, error) {
 	msg := fmt.Sprintf("company:%d, no transaction with id %d", company_id, trans_id)
 	transaction, err := _queryShTransactions(s, fetch_items, msg,
 		"where company_id = $1 AND transaction_id = $2", company_id, trans_id)
@@ -103,7 +93,7 @@ func (s *shStore) GetShTransactionByUUIDInTx(tnx *sql.Tx, uid string) (*ShTransa
 	return transaction[0], nil
 }
 
-func (s *shStore) GetShTransactionSinceTransId(company_id, prev_id int64) (trans []*ShTransaction, err error) {
+func (s *shStore) GetShTransactionSinceTransId(company_id int, prev_id int64) (trans []*ShTransaction, err error) {
 	msg := fmt.Sprintf("no transactions after id:%d", prev_id)
 	transaction, err := _queryShTransactions(s, true, msg,
 		"where company_id = $1 AND transaction_id > $2", company_id, prev_id)

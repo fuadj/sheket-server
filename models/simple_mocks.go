@@ -6,8 +6,8 @@ import (
 )
 
 type BranchItemPair struct {
-	BranchId int64
-	ItemId   int64
+	BranchId int
+	ItemId   int
 }
 
 // Begin: SimpleBranchItemStore
@@ -18,7 +18,7 @@ type SimpleBranchItemStore struct {
 
 func NewSimpleBranchItemStore(initialQuantity map[BranchItemPair]float64) *SimpleBranchItemStore {
 	result := &SimpleBranchItemStore{}
-	result.items = make(map[BranchItemPair]*ShBranchItem, 10)
+	result.items = make(map[BranchItemPair]*ShBranchItem)
 	result.initialQty = make(map[BranchItemPair]float64, len(initialQuantity))
 	for k, v := range initialQuantity {
 		result.initialQty[k] = v
@@ -35,11 +35,11 @@ func (m *SimpleBranchItemStore) AddItemToBranchInTx(tnx *sql.Tx, item *ShBranchI
 	return item, nil
 }
 
-func (m *SimpleBranchItemStore) GetBranchItem(branch_id, item_id int64) (*ShBranchItem, error) {
+func (m *SimpleBranchItemStore) GetBranchItem(branch_id, item_id int) (*ShBranchItem, error) {
 	return m.GetBranchItemInTx(nil, branch_id, item_id)
 }
 
-func (m *SimpleBranchItemStore) GetBranchItemInTx(tnx *sql.Tx, branch_id, item_id int64) (*ShBranchItem, error) {
+func (m *SimpleBranchItemStore) GetBranchItemInTx(tnx *sql.Tx, branch_id, item_id int) (*ShBranchItem, error) {
 	if item, ok := m.items[BranchItemPair{branch_id, item_id}]; ok {
 		return item, nil
 	} else if qty, ok := m.initialQty[BranchItemPair{branch_id, item_id}]; ok {
@@ -58,11 +58,11 @@ func (m *SimpleBranchItemStore) UpdateBranchItemInTx(tnx *sql.Tx, item *ShBranch
 	return item, nil
 }
 
-func (m *SimpleBranchItemStore) GetItemsInBranch(int64) ([]*ShBranchItem, error) {
+func (m *SimpleBranchItemStore) GetItemsInBranch(int) ([]*ShBranchItem, error) {
 	// TODO: not yet implemented
 	return nil, nil
 }
-func (m *SimpleBranchItemStore) GetItemsInAllCompanyBranches(int64) ([]*ShBranchItem, error) {
+func (m *SimpleBranchItemStore) GetItemsInAllCompanyBranches(int) ([]*ShBranchItem, error) {
 	return nil, nil
 }
 
@@ -76,8 +76,8 @@ type SimpleTransactionStore struct {
 
 func NewSimpleTransactionStore() *SimpleTransactionStore {
 	s := &SimpleTransactionStore{}
-	s.Transactions = make(map[int64]*ShTransaction, 10)
-	s.TransItems = make(map[int64]map[*ShTransactionItem]bool, 10)
+	s.Transactions = make(map[int64]*ShTransaction)
+	s.TransItems = make(map[int64]map[*ShTransactionItem]bool)
 	return s
 }
 
@@ -96,7 +96,7 @@ func (s *SimpleTransactionStore) AddShTransactionItemInTx(tnx *sql.Tx,
 	return trans_item, nil
 }
 
-func (s *SimpleTransactionStore) GetShTransactionById(company_id, id int64, fetch_items bool) (*ShTransaction, error) {
+func (s *SimpleTransactionStore) GetShTransactionById(company_id int, id int64, fetch_items bool) (*ShTransaction, error) {
 	trans, ok := s.Transactions[id]
 	if !ok {
 		return nil, fmt.Errorf("no transaction: %d", id)
@@ -111,7 +111,7 @@ func (s *SimpleTransactionStore) GetShTransactionById(company_id, id int64, fetc
 	return trans, nil
 }
 
-func (s *SimpleTransactionStore) GetShTransactionSinceTransId(company_id, trans_id int64) ([]*ShTransaction, error) {
+func (s *SimpleTransactionStore) GetShTransactionSinceTransId(company_id int, trans_id int64) ([]*ShTransaction, error) {
 	var trans []*ShTransaction
 	for _, t := range s.Transactions {
 		trans = append(trans, t)
@@ -136,8 +136,8 @@ func (s *SimpleRevisionStore) AddEntityRevisionInTx(*sql.Tx, *ShEntityRevision) 
 	return nil, nil
 }
 
-func (s *SimpleRevisionStore) GetRevisionsSince(start_from *ShEntityRevision) (latest_rev int64, since []*ShEntityRevision, err error) {
-	var max_rev int64
+func (s *SimpleRevisionStore) GetRevisionsSince(start_from *ShEntityRevision) (latest_rev int, since []*ShEntityRevision, err error) {
+	var max_rev int
 	if len(s.Revisions) > 0 {
 		for _, rev := range s.Revisions {
 			if rev.RevisionNumber > max_rev {
@@ -152,12 +152,12 @@ func (s *SimpleRevisionStore) GetRevisionsSince(start_from *ShEntityRevision) (l
 
 // Begin: SimpleItemStore
 type SimpleItemStore struct {
-	Items map[int64]*ShItem
+	Items map[int]*ShItem
 }
 
 func NewSimpleItemStore(initialItems []*ShItem) *SimpleItemStore {
 	s := &SimpleItemStore{}
-	s.Items = make(map[int64]*ShItem)
+	s.Items = make(map[int]*ShItem)
 	for _, item := range initialItems {
 		s.Items[item.ItemId] = item
 	}
@@ -171,7 +171,7 @@ func (s *SimpleItemStore) CreateItem(item *ShItem) (*ShItem, error) {
 func (s *SimpleItemStore) CreateItemInTx(tnx *sql.Tx, item *ShItem) (*ShItem, error) {
 	created := &ShItem{}
 	*created = *item
-	created.ItemId = int64(len(s.Items) + 1)
+	created.ItemId = len(s.Items) + 1
 	s.Items[created.ItemId] = created
 	return created, nil
 }
@@ -184,18 +184,18 @@ func (s *SimpleItemStore) UpdateItemInTx(tnx *sql.Tx, item *ShItem) (*ShItem, er
 	return nil, fmt.Errorf("UpdateItemInTx, Item %d doens't exist", item.ItemId)
 }
 
-func (s *SimpleItemStore) GetItemById(id int64) (*ShItem, error) {
+func (s *SimpleItemStore) GetItemById(id int) (*ShItem, error) {
 	return s.GetItemByIdInTx(nil, id)
 }
 
-func (s *SimpleItemStore) GetItemByIdInTx(tnx *sql.Tx, id int64) (*ShItem, error) {
+func (s *SimpleItemStore) GetItemByIdInTx(tnx *sql.Tx, id int) (*ShItem, error) {
 	if prev_item, ok := s.Items[id]; ok {
 		return prev_item, nil
 	}
 	return nil, fmt.Errorf("GetItemByIdInTx, Item %d doens't exist", id)
 }
 
-func (s *SimpleItemStore) GetAllCompanyItems(int64) ([]*ShItem, error) {
+func (s *SimpleItemStore) GetAllCompanyItems(int) ([]*ShItem, error) {
 	return nil, fmt.Errorf("GetAllCompanyItems, Not yet implemented ")
 }
 
@@ -203,12 +203,12 @@ func (s *SimpleItemStore) GetAllCompanyItems(int64) ([]*ShItem, error) {
 
 // Begin: SimpleBranchStore
 type SimpleBranchStore struct {
-	Branches map[int64]*ShBranch
+	Branches map[int]*ShBranch
 }
 
 func NewSimpleBranchStore() *SimpleBranchStore {
 	s := &SimpleBranchStore{}
-	s.Branches = make(map[int64]*ShBranch)
+	s.Branches = make(map[int]*ShBranch)
 	return s
 }
 
@@ -219,7 +219,7 @@ func (s *SimpleBranchStore) CreateBranch(branch *ShBranch) (*ShBranch, error) {
 func (s *SimpleBranchStore) CreateBranchInTx(tnx *sql.Tx, branch *ShBranch) (*ShBranch, error) {
 	created := &ShBranch{}
 	*created = *branch
-	created.BranchId = int64(len(s.Branches) + 1)
+	created.BranchId = len(s.Branches) + 1
 	s.Branches[created.BranchId] = created
 	return created, nil
 }
@@ -232,17 +232,17 @@ func (s *SimpleBranchStore) UpdateBranchInTx(tnx *sql.Tx, branch *ShBranch) (*Sh
 	return nil, fmt.Errorf("UpdateBranchInTx, Branch %d doens't exist", branch.BranchId)
 }
 
-func (s *SimpleBranchStore) GetBranchById(id int64) (*ShBranch, error) {
+func (s *SimpleBranchStore) GetBranchById(id int) (*ShBranch, error) {
 	return s.GetBranchByIdInTx(nil, id)
 }
 
-func (s *SimpleBranchStore) GetBranchByIdInTx(tnx *sql.Tx, id int64) (*ShBranch, error) {
+func (s *SimpleBranchStore) GetBranchByIdInTx(tnx *sql.Tx, id int) (*ShBranch, error) {
 	if prev_item, ok := s.Branches[id]; ok {
 		return prev_item, nil
 	}
 	return nil, fmt.Errorf("GetBranchByIdInTx, Branch %d doens't exist", id)
 }
 
-func (s *SimpleBranchStore) ListCompanyBranches(int64) ([]*ShBranch, error) {
+func (s *SimpleBranchStore) ListCompanyBranches(int) ([]*ShBranch, error) {
 	return nil, fmt.Errorf("ListCompanyBranches, Not yet implemented ")
 }
