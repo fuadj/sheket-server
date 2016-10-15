@@ -8,6 +8,8 @@ import (
 	"sheket/server/models"
 	sp "sheket/server/sheketproto"
 	"time"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 )
 
 const (
@@ -40,11 +42,11 @@ func _to_client_limit(val int) int {
 func (s *SheketController) IssuePayment(c context.Context, request *sp.IssuePaymentRequest) (response *sp.IssuePaymentResponse, err error) {
 	user, err := auth.GetUser(request.SheketAuth.LoginCookie)
 	if err != nil {
-		return nil, err
+		return nil, grpc.Errorf(codes.Unauthenticated, "%v", err.Error())
 	}
 
 	if err := is_user_allowed_to_issue_payment(user); err != nil {
-		return nil, err
+		return nil, grpc.Errorf(codes.Unauthenticated, "You don't have authority to issue payment")
 	}
 
 	payment := &models.PaymentInfo{}
@@ -60,18 +62,18 @@ func (s *SheketController) IssuePayment(c context.Context, request *sp.IssuePaym
 	company_id := int(request.CompanyId)
 	company, err := Store.GetCompanyById(company_id)
 	if err != nil {
-		return nil, err
+		return nil, grpc.Errorf(codes.Internal, "%v", err)
 	}
 	company.EncodedPayment = payment.Encode()
 	tnx, err := Store.Begin()
 	if err != nil {
-		return nil, err
+		return nil, grpc.Errorf(codes.Internal, "%v", err)
 	}
 
 	company, err = Store.UpdateCompanyInTx(tnx, company)
 	if err != nil {
 		tnx.Rollback()
-		return nil, err
+		return nil, grpc.Errorf(codes.Internal, "%v", err)
 	}
 	tnx.Commit()
 
@@ -97,18 +99,18 @@ func (s *SheketController) VerifyPayment(c context.Context, request *sp.VerifyPa
 
 	user_info, err := GetUserWithCompanyPermission(request.CompanyAuth)
 	if err != nil {
-		return nil, err
+		return nil, grpc.Errorf(codes.Unauthenticated, "%v", err.Error())
 	}
 	company, err := Store.GetCompanyById(user_info.CompanyId)
 	if err != nil {
-		return nil, err
+		return nil, grpc.Errorf(codes.Internal, "%v", err)
 	}
 
 	license, err := GenerateCompanyLicense(user_info.CompanyId, user_info.User.UserId,
 		company.EncodedPayment, request.DeviceId, request.LocalUserTime)
 
 	if err != nil {
-		return nil, fmt.Errorf("License expired, please renew.")
+		return nil, grpc.Errorf(codes.DeadlineExceeded, "License expired, please renew, '%v'", err)
 	}
 
 	return &sp.VerifyPaymentResponse{SignedLicense: license}, nil

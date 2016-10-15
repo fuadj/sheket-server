@@ -5,6 +5,8 @@ import (
 	_ "net/http/httputil"
 	"sheket/server/models"
 	sp "sheket/server/sheketproto"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc"
 )
 
 const (
@@ -32,26 +34,26 @@ func (s *SheketController) SyncEntity(c context.Context, request *sp.EntityReque
 
 	user_info, err := GetUserWithCompanyPermission(request.CompanyAuth)
 	if err != nil {
-		return nil, err
+		return nil, grpc.Errorf(codes.Unauthenticated, "%v", err)
 	}
 
 	tnx, err := Store.Begin()
 	if err != nil {
-		return nil, err
+		return nil, grpc.Errorf(codes.Internal, "%v", err)
 	}
 
 	var old_2_new OLD_ENTITY_ID_2_NEW
 
 	if old_2_new, err = applyEntityOperations(tnx, request, user_info); err != nil {
 		tnx.Rollback()
-		return nil, err
+		return nil, grpc.Errorf(codes.Internal, "%v", err)
 	}
 	tnx.Commit()
 
 	response = new(sp.EntityResponse)
 
 	if err = fetchModifiedEntities(request, response, old_2_new, user_info); err != nil {
-		return nil, err
+		return nil, grpc.Errorf(codes.Internal, "%v", err)
 	}
 
 	for old_id, new_id := range old_2_new.getEntityType(_TYPE_ITEM) {

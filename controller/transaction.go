@@ -5,6 +5,8 @@ import (
 	"golang.org/x/net/context"
 	"sheket/server/models"
 	sp "sheket/server/sheketproto"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc"
 )
 
 type Pair_BranchItem struct {
@@ -220,12 +222,12 @@ func (s *SheketController) SyncTransaction(c context.Context, request *sp.Transa
 
 	user_info, err := GetUserWithCompanyPermission(request.CompanyAuth)
 	if err != nil {
-		return nil, err
+		return nil, grpc.Errorf(codes.Unauthenticated, "%v", err)
 	}
 
 	tnx, err := Store.Begin()
 	if err != nil {
-		return nil, err
+		return nil, grpc.Errorf(codes.Internal, "%v", err)
 	}
 
 	var old_2_new map[int64]int64
@@ -233,13 +235,13 @@ func (s *SheketController) SyncTransaction(c context.Context, request *sp.Transa
 
 	if affected_branch_items, old_2_new, err = addTransactions(tnx, request, user_info); err != nil {
 		tnx.Rollback()
-		return nil, err
+		return nil, grpc.Errorf(codes.Internal, "%v", err)
 	}
 
 	// update items affected by the transactions
 	if err = updateBranchItems(tnx, affected_branch_items, user_info.CompanyId); err != nil {
 		tnx.Rollback()
-		return nil, err
+		return nil, grpc.Errorf(codes.Internal, "%v", err)
 	}
 	tnx.Commit()
 
@@ -253,12 +255,12 @@ func (s *SheketController) SyncTransaction(c context.Context, request *sp.Transa
 	}
 
 	if err = fetchBranchItemsSinceRev(request, response, old_2_new, user_info.CompanyId); err != nil {
-		return nil, err
+		return nil, grpc.Errorf(codes.Internal, "%v", err)
 	}
 
 	if user_info.Permission.HasManagerAccess() {
 		if err := fetchTransactionsSince(request, response, old_2_new, user_info.CompanyId); err != nil {
-			return nil, err
+			return nil, grpc.Errorf(codes.Internal, "%v", err)
 		}
 	}
 

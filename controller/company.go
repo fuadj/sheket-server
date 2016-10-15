@@ -8,6 +8,8 @@ import (
 	sp "sheket/server/sheketproto"
 	"strings"
 	"time"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 )
 
 func (s *SheketController) AddEmployee(c context.Context, request *sp.AddEmployeeRequest) (response *sp.AddEmployeeResponse, err error) {
@@ -15,12 +17,12 @@ func (s *SheketController) AddEmployee(c context.Context, request *sp.AddEmploye
 
 	user_info, err := GetUserWithCompanyPermission(request.CompanyAuth)
 	if err != nil {
-		return nil, err
+		return nil, grpc.Errorf(codes.Unauthenticated, "%v", err)
 	}
 
 	request.Permission = strings.TrimSpace(request.Permission)
 	if len(request.Permission) == 0 {
-		return nil, fmt.Errorf("Invalid company permission")
+		return nil, grpc.Errorf(codes.InvalidArgument, "%v", err)
 	}
 
 	p := &models.UserPermission{
@@ -31,17 +33,17 @@ func (s *SheketController) AddEmployee(c context.Context, request *sp.AddEmploye
 
 	member, err := Store.FindUserById(p.UserId)
 	if err != nil {
-		return nil, fmt.Errorf("Couldn't find employee:'%v'", err.Error())
+		return nil, grpc.Errorf(codes.Internal, "%v", err)
 	}
 
 	tnx, err := Store.Begin()
 	if err != nil {
-		return nil, err
+		return nil, grpc.Errorf(codes.Internal, "%v", err)
 	}
 
 	_, err = Store.SetUserPermissionInTx(tnx, p)
 	if err != nil {
-		return nil, err
+		return nil, grpc.Errorf(codes.Internal, "%v", err)
 	}
 
 	rev := &models.ShEntityRevision{
@@ -55,7 +57,7 @@ func (s *SheketController) AddEmployee(c context.Context, request *sp.AddEmploye
 	_, err = Store.AddEntityRevisionInTx(tnx, rev)
 	if err != nil {
 		tnx.Rollback()
-		return nil, err
+		return nil, grpc.Errorf(codes.Internal, "%v", err)
 	}
 	tnx.Commit()
 
@@ -90,7 +92,7 @@ func (s *SheketController) CreateCompany(c context.Context, request *sp.NewCompa
 
 	user, err := auth.GetUser(request.Auth.LoginCookie)
 	if err != nil {
-		return nil, err
+		return nil, grpc.Errorf(codes.Unauthenticated, "%v", err)
 	}
 
 	// TODO: update the initial contract type
@@ -103,13 +105,13 @@ func (s *SheketController) CreateCompany(c context.Context, request *sp.NewCompa
 
 	tnx, err := Store.GetDataStore().Begin()
 	if err != nil {
-		return nil, err
+		return nil, grpc.Errorf(codes.Internal, "%v", err)
 	}
 
 	created_company, err := Store.CreateCompanyInTx(tnx, user, company)
 	if err != nil {
 		tnx.Rollback()
-		return nil, err
+		return nil, grpc.Errorf(codes.Internal, "%v", err)
 	}
 
 	permission := &models.UserPermission{CompanyId: created_company.CompanyId,
@@ -119,7 +121,7 @@ func (s *SheketController) CreateCompany(c context.Context, request *sp.NewCompa
 	_, err = Store.SetUserPermissionInTx(tnx, permission)
 	if err != nil {
 		tnx.Rollback()
-		return nil, err
+		return nil, grpc.Errorf(codes.Internal, "%v", err)
 	}
 	tnx.Commit()
 
@@ -129,7 +131,7 @@ func (s *SheketController) CreateCompany(c context.Context, request *sp.NewCompa
 		payment,
 		request.DeviceId, request.LocalUserTime)
 	if err != nil {
-		return nil, err
+		return nil, grpc.Errorf(codes.Internal, "%v", err)
 	}
 
 	response = new(sp.Company)
@@ -147,24 +149,24 @@ func (s *SheketController) EditCompany(c context.Context, request *sp.EditCompan
 
 	user_info, err := GetUserWithCompanyPermission(request.CompanyAuth)
 	if err != nil {
-		return nil, err
+		return nil, grpc.Errorf(codes.Unauthenticated, "%v", err)
 	}
 	company, err := Store.GetCompanyById(user_info.CompanyId)
 	if err != nil {
-		return nil, err
+		return nil, grpc.Errorf(codes.Internal, "%v", err)
 	}
 
 	tnx, err := Store.Begin()
 	if err != nil {
-		return nil, err
+		return nil, grpc.Errorf(codes.Internal, "%v", err)
 	}
 
 	company.CompanyName = request.NewName
 	if _, err = Store.UpdateCompanyInTx(tnx, company); err != nil {
-		return nil, err
+		return nil, grpc.Errorf(codes.Internal, "%v", err)
 	}
 	if err = tnx.Commit(); err != nil {
-		return nil, err
+		return nil, grpc.Errorf(codes.Internal, "%v", err)
 	}
 
 	return &sp.EmptyResponse{}, nil
