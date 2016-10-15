@@ -2,10 +2,11 @@ package controller
 
 import (
 	"fmt"
-	"github.com/gin-gonic/gin"
-	sh "sheket/server/controller/sheket_handler"
+	"golang.org/x/net/context"
+	"sheket/server/controller/auth"
 	"sheket/server/controller/signature"
 	"sheket/server/models"
+	sp "sheket/server/sheketproto"
 	"time"
 )
 
@@ -36,74 +37,51 @@ func _to_client_limit(val int) int {
  * TODO: currently it overwrites the payment, in the future "see" what has already
  * been paid and do {extend | upgrade}
  */
-func IssuePaymentHandler(c *gin.Context) *sh.SheketError {
-	/*
-	data, err := simplejson.NewFromReader(c.Request.Body)
+func (s *SheketController) IssuePayment(c context.Context, request *sp.IssuePaymentRequest) (response *sp.IssuePaymentResponse, err error) {
+	user, err := auth.GetUser(request.SheketAuth.LoginCookie)
 	if err != nil {
-		return &sh.SheketError{Code: http.StatusBadRequest, Error: err.Error()}
+		return nil, err
 	}
 
-	values, err := data.Map()
-	if err != nil {
-		return &sh.SheketError{Code: http.StatusBadRequest, Error: err.Error()}
+	if err := is_user_allowed_to_issue_payment(user); err != nil {
+		return nil, err
 	}
 
-	payment_info := &models.PaymentInfo{}
+	payment := &models.PaymentInfo{}
+	payment.ContractType = int(request.ContractType)
+	payment.DurationInDays = int(request.DurationDays)
 
-	var company_id int
-	var ok bool
-	var missing_field string
+	payment.EmployeeLimit = _to_server_limit(int(request.EmployeeLimit))
+	payment.BranchLimit = _to_server_limit(int(request.BranchLimit))
+	payment.ItemLimit = _to_server_limit(int(request.ItemLimit))
 
-	// These cascade of if statements will only be executed of there was no problem
-	// If a problem is encountered, that if condition will be fulfilled, so the rest will basically stop
-	if company_id, ok = get_int64(models.PAYMENT_JSON_COMPANY_ID, values, nil); !ok {
-		missing_field = models.PAYMENT_JSON_COMPANY_ID
-	} else if payment_info.ContractType, ok = get_int64(models.PAYMENT_JSON_CONTRACT_TYPE, values, nil); !ok {
-		missing_field = models.PAYMENT_JSON_CONTRACT_TYPE
-	} else if payment_info.DurationInDays, ok = get_int64(models.PAYMENT_JSON_DURATION, values, nil); !ok {
-		missing_field = models.PAYMENT_JSON_DURATION
-	} else if payment_info.EmployeeLimit, ok = get_int64(models.PAYMENT_JSON_LIMIT_EMPLOYEE, values, nil); !ok {
-		missing_field = models.PAYMENT_JSON_LIMIT_EMPLOYEE
-	} else if payment_info.BranchLimit, ok = get_int64(models.PAYMENT_JSON_LIMIT_BRANCH, values, nil); !ok {
-		missing_field = models.PAYMENT_JSON_LIMIT_BRANCH
-	} else if payment_info.ItemLimit, ok = get_int64(models.PAYMENT_JSON_LIMIT_ITEM, values, nil); !ok {
-		missing_field = models.PAYMENT_JSON_LIMIT_ITEM
-	}
+	payment.IssuedDate = time.Now().Unix()
 
-	// we can check here if the above was successful or not
-	if !ok {
-		return &sh.SheketError{Code: http.StatusBadRequest, Error: fmt.Sprintf("missing: %s", missing_field)}
-	}
-
-	payment_info.EmployeeLimit = _to_server_limit(payment_info.EmployeeLimit)
-	payment_info.BranchLimit = _to_server_limit(payment_info.BranchLimit)
-	payment_info.ItemLimit = _to_server_limit(payment_info.ItemLimit)
-
-	payment_info.IssuedDate = time.Now().Unix()
-
+	company_id := int(request.CompanyId)
 	company, err := Store.GetCompanyById(company_id)
 	if err != nil {
-		return &sh.SheketError{Code: http.StatusInternalServerError, Error: err.Error()}
+		return nil, err
 	}
-	company.EncodedPayment = payment_info.Encode()
+	company.EncodedPayment = payment.Encode()
 	tnx, err := Store.Begin()
 	if err != nil {
-		return &sh.SheketError{Code: http.StatusInternalServerError, Error: err.Error()}
+		return nil, err
 	}
 
 	company, err = Store.UpdateCompanyInTx(tnx, company)
 	if err != nil {
 		tnx.Rollback()
-		return &sh.SheketError{Code: http.StatusInternalServerError, Error: err.Error()}
+		return nil, err
 	}
 	tnx.Commit()
 
-	c.JSON(http.StatusOK, map[string]interface{}{
-		JSON_KEY_COMPANY_ID:      company_id,
-		JSON_PAYMENT_DESCRIPTION: fmt.Sprintf("Successful payment for %d days", payment_info.DurationInDays),
-	})
+	return &sp.IssuePaymentResponse{
+		IssuedCompanyId:    request.CompanyId,
+		PaymentDescription: fmt.Sprintf("Successful payment for %d days", request.DurationDays),
+	}, nil
+}
 
-	*/
+func is_user_allowed_to_issue_payment(user *models.User) error {
 	return nil
 }
 
@@ -114,41 +92,26 @@ func IssuePaymentHandler(c *gin.Context) *sh.SheketError {
  * This is particularly necessary for uses that don't use the sync feature as the payment verification
  * should always happen on every sync.
  */
-func VerifyPaymentHandler(c *gin.Context) *sh.SheketError {
-	/*
-	info, err := GetIdentityInfo(c.Request)
+func (s *SheketController) VerifyPayment(c context.Context, request *sp.VerifyPaymentRequest) (response *sp.VerifyPaymentResponse, err error) {
+	defer trace("VerifyPayment")()
+
+	user_info, err := GetUserWithCompanyPermission(request.CompanyAuth)
 	if err != nil {
-		return &sh.SheketError{Code: http.StatusBadRequest, Error: err.Error()}
+		return nil, err
 	}
-	data, err := simplejson.NewFromReader(c.Request.Body)
+	company, err := Store.GetCompanyById(user_info.CompanyId)
 	if err != nil {
-		return &sh.SheketError{Code: http.StatusInternalServerError, Error: err.Error()}
+		return nil, err
 	}
 
-	device_id := data.Get(JSON_PAYMENT_DEVICE_ID).MustString("")
-	user_local_time := data.Get(JSON_PAYMENT_LOCAL_USER_TIME).MustString("")
-
-	if device_id == "" || user_local_time == "" {
-		return &sh.SheketError{Code: http.StatusBadRequest, Error: "missing payment fields"}
-	}
-
-	company, err := Store.GetCompanyById(info.CompanyId)
-	if err != nil {
-		return &sh.SheketError{Code: http.StatusInternalServerError, Error: err.Error()}
-	}
-
-	license, err := GenerateCompanyLicense(info.CompanyId, info.User.UserId,
-		company.EncodedPayment, device_id, user_local_time)
+	license, err := GenerateCompanyLicense(user_info.CompanyId, user_info.User.UserId,
+		company.EncodedPayment, request.DeviceId, request.LocalUserTime)
 
 	if err != nil {
-		return &sh.SheketError{Code: http.StatusPaymentRequired,
-			Error: "license expired, please renew"}
+		return nil, fmt.Errorf("License expired, please renew.")
 	}
 
-	c.JSON(http.StatusOK,
-		gin.H{JSON_PAYMENT_SIGNED_LICENSE: license})
-	*/
-	return nil
+	return &sp.VerifyPaymentResponse{SignedLicense: license}, nil
 }
 
 /**
@@ -213,4 +176,3 @@ func GenerateCompanyLicense(company_id, user_id int, encoded_payment, device_id,
 	license := fmt.Sprintf("%s_||_%s", contract, signature)
 	return license, nil
 }
-

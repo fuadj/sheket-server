@@ -1,14 +1,12 @@
 package controller
 
 import (
-	"github.com/gin-gonic/gin"
-	"sheket/server/controller/auth"
-	sh "sheket/server/controller/sheket_handler"
-	"sheket/server/models"
-	"strings"
-	"golang.org/x/net/context"
-	sp "sheket/server/sheketproto"
 	"fmt"
+	"golang.org/x/net/context"
+	"sheket/server/controller/auth"
+	"sheket/server/models"
+	sp "sheket/server/sheketproto"
+	"strings"
 	"time"
 )
 
@@ -26,9 +24,9 @@ func (s *SheketController) AddEmployee(c context.Context, request *sp.AddEmploye
 	}
 
 	p := &models.UserPermission{
-		CompanyId:user_info.CompanyId,
-		EncodedPermission:request.Permission,
-		UserId:int(request.EmployeeId),
+		CompanyId:         user_info.CompanyId,
+		EncodedPermission: request.Permission,
+		UserId:            int(request.EmployeeId),
 	}
 
 	member, err := Store.FindUserById(p.UserId)
@@ -75,7 +73,7 @@ func getSingleUserContract() string {
 	payment_info.EmployeeLimit = _to_server_limit(CLIENT_NO_LIMIT)
 	payment_info.BranchLimit = _to_server_limit(CLIENT_NO_LIMIT)
 	payment_info.ItemLimit = _to_server_limit(CLIENT_NO_LIMIT)
-	payment_info.DurationInDays = 60 		// these is in days(2 months)
+	payment_info.DurationInDays = 60 // these is in days(2 months)
 
 	payment_info.IssuedDate = time.Now().Unix()
 
@@ -99,8 +97,8 @@ func (s *SheketController) CreateCompany(c context.Context, request *sp.NewCompa
 	payment := getSingleUserContract()
 
 	company := &models.Company{
-		CompanyName:request.CompanyName,
-		EncodedPayment:payment,
+		CompanyName:    request.CompanyName,
+		EncodedPayment: payment,
 	}
 
 	tnx, err := Store.GetDataStore().Begin()
@@ -125,7 +123,6 @@ func (s *SheketController) CreateCompany(c context.Context, request *sp.NewCompa
 	}
 	tnx.Commit()
 
-
 	license, err := GenerateCompanyLicense(
 		created_company.CompanyId,
 		user.UserId,
@@ -145,48 +142,30 @@ func (s *SheketController) CreateCompany(c context.Context, request *sp.NewCompa
 	return response, nil
 }
 
-func EditCompanyNameHandler(c *gin.Context) *sh.SheketError {
-	/*
-	defer trace("EditCompanyNameHandler")()
+func (s *SheketController) EditCompany(c context.Context, request *sp.EditCompanyRequest) (response *sp.EmptyResponse, err error) {
+	defer trace("EditCompany")()
 
-	info, err := GetIdentityInfo(c.Request)
+	user_info, err := GetUserWithCompanyPermission(request.CompanyAuth)
 	if err != nil {
-		return &sh.SheketError{Code: http.StatusBadRequest, Error: err.Error()}
+		return nil, err
 	}
-
-	data, err := simplejson.NewFromReader(c.Request.Body)
+	company, err := Store.GetCompanyById(user_info.CompanyId)
 	if err != nil {
-		return &sh.SheketError{Code: http.StatusInternalServerError, Error: err.Error()}
-	}
-
-	new_company_name := data.Get(JSON_KEY_NEW_COMPANY_NAME).MustString("")
-	if new_company_name == "" {
-		return &sh.SheketError{Code: http.StatusBadRequest, Error: "invalid company name"}
-	}
-
-	company, err := Store.GetCompanyById(info.CompanyId)
-	if err != nil {
-		return &sh.SheketError{Code: http.StatusInternalServerError, Error: err.Error()}
+		return nil, err
 	}
 
 	tnx, err := Store.Begin()
 	if err != nil {
-		return &sh.SheketError{Code: http.StatusInternalServerError, Error: err.Error()}
+		return nil, err
 	}
 
-	company.CompanyName = new_company_name
-	_, err = Store.UpdateCompanyInTx(tnx, company)
-	if err != nil {
-		return &sh.SheketError{Code: http.StatusInternalServerError, Error: err.Error()}
+	company.CompanyName = request.NewName
+	if _, err = Store.UpdateCompanyInTx(tnx, company); err != nil {
+		return nil, err
 	}
-	err = tnx.Commit()
-	if err != nil {
-		return &sh.SheketError{Code: http.StatusInternalServerError, Error: err.Error()}
+	if err = tnx.Commit(); err != nil {
+		return nil, err
 	}
 
-	// we don't actually send any "useful" data, it is just to inform that it was successful
-	c.String(http.StatusOK, "")
-
-	*/
-	return nil
+	return &sp.EmptyResponse{}, nil
 }
