@@ -91,7 +91,7 @@ func (b *shStore) GetCompanyById(id int) (*Company, error) {
 func _queryCompany(s *shStore, err_msg string, where_stmt string, args ...interface{}) ([]*Company, error) {
 	var result []*Company
 
-	query := fmt.Sprintf("select company_id, company_name, contact, encoded_payment from %s", TABLE_COMPANY)
+	query := fmt.Sprintf("select company_id, company_name, encoded_payment from %s", TABLE_COMPANY)
 	sort_by := " ORDER BY company_id desc"
 
 	var rows *sql.Rows
