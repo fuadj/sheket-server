@@ -100,6 +100,7 @@ func (s *SheketController) UserSignup(c context.Context, request *sp.SingupReque
 	tnx = nil
 
 	response = new(sp.SignupResponse)
+	response.UserId = int32(user.UserId)
 	response.LoginCookie, err = auth.GenerateLoginCookie(user)
 	if err != nil {
 		return nil, err
