@@ -14,21 +14,29 @@ const (
 )
 
 const (
-	PERMISSION_TYPE_OWNER    = 1
-	PERMISSION_TYPE_MANAGER  = 2
-	PERMISSION_TYPE_EMPLOYEE = 3
+	PERMISSION_TYPE_OWNER           = 1
+	PERMISSION_TYPE_GENERAL_MANAGER = 2
+	PERMISSION_TYPE_BRANCH_MANAGER  = 3
+	PERMISSION_TYPE_EMPLOYEE        = 4
 )
 
-type BranchAuthority struct {
-	BranchId  int `json:"branch_id"`
-	Authority int `json:"authority"`
+// TODO: convert these to masks
+const (
+	BRANCH_ACCESS_SEE_QTY          = 1 // mask will be 001
+	BRANCH_ACCESS_BUY_ITEM         = 2 // mask will be 010
+	BRANCH_ACCESS_SEE_AND_BUY_ITEM = 3 // mask will be 011
+)
+
+type BranchAccess struct {
+	BranchId int `json:"branch_id"`
+	Access   int `json:"access"`
 }
 
-// i couldn't embed these constants in BranchAuthority json annotation,
+// i couldn't embed these constants in BranchAccess json annotation,
 // so they need to be kept up-to-date with it.
 const (
 	_json_branch_id = "branch_id"
-	_json_authority = "authority"
+	_json_access    = "access"
 )
 
 type UserPermission struct {
@@ -37,7 +45,7 @@ type UserPermission struct {
 
 	PermissionType int
 
-	Branches []BranchAuthority
+	Branches []BranchAccess
 
 	// This is used when retrieving UserPermission objects.
 	// The permission will be stored in this.
@@ -55,8 +63,8 @@ type Pair_User_UserPermission struct {
 }
 
 func (u *UserPermission) HasManagerAccess() bool {
-	switch (u.PermissionType) {
-	case PERMISSION_TYPE_OWNER, PERMISSION_TYPE_MANAGER:
+	switch u.PermissionType {
+	case PERMISSION_TYPE_OWNER, PERMISSION_TYPE_GENERAL_MANAGER:
 		return true
 	default:
 		return false
@@ -105,22 +113,22 @@ func (u *UserPermission) Decode() error {
 			return err
 		}
 		for i := 0; i < len(arr); i++ {
-			branch_authority, ok := arr[i].(map[string]interface{})
+			branch_access, ok := arr[i].(map[string]interface{})
 			if !ok {
-				return fmt.Errorf("Error parsing branch authority at %d, '%v'", i+1, arr[i])
+				return fmt.Errorf("Error parsing branch access at %d, '%v'", i+1, arr[i])
 			}
-			branch_id, ok := get_int(_json_branch_id, branch_authority)
+			branch_id, ok := get_int(_json_branch_id, branch_access)
 			if !ok {
 				return fmt.Errorf("Error parsing branchid at '%v'", arr[i])
 			}
-			authority, ok := get_int(_json_authority, branch_authority)
+			access, ok := get_int(_json_access, branch_access)
 			if !ok {
-				return fmt.Errorf("Error parsing branchid at '%v'", arr[i])
+				return fmt.Errorf("Error parsing access at '%v'", arr[i])
 			}
 			u.Branches = append(u.Branches,
-				BranchAuthority{
-					BranchId:  branch_id,
-					Authority: authority,
+				BranchAccess{
+					BranchId: branch_id,
+					Access:   access,
 				})
 		}
 	}

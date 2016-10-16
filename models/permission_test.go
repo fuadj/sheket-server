@@ -3,8 +3,8 @@ package models
 import "testing"
 
 var allowedBranches = [][]struct {
-	branchId  int
-	authority int
+	branchId int
+	access   int
 }{
 	{
 		{1, 3},
@@ -21,9 +21,9 @@ func TestEncodeUserPermission(t *testing.T) {
 		p := UserPermission{}
 		for _, branch_authority := range test {
 			p.Branches = append(p.Branches,
-				BranchAuthority{
+				BranchAccess{
 					BranchId:  branch_authority.branchId,
-					Authority: branch_authority.authority,
+					Access: branch_authority.access,
 				})
 		}
 
@@ -35,8 +35,8 @@ func TestEncodeUserPermission(t *testing.T) {
 		}
 		for j, branch_authority := range decoded.Branches {
 			if branch_authority.BranchId != test[j].branchId ||
-				branch_authority.Authority != test[j].authority {
-				t.Errorf("Branch authority(%d, %d) doesn't match, wanted %v got %v\n",
+				branch_authority.Access != test[j].access {
+				t.Errorf("Branch access(%d, %d) doesn't match, wanted %v got %v\n",
 					i+1, j+1, test[j], branch_authority)
 				continue
 			}
