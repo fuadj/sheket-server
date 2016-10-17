@@ -559,7 +559,7 @@ func applyEmployeeOperations(tnx *sql.Tx,
 		// NOT on sync time
 		case sp.EntityRequest_UPDATE:
 
-			if _, err := Store.SetUserPermission(employee); err != nil {
+			if _, err := Store.SetUserPermissionInTx(tnx, employee); err != nil {
 				return fmt.Errorf("error updating employee:%d permission '%v'",
 					employee.UserId, err)
 			}

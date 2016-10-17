@@ -22,9 +22,9 @@ const (
 
 // TODO: convert these to masks
 const (
-	BRANCH_ACCESS_SEE_QTY          = 1 // mask will be 001
-	BRANCH_ACCESS_BUY_ITEM         = 2 // mask will be 010
-	BRANCH_ACCESS_SEE_AND_BUY_ITEM = 3 // mask will be 011
+	BRANCH_ACCESS_SEE_QTY              = 1 // mask will be 001
+	BRANCH_ACCESS_BUY_ITEM             = 2 // mask will be 010
+	BRANCH_ACCESS_SEE_QTY_AND_BUY_ITEM = 3 // mask will be 011
 )
 
 type BranchAccess struct {
@@ -157,8 +157,6 @@ func (b *shStore) SetUserPermission(p *UserPermission) (*UserPermission, error) 
 }
 
 func (b *shStore) SetUserPermissionInTx(tnx *sql.Tx, p *UserPermission) (*UserPermission, error) {
-	encoded := p.Encode()
-
 	rows, err := tnx.Query(
 		fmt.Sprintf("select permission from %s "+
 			"where company_id = $1 and user_id = $2", TABLE_U_PERMISSION),
@@ -171,7 +169,7 @@ func (b *shStore) SetUserPermissionInTx(tnx *sql.Tx, p *UserPermission) (*UserPe
 		stmt := fmt.Sprintf("update %s set "+
 			"permission = $1 "+
 			"where company_id = $2 and user_id = $3", TABLE_U_PERMISSION)
-		_, err = tnx.Exec(stmt, encoded, p.CompanyId, p.UserId)
+		_, err = tnx.Exec(stmt, p.EncodedPermission, p.CompanyId, p.UserId)
 		if err != nil {
 			return nil, err
 		}
@@ -181,7 +179,7 @@ func (b *shStore) SetUserPermissionInTx(tnx *sql.Tx, p *UserPermission) (*UserPe
 			fmt.Sprintf("insert into %s "+
 				"(company_id, user_id, permission) values "+
 				"($1, $2, $3)", TABLE_U_PERMISSION),
-			p.CompanyId, p.UserId, encoded)
+			p.CompanyId, p.UserId, p.EncodedPermission)
 		if err != nil {
 			return nil, err
 		}
