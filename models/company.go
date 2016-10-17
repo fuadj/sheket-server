@@ -35,27 +35,6 @@ type PaymentInfo struct {
 	ItemLimit     int
 }
 
-func (b *shStore) CreateCompany(u *User, c *Company) (*Company, error) {
-	tnx, err := b.Begin()
-	if err != nil {
-		return nil, fmt.Errorf("Company create error '%v'", err)
-	}
-	defer func() {
-		if err != nil {
-			tnx.Rollback()
-		}
-	}()
-
-	company, err := b.CreateCompanyInTx(tnx, u, c)
-	if err != nil {
-		return nil, err
-	}
-
-	tnx.Commit()
-
-	return company, nil
-}
-
 func (b *shStore) CreateCompanyInTx(tnx *sql.Tx, u *User, c *Company) (*Company, error) {
 	err := tnx.QueryRow(
 		fmt.Sprintf("insert into %s "+

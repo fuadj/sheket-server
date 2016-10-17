@@ -22,7 +22,6 @@ type TransactionStore interface {
 }
 
 type ItemStore interface {
-	CreateItem(*ShItem) (*ShItem, error)
 	CreateItemInTx(*sql.Tx, *ShItem) (*ShItem, error)
 
 	UpdateItemInTx(*sql.Tx, *ShItem) (*ShItem, error)
@@ -33,7 +32,6 @@ type ItemStore interface {
 }
 
 type BranchStore interface {
-	CreateBranch(*ShBranch) (*ShBranch, error)
 	CreateBranchInTx(*sql.Tx, *ShBranch) (*ShBranch, error)
 	UpdateBranchInTx(*sql.Tx, *ShBranch) (*ShBranch, error)
 
@@ -43,7 +41,6 @@ type BranchStore interface {
 }
 
 type BranchItemStore interface {
-	AddItemToBranch(*ShBranchItem) (*ShBranchItem, error)
 	AddItemToBranchInTx(*sql.Tx, *ShBranchItem) (*ShBranchItem, error)
 
 	// the *ShBranchItem argument is only used to get the
@@ -54,8 +51,6 @@ type BranchItemStore interface {
 }
 
 type CompanyStore interface {
-	CreateCompany(u *User, c *Company) (*Company, error)
-
 	// If the user doesn't exist, it will be created and then
 	// the company gets created, it all happens in a single-transaction
 	// NOTE: the transaction is not rolled-back in this method
@@ -75,13 +70,6 @@ type UserStore interface {
 	FindUserWithProviderIdInTx(tnx *sql.Tx, provider_id int, provider_user_id string) (*User, error)
 
 	UpdateUserInTx(*sql.Tx, *User) (*User, error)
-
-	/**
-	 * Permission is given to a user on a company basis.
-	 * A permission typical looks like
-	 * { company_id, user_id, permission }
-	 */
-	SetUserPermission(*UserPermission) (*UserPermission, error)
 
 	RemoveUserFromCompanyInTx(tnx *sql.Tx, user_id, company_id int) (error)
 

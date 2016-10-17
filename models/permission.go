@@ -136,26 +136,6 @@ func (u *UserPermission) Decode() error {
 	return nil
 }
 
-func (b *shStore) SetUserPermission(p *UserPermission) (*UserPermission, error) {
-	tnx, err := b.Begin()
-	if err != nil {
-		return nil, fmt.Errorf("Error setting permission '%v'", err)
-	}
-	defer func() {
-		if err != nil {
-			tnx.Rollback()
-		}
-	}()
-
-	permission, err := b.SetUserPermissionInTx(tnx, p)
-	if err != nil {
-		return nil, err
-	}
-	tnx.Commit()
-
-	return permission, nil
-}
-
 func (b *shStore) SetUserPermissionInTx(tnx *sql.Tx, p *UserPermission) (*UserPermission, error) {
 	rows, err := tnx.Query(
 		fmt.Sprintf("select permission from %s "+

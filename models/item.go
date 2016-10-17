@@ -72,24 +72,6 @@ func _checkItemArrError(items []*ShItem, err error) ([]*ShItem, error) {
 	}
 }
 
-func (s *shStore) CreateItem(item *ShItem) (*ShItem, error) {
-	tnx, err := s.Begin()
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		if err != nil {
-			tnx.Rollback()
-		}
-	}()
-	created_item, err := s.CreateItemInTx(tnx, item)
-	if err != nil {
-		return nil, err
-	}
-	tnx.Commit()
-	return created_item, nil
-}
-
 func (s *shStore) CreateItemInTx(tnx *sql.Tx, item *ShItem) (*ShItem, error) {
 	err := tnx.QueryRow(
 		"insert into "+TABLE_INVENTORY_ITEM+" ( "+

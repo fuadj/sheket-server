@@ -42,13 +42,6 @@ func runInTransaction(s *shStore, f func(*sql.Tx) (*ShCategory, error)) (*ShCate
 	return result, nil
 }
 
-func (s *shStore) CreateCategory(category *ShCategory) (*ShCategory, error) {
-	return runInTransaction(s,
-		func(tnx *sql.Tx) (*ShCategory, error) {
-			return s.CreateCategoryInTx(tnx, category)
-		})
-}
-
 func (s *shStore) CreateCategoryInTx(tnx *sql.Tx, category *ShCategory) (*ShCategory, error) {
 	err := tnx.QueryRow(
 		fmt.Sprintf("insert into %s "+

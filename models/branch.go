@@ -22,24 +22,6 @@ type ShBranchItem struct {
 	ItemLocation string
 }
 
-func (s *shStore) CreateBranch(b *ShBranch) (*ShBranch, error) {
-	tnx, err := s.Begin()
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		if err != nil {
-			tnx.Rollback()
-		}
-	}()
-	created, err := s.CreateBranchInTx(tnx, b)
-	if err != nil {
-		return nil, err
-	}
-	tnx.Commit()
-	return created, nil
-}
-
 func (s *shStore) CreateBranchInTx(tnx *sql.Tx, b *ShBranch) (*ShBranch, error) {
 	err := tnx.QueryRow(
 		fmt.Sprintf("insert into %s "+
@@ -83,26 +65,6 @@ func (s *shStore) GetBranchByUUIDInTx(tnx *sql.Tx, uid string) (*ShBranch, error
 		return nil, err
 	}
 	return branches[0], nil
-}
-
-func (s *shStore) AddItemToBranch(item *ShBranchItem) (*ShBranchItem, error) {
-	tnx, err := s.Begin()
-	if err != nil {
-		return nil, fmt.Errorf("Error creating item %v", err)
-	}
-	defer func() {
-		if err != nil {
-			tnx.Rollback()
-		}
-	}()
-
-	updated, err := s.AddItemToBranchInTx(tnx, item)
-	if err != nil {
-		return nil, err
-	}
-	tnx.Commit()
-
-	return updated, nil
 }
 
 func (s *shStore) AddItemToBranchInTx(tnx *sql.Tx, item *ShBranchItem) (*ShBranchItem, error) {
