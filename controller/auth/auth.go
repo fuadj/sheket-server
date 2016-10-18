@@ -17,9 +17,18 @@ var (
 	Store models.ShStore
 
 	cookieHandler = securecookie.New(
-		securecookie.GenerateRandomKey(64),
-		securecookie.GenerateRandomKey(32))
+		generateDummyKey("abcd", 64),
+		generateDummyKey("kkk", 32))
 )
+
+func generateDummyKey(s string, length int) []byte {
+	k := make([]byte, length)
+
+	for i := 0; i < length; i++ {
+		k[i] = byte(s[i%len(s)])
+	}
+	return k
+}
 
 func GetUser(login_cookie string) (*models.User, error) {
 	if user_id, err := GetUserId(login_cookie); err == nil {
