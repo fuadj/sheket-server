@@ -10,6 +10,8 @@ import (
 	sp "sheket/server/sheketproto"
 	"strings"
 	"fmt"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc"
 )
 
 var fb_app_secret string
@@ -66,12 +68,12 @@ func (s *SheketController) UserSignup(c context.Context, request *sp.SingupReque
 	fb_id := "1417001148315681"
 	username := "abcd"
 	if err != nil {
-		return nil, err
+		return nil, grpc.Errorf(codes.Internal, "%v", err)
 	}
 
 	tnx, err := Store.GetDataStore().Begin()
 	if err != nil {
-		return nil, err
+		return nil, grpc.Errorf(codes.Internal, "%v", err)
 	}
 	defer func() {
 		if err != nil && tnx != nil {
@@ -84,14 +86,14 @@ func (s *SheketController) UserSignup(c context.Context, request *sp.SingupReque
 		models.AUTH_PROVIDER_FACEBOOK, fb_id); err != nil {
 
 		if err != models.ErrNoData {
-			return nil, err
+			return nil, grpc.Errorf(codes.Internal, "%v", err)
 		} else { // err == models.ErrNoData( which means user doesn't exist), create it
 			new_user := &models.User{Username: username,
 				ProviderID:     models.AUTH_PROVIDER_FACEBOOK,
 				UserProviderID: fb_id}
 			user, err = Store.CreateUserInTx(tnx, new_user)
 			if err != nil {
-				return nil, err
+				return nil, grpc.Errorf(codes.Internal, "%v", err)
 			}
 			tnx.Commit()
 			tnx = nil
@@ -103,7 +105,7 @@ func (s *SheketController) UserSignup(c context.Context, request *sp.SingupReque
 	response.UserId = int32(user.UserId)
 	response.LoginCookie, err = auth.GenerateLoginCookie(user)
 	if err != nil {
-		return nil, err
+		return nil, grpc.Errorf(codes.Internal, "%v", err)
 	}
 
 	response.Username = user.Username
@@ -116,12 +118,12 @@ func (s *SheketController) SyncCompanies(c context.Context, request *sp.SyncComp
 
 	user, err := auth.GetUser(request.Auth.LoginCookie)
 	if err != nil {
-		return nil, err
+		return nil, grpc.Errorf(codes.Unauthenticated, "%v", err)
 	}
 
 	company_permissions, err := Store.GetUserCompanyPermissions(user)
 	if err != nil && err != models.ErrNoData {
-		return nil, err
+		return nil, grpc.Errorf(codes.Internal, "%v", err)
 	}
 
 	user_companies := new(sp.CompanyList)
@@ -157,22 +159,22 @@ func (s *SheketController) EditUserName(c context.Context, request *sp.EditUserN
 
 	user, err := auth.GetUser(request.Auth.LoginCookie)
 	if err != nil {
-		return nil, err
+		return nil, grpc.Errorf(codes.Unauthenticated, "%v", err)
 	}
 
 	tnx, err := Store.Begin()
 	if err != nil {
-		return nil, err
+		return nil, grpc.Errorf(codes.Internal, "%v", err)
 	}
 
 	user.Username = request.NewName
 	_, err = Store.UpdateUserInTx(tnx, user)
 	if err != nil {
-		return nil, err
+		return nil, grpc.Errorf(codes.Internal, "%v", err)
 	}
 	err = tnx.Commit()
 	if err != nil {
-		return nil, err
+		return nil, grpc.Errorf(codes.Internal, "%v", err)
 	}
 
 	response = new(sp.EmptyResponse)
