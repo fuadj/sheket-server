@@ -221,7 +221,8 @@ func (b *shStore) GetUserCompanyPermissions(u *User) ([]*Pair_Company_UserPermis
 		}
 
 		if err = pc.Permission.Decode(); err != nil {
-			return nil, err
+			// couldn't decode the permission, so ignore and move on to the next company
+			continue
 		}
 
 		result = append(result, pc)
