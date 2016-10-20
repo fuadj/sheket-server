@@ -14,10 +14,10 @@ type Company struct {
 }
 
 const (
-	PAYMENT_CONTRACT_TYPE_NONE       = 0
-	PAYMENT_CONTRACT_TYPE_SINGLE_USE = 1
-	PAYMENT_CONTRACT_TYPE_GOLD       = 2
-	PAYMENT_CONTRACT_TYPE_PLATINUM   = 3
+	PAYMENT_CONTRACT_NONE               = 0
+	PAYMENT_CONTRACT_LIMITED_FREE       = 1
+	PAYMENT_CONTRACT_UNLIMITED_ONE_TIME = 2
+	PAYMENT_CONTRACT_SUBSCRIPTION       = 3
 )
 
 // can be used in either {employee | branch | item} to signal no limits
@@ -153,8 +153,8 @@ func DecodePayment(s string) (*PaymentInfo, error) {
 
 	p.IssuedDate = int64(_extract_int(subs[0]))
 	p.DurationInDays = _extract_int(subs[1])
-	p.ContractType = _extract_int(subs[2], PAYMENT_CONTRACT_TYPE_NONE)
-	if p.ContractType == PAYMENT_CONTRACT_TYPE_NONE {
+	p.ContractType = _extract_int(subs[2], PAYMENT_CONTRACT_NONE)
+	if p.ContractType == PAYMENT_CONTRACT_NONE {
 		return nil, fmt.Errorf("invalid contract type '%d'", p.ContractType)
 	}
 	p.EmployeeLimit = _extract_int(subs[3])

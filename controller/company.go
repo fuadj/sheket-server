@@ -71,11 +71,11 @@ func (s *SheketController) AddEmployee(c context.Context, request *sp.AddEmploye
 func getSingleUserContract() string {
 	payment_info := &models.PaymentInfo{}
 
-	payment_info.ContractType = models.PAYMENT_CONTRACT_TYPE_SINGLE_USE
+	payment_info.ContractType = models.PAYMENT_CONTRACT_LIMITED_FREE
 	payment_info.EmployeeLimit = _to_server_limit(CLIENT_NO_LIMIT)
 	payment_info.BranchLimit = _to_server_limit(CLIENT_NO_LIMIT)
 	payment_info.ItemLimit = _to_server_limit(CLIENT_NO_LIMIT)
-	payment_info.DurationInDays = 60 // these is in days(2 months)
+	payment_info.DurationInDays = 30 // these is in days(1 month)
 
 	payment_info.IssuedDate = time.Now().Unix()
 
@@ -117,6 +117,7 @@ func (s *SheketController) CreateCompany(c context.Context, request *sp.NewCompa
 	permission := &models.UserPermission{CompanyId: created_company.CompanyId,
 		UserId:         user.UserId,
 		PermissionType: models.PERMISSION_TYPE_OWNER}
+	permission.Encode()
 
 	_, err = Store.SetUserPermissionInTx(tnx, permission)
 	if err != nil {
