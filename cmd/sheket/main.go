@@ -14,6 +14,7 @@ import (
 	sh_service "sheket/server/sheketproto"
 	panic_handler "github.com/kazegusuri/grpc-panic-handler"
 	"fmt"
+	"time"
 )
 
 func main() {
@@ -36,7 +37,20 @@ func main() {
 
 	grpcServer := grpc.NewServer(uIntOpt, sIntOpt)
 	sh_service.RegisterSheketServiceServer(grpcServer, new(c.SheketController))
-	grpcServer.Serve(conn)
+	grpcServer.Serve(&closableListener{conn})
+}
+
+type closableListener struct {
+	net.Listener
+}
+
+func (c *closableListener) Accept() (net.Conn, error) {
+	conn, err := c.Listener.Accept()
+	if err != nil {
+		return nil, err
+	}
+	conn.SetDeadline(time.Now() + (time.Second * 10))
+	return conn, nil
 }
 
 func init() {
